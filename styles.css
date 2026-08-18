@@ -126,6 +126,7 @@ button { font: inherit; cursor: pointer; }
 
 .chart-panel,
 .summary-panel,
+.finance-panel,
 .quick-entry-panel,
 .history-panel {
   border-radius: 22px;
@@ -149,13 +150,53 @@ button { font: inherit; cursor: pointer; }
 .legend-color { width: 10px; height: 10px; border-radius: 50%; }
 .chart-legend .empty-chart { display: block; color: #657066; line-height: 1.6; }
 
-.summary-panel { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 14px; }
+.summary-panel { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 14px; }
 .summary-panel div { display: grid; gap: 6px; }
 .summary-panel span { color: #657066; font-size: 0.8rem; }
 .summary-panel strong { font-size: 1rem; }
+.savings-summary { padding: 10px; border-radius: 14px; background: #e9f4df; }
 
 .quick-entry-panel,
 .history-panel { display: grid; gap: 16px; }
+
+.finance-panel { display: grid; align-content: start; gap: 18px; }
+.panel-heading { display: flex; justify-content: space-between; align-items: end; gap: 12px; }
+.panel-heading > span { color: #657066; font-size: 0.75rem; text-align: right; }
+.compact-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 14px; border-radius: 16px; background: #f4f6f1; }
+.compact-form label { display: grid; gap: 6px; font-size: 0.82rem; font-weight: 800; }
+.compact-form input,
+.inline-money-form input,
+.fixed-rule-form input,
+.fixed-rule-form select {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #cbd4c9;
+  border-radius: 10px;
+  padding: 10px;
+  background: white;
+  color: inherit;
+  font: inherit;
+}
+.compact-form .inline-check { display: flex; grid-column: 1 / -1; align-items: center; gap: 7px; font-weight: 500; }
+.compact-form .inline-check input { width: auto; }
+.compact-form .form-status { grid-column: 1 / -1; }
+.small-primary-button,
+.secondary-button { border: 0; border-radius: 10px; padding: 10px 12px; font-weight: 800; }
+.small-primary-button { background: #214f32; color: white; }
+.secondary-button { background: #dfeadd; color: #24422d; }
+.finance-subsection { display: grid; gap: 10px; padding-top: 4px; border-top: 1px solid #e1e6df; }
+.finance-subsection h3 { margin: 0; font-size: 1rem; }
+.money-list { display: grid; gap: 6px; padding: 0; margin: 0; list-style: none; }
+.money-list li { display: flex; justify-content: space-between; gap: 10px; padding: 7px 9px; border-radius: 10px; background: #f4f6f1; font-size: 0.82rem; }
+.money-list .empty-money-list { display: block; color: #657066; }
+.inline-money-form { display: grid; grid-template-columns: minmax(0, 1fr) 100px auto; gap: 7px; }
+.inline-money-form .form-status,
+.fixed-rule-form .form-status { grid-column: 1 / -1; }
+.fixed-rule-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.fixed-rule-form label { display: flex; align-items: center; gap: 5px; font-size: 0.82rem; }
+.fixed-rule-form label input { width: 64px; }
+.migration-notice { border: 1px dashed #d89949; }
+.migration-notice p { margin: 0; color: #657066; line-height: 1.65; }
 
 .expense-form { display: grid; gap: 14px; }
 .expense-form > label { display: grid; gap: 7px; font-weight: 800; }
@@ -196,7 +237,7 @@ button { font: inherit; cursor: pointer; }
   .auth-card p,
   .next-step { color: #bdc9bf; }
   .notice, .suggestion-button { background: #202c22; color: #d3ded3; }
-  .chart-panel, .summary-panel, .quick-entry-panel, .history-panel { background: #172119; box-shadow: none; }
+  .chart-panel, .summary-panel, .finance-panel, .quick-entry-panel, .history-panel { background: #172119; box-shadow: none; }
   .user-menu summary:hover, .menu-sign-out { background: #202c22; color: #dce5dd; }
   .user-menu-popover { border-color: #3b493d; background: #172119; box-shadow: 0 14px 32px rgb(0 0 0 / 30%); }
   .user-menu-popover p { color: #aeb9af; }
@@ -204,6 +245,12 @@ button { font: inherit; cursor: pointer; }
   .expense-form input:not([type="radio"]), .expense-form select { background: #172119; border-color: #526154; }
   .expense-form fieldset { border-color: #3b493d; }
   .summary-panel span, .chart-heading > span, .expense-pie span, .chart-legend li small, .chart-legend .empty-chart, .entry-date small, .entry-detail small { color: #aeb9af; }
+  .savings-summary { background: #263b29; }
+  .compact-form, .money-list li { background: #202c22; }
+  .compact-form input, .inline-money-form input, .fixed-rule-form input, .fixed-rule-form select { border-color: #526154; background: #172119; }
+  .secondary-button { background: #2a412e; color: #dce5dd; }
+  .finance-subsection { border-color: #3b493d; }
+  .panel-heading > span, .money-list .empty-money-list, .migration-notice p { color: #aeb9af; }
   .expense-pie::after { background: #172119; }
   .entry-date { color: #dce5dd; border-color: #3b493d; }
   .sign-in-divider::before, .sign-in-divider::after { background: #3b493d; }
@@ -213,5 +260,46 @@ button { font: inherit; cursor: pointer; }
   .chart-body { grid-template-columns: 1fr; justify-items: center; }
   .chart-legend { width: 100%; }
   .suggestion-button { grid-template-columns: 94px 1fr; }
+  .compact-form, .fixed-rule-form, .inline-money-form { grid-template-columns: 1fr; }
+  .inline-money-form .form-status, .fixed-rule-form .form-status { grid-column: 1; }
+}
+
+@media (min-width: 900px) {
+  .ledger-home {
+    width: min(100%, 1480px);
+    padding: 24px 32px 32px;
+    grid-template-columns: minmax(330px, 0.9fr) minmax(360px, 1fr);
+    grid-template-areas:
+      "header header"
+      "summary summary"
+      "chart finance"
+      "quick finance"
+      "history history";
+    gap: 16px;
+  }
+  .top-bar { grid-area: header; }
+  .summary-panel { grid-area: summary; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .chart-panel { grid-area: chart; }
+  .finance-panel { grid-area: finance; }
+  .quick-entry-panel { grid-area: quick; }
+  .history-panel { grid-area: history; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  .history-panel > div:first-child { grid-column: 1 / -1; }
+  .chart-panel, .summary-panel, .finance-panel, .quick-entry-panel, .history-panel { padding: 18px; }
+  .expense-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .expense-form fieldset, .expense-form .email-button, .expense-form .form-status { grid-column: 1 / -1; }
+}
+
+@media (min-width: 1240px) {
+  .ledger-home {
+    grid-template-columns: minmax(320px, 0.85fr) minmax(360px, 1fr) minmax(390px, 1.05fr);
+    grid-template-areas:
+      "header header header"
+      "summary summary summary"
+      "chart quick finance"
+      "history quick finance";
+  }
+  .history-panel { grid-template-columns: 1fr; max-height: 360px; overflow-y: auto; }
+  .history-panel > div:first-child { grid-column: auto; }
+  .finance-panel { max-height: 720px; overflow-y: auto; }
 }
 
