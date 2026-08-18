@@ -89,7 +89,10 @@ button { font: inherit; cursor: pointer; }
 .text-button { border: 0; background: transparent; color: #3d7b54; font-weight: 800; padding: 4px; }
 
 .welcome-panel,
-.category-panel {
+.category-panel,
+.summary-panel,
+.quick-entry-panel,
+.history-panel {
   border-radius: 22px;
   padding: 20px;
   background: white;
@@ -113,15 +116,55 @@ button { font: inherit; cursor: pointer; }
 
 .category-panel li { padding: 9px 12px; border-radius: 999px; background: #f0f3ed; color: #3a463d; }
 
+.summary-panel { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 14px; }
+.summary-panel div { display: grid; gap: 6px; }
+.summary-panel span { color: #657066; font-size: 0.8rem; }
+.summary-panel strong { font-size: 1rem; }
+
+.quick-entry-panel,
+.history-panel { display: grid; gap: 16px; }
+
+.expense-form { display: grid; gap: 14px; }
+.expense-form > label { display: grid; gap: 7px; font-weight: 800; }
+.expense-form input:not([type="radio"]),
+.expense-form select {
+  width: 100%;
+  border: 1px solid #aeb9ae;
+  border-radius: 13px;
+  padding: 13px;
+  background: white;
+  color: inherit;
+  font: inherit;
+}
+
+.expense-form fieldset { display: flex; flex-wrap: wrap; gap: 14px; margin: 0; padding: 12px; border: 1px solid #d4dbd3; border-radius: 13px; }
+.expense-form legend { padding: 0 4px; font-weight: 800; }
+.expense-form fieldset label { display: flex; gap: 6px; align-items: center; }
+
+.suggestion-button {
+  display: grid;
+  gap: 4px;
+  border: 0;
+  border-radius: 14px;
+  padding: 14px;
+  background: #f0f3ed;
+  color: #26342a;
+  text-align: left;
+}
+.suggestion-button span { color: #68736a; font-size: 0.85rem; }
+
 @media (prefers-color-scheme: dark) {
   :root { background: #101812; color: #eff4ed; }
   .auth-card p,
   .welcome-panel p,
   .next-step { color: #bdc9bf; }
-  .notice, .category-panel li { background: #202c22; color: #d3ded3; }
-  .welcome-panel, .category-panel { background: #172119; box-shadow: none; }
+  .notice, .category-panel li, .suggestion-button { background: #202c22; color: #d3ded3; }
+  .welcome-panel, .category-panel, .summary-panel, .quick-entry-panel, .history-panel { background: #172119; box-shadow: none; }
   .text-button { color: #9ed7aa; }
   .email-sign-in input { background: #172119; border-color: #526154; }
+  .expense-form input:not([type="radio"]), .expense-form select { background: #172119; border-color: #526154; }
+  .expense-form fieldset { border-color: #3b493d; }
+  .summary-panel span, .suggestion-button span { color: #aeb9af; }
   .sign-in-divider::before, .sign-in-divider::after { background: #3b493d; }
 }
 
