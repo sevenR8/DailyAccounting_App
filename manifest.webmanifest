@@ -1,0 +1,19 @@
+{
+  "name": "每日帳本",
+  "short_name": "每日帳本",
+  "description": "手機優先的每日記帳 PWA",
+  "lang": "zh-Hant",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f7f8f3",
+  "theme_color": "#f7f8f3",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
+

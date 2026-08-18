@@ -1,0 +1,93 @@
+:root {
+  color-scheme: light dark;
+  font-family: "Noto Sans TC", "PingFang TC", system-ui, sans-serif;
+  background: #f7f8f3;
+  color: #172119;
+}
+
+* { box-sizing: border-box; }
+
+body { margin: 0; min-width: 320px; }
+
+button { font: inherit; cursor: pointer; }
+
+.auth-card,
+.ledger-home {
+  width: min(100%, 480px);
+  min-height: 100dvh;
+  margin: auto;
+  padding: 48px 24px;
+}
+
+.auth-card { display: grid; align-content: center; gap: 18px; }
+
+.auth-card h1,
+.ledger-home h1,
+.ledger-home h2 { margin: 0; letter-spacing: -0.03em; }
+
+.auth-card h1 { font-size: clamp(2.25rem, 10vw, 3.4rem); line-height: 1.15; }
+
+.auth-card p,
+.welcome-panel p,
+.next-step { color: #566157; line-height: 1.7; }
+
+.eyebrow { color: #3d7b54; font-weight: 800; letter-spacing: 0.08em; margin: 0; }
+
+.google-button {
+  border: 0;
+  border-radius: 16px;
+  padding: 16px 20px;
+  background: #214f32;
+  color: white;
+  font-weight: 800;
+  box-shadow: 0 10px 24px rgb(33 79 50 / 18%);
+}
+
+.notice {
+  padding: 14px;
+  border-radius: 14px;
+  background: #edf0e9;
+  font-size: 0.9rem;
+}
+
+.ledger-home { display: grid; align-content: start; gap: 22px; }
+
+.ledger-home header { display: flex; justify-content: space-between; gap: 16px; align-items: start; }
+
+.text-button { border: 0; background: transparent; color: #3d7b54; font-weight: 800; padding: 4px; }
+
+.welcome-panel,
+.category-panel {
+  border-radius: 22px;
+  padding: 20px;
+  background: white;
+  box-shadow: 0 10px 30px rgb(23 33 25 / 7%);
+}
+
+.welcome-panel { display: flex; gap: 14px; align-items: flex-start; }
+
+.success-mark {
+  display: grid;
+  place-items: center;
+  min-width: 34px;
+  min-height: 34px;
+  border-radius: 50%;
+  background: #dceede;
+  color: #2d7544;
+  font-weight: 900;
+}
+
+.category-panel ul { display: flex; flex-wrap: wrap; gap: 10px; padding: 0; margin: 16px 0 0; list-style: none; }
+
+.category-panel li { padding: 9px 12px; border-radius: 999px; background: #f0f3ed; color: #3a463d; }
+
+@media (prefers-color-scheme: dark) {
+  :root { background: #101812; color: #eff4ed; }
+  .auth-card p,
+  .welcome-panel p,
+  .next-step { color: #bdc9bf; }
+  .notice, .category-panel li { background: #202c22; color: #d3ded3; }
+  .welcome-panel, .category-panel { background: #172119; box-shadow: none; }
+  .text-button { color: #9ed7aa; }
+}
+
