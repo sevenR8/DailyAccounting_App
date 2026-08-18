@@ -1,5 +1,6 @@
 import { LedgerModule } from './ledger-module.js';
 import {
+  sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
@@ -75,7 +76,7 @@ function renderSetup() {
     <main class="auth-card">
       <p class="eyebrow">每日帳本</p>
       <h1>先連結你的帳本</h1>
-      <p>填入 Supabase 專案網址與公開匿名金鑰後，即可使用 Google 登入並安全建立個人帳本。</p>
+      <p>填入 Supabase 專案網址與公開匿名金鑰後，即可使用登入連結或 Google 登入，安全建立個人帳本。</p>
       <p class="notice">這兩項設定需在部署前填入 <code>config.js</code>；不要把服務角色金鑰放入前端。</p>
     </main>`;
 }
@@ -86,8 +87,40 @@ function renderSignIn() {
       <p class="eyebrow">每日帳本</p>
       <h1>把每一筆開銷記得簡單。</h1>
       <p>登入後會自動建立你的帳本與六個預設分類。</p>
+      <form class="email-sign-in" id="email-sign-in">
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" autocomplete="email" inputmode="email" placeholder="name@example.com" required />
+        <button class="email-button" type="submit">寄送登入連結</button>
+        <p class="form-status" id="email-status" aria-live="polite"></p>
+      </form>
+      <div class="sign-in-divider" aria-hidden="true"><span>或</span></div>
       <button class="google-button" type="button" id="google-sign-in">使用 Google 繼續</button>
+      <p class="sign-in-hint">Google 登入正在等待 Google Cloud 設定完成；現在可先使用 Email 登入連結。</p>
     </main>`;
+
+  document.querySelector('#email-sign-in').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const email = new FormData(form).get('email').trim();
+    const button = form.querySelector('button');
+    const status = document.querySelector('#email-status');
+    button.disabled = true;
+    status.textContent = '正在寄送登入連結…';
+
+    try {
+      await sendMagicLink({
+        supabaseUrl: config.supabaseUrl,
+        supabaseAnonKey: config.supabaseAnonKey,
+        email,
+        redirectTo: window.location.href,
+      });
+      status.textContent = `登入連結已寄到 ${email}，請到信箱點開它。`;
+    } catch (error) {
+      status.textContent = error.message;
+    } finally {
+      button.disabled = false;
+    }
+  });
 
   document.querySelector('#google-sign-in').addEventListener('click', () => {
     startGoogleSignIn({
