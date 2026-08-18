@@ -13,7 +13,7 @@ export class SupabaseConnection {
   }
 
   async request(path, options = {}) {
-    return this.fetchImpl(`${this.supabaseUrl}${path}`, {
+    return this.fetchImpl.call(globalThis, `${this.supabaseUrl}${path}`, {
       ...options,
       headers: { ...jsonHeaders(this.accessToken, this.supabaseAnonKey), ...options.headers },
     });
@@ -99,7 +99,7 @@ export async function sendMagicLink({
   redirectTo,
   fetchImpl = fetch,
 }) {
-  const response = await fetchImpl(`${supabaseUrl.replace(/\/$/, '')}/auth/v1/otp`, {
+  const response = await fetchImpl.call(globalThis, `${supabaseUrl.replace(/\/$/, '')}/auth/v1/otp`, {
     method: 'POST',
     headers: {
       apikey: supabaseAnonKey,
