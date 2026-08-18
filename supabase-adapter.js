@@ -89,7 +89,7 @@ export class SupabaseLedgerAdapter {
       select: 'id,category_id,item_name,amount,payment_method,occurred_at,created_at',
       ledger_id: `eq.${ledgerId}`,
       order: 'occurred_at.desc',
-      limit: '30',
+      limit: '1000',
     });
     const response = await this.connection.request(`/rest/v1/expense_entries?${parameters}`);
     if (!response.ok) {
