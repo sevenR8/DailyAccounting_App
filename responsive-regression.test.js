@@ -38,3 +38,10 @@ test('桌面快速記帳的日期時間欄位獨占整列，完整保留日期�
     /@media \(min-width: 900px\)[\s\S]*\.expense-form \.expense-datetime-field\s*\{[^}]*grid-column:\s*1\s*\/\s*-1;/,
   );
 });
+
+test('手機快速記帳的日期時間與金額欄位共用同一個受限單欄寬度', () => {
+  assert.match(
+    baseStyles,
+    /\.expense-form\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);[^}]*width:\s*100%;[^}]*min-width:\s*0;/s,
+  );
+});

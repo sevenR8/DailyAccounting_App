@@ -361,7 +361,13 @@ button { font: inherit; cursor: pointer; }
 .migration-notice { border: 1px dashed #d89949; }
 .migration-notice p { margin: 0; color: #657066; line-height: 1.65; }
 
-.expense-form { display: grid; gap: 14px; }
+.expense-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  width: 100%;
+  min-width: 0;
+  gap: 14px;
+}
 .expense-form > label { display: grid; gap: 7px; min-width: 0; font-weight: 800; }
 .expense-form input:not([type="radio"]),
 .expense-form select {

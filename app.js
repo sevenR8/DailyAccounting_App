@@ -1,23 +1,23 @@
-import { LedgerModule } from './ledger-module.js?v=19';
-import { calculateFinancialSummary } from './financial-summary.js?v=19';
+import { LedgerModule } from './ledger-module.js?v=20';
+import { calculateFinancialSummary } from './financial-summary.js?v=20';
 import {
   buildExpenseTemplates,
   dailyExpenseTotalTone,
   findExpenseTemplates,
   groupExpenseEntriesByDay,
-} from './daily-history.js?v=19';
+} from './daily-history.js?v=20';
 import {
   accountingPeriodFromStart,
   compareExpenseTotals,
   scheduledDateInAccountingPeriod,
   shiftAccountingPeriodStart,
-} from './accounting-period.js?v=19';
+} from './accounting-period.js?v=20';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=19';
+} from './supabase-adapter.js?v=20';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
