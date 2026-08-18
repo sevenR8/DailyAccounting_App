@@ -1,4 +1,5 @@
 import { LedgerModule } from './ledger-module.js?v=4';
+import { calculateFinancialSummary } from './financial-summary.js?v=4';
 import {
   sendMagicLink,
   startGoogleSignIn,
@@ -164,7 +165,29 @@ function currentAccountingPeriod(now = new Date(), startDay = 5) {
   return { start, end };
 }
 
+function localDateFromISO(value) {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
+
 async function renderLedger(ledger, user, expenseAdapter) {
+  let financialOverview = null;
+  try {
+    const period = await expenseAdapter.ensureCurrentAccountingPeriod(ledger.id);
+    const [settings, otherIncomeEntries, fixedExpenseRules] = await Promise.all([
+      expenseAdapter.getFinancialSettings(ledger.id),
+      expenseAdapter.listOtherIncomeEntries({
+        ledgerId: ledger.id,
+        startsOn: period.starts_on,
+        endsOn: period.ends_on,
+      }),
+      expenseAdapter.listFixedExpenseRules(ledger.id),
+    ]);
+    financialOverview = { period, settings, otherIncomeEntries, fixedExpenseRules };
+  } catch (error) {
+    financialOverview = null;
+  }
+
   let entries = [];
   try {
     entries = await expenseAdapter.listExpenseEntries(ledger.id);
@@ -176,18 +199,38 @@ async function renderLedger(ledger, user, expenseAdapter) {
   const userEmail = user.email || '目前使用者';
   const userDisplayName = user.user_metadata?.full_name || userEmail.split('@')[0];
   const userInitial = Array.from(userDisplayName.trim())[0]?.toUpperCase() || '我';
-  const { start: periodStart, end: periodEnd } = currentAccountingPeriod();
+  const fallbackPeriod = currentAccountingPeriod();
+  const periodStart = financialOverview
+    ? localDateFromISO(financialOverview.period.starts_on)
+    : fallbackPeriod.start;
+  const periodEnd = financialOverview
+    ? new Date(localDateFromISO(financialOverview.period.ends_on).getTime() + 86_400_000)
+    : fallbackPeriod.end;
   const periodEntries = entries.filter((entry) => {
     const occurredAt = new Date(entry.occurred_at);
     return occurredAt >= periodStart && occurredAt < periodEnd;
   });
-  const cashTotal = periodEntries
-    .filter((entry) => entry.payment_method === 'cash')
+  const calculatedSummary = financialOverview ? calculateFinancialSummary({
+    periodEntries,
+    fixedExpenseRules: financialOverview.fixedExpenseRules,
+    salaryAmount: financialOverview.period.salary_amount,
+    otherIncomeEntries: financialOverview.otherIncomeEntries,
+    previousCardBillAmount: financialOverview.period.previous_card_bill_amount,
+    previousCardBillZeroConfirmed: financialOverview.period.previous_card_bill_zero_confirmed,
+  }) : null;
+  const cashTotal = calculatedSummary?.cashTotal ?? periodEntries
+    .filter((entry) => !entry.is_fixed && entry.payment_method === 'cash')
     .reduce((total, entry) => total + entry.amount, 0);
-  const creditCardTotal = periodEntries
-    .filter((entry) => entry.payment_method === 'credit_card')
+  const creditCardTotal = calculatedSummary?.creditCardTotal ?? periodEntries
+    .filter((entry) => !entry.is_fixed && entry.payment_method === 'credit_card')
     .reduce((total, entry) => total + entry.amount, 0);
-  const expenseTotal = cashTotal + creditCardTotal;
+  const nonFixedExpenseTotal = cashTotal + creditCardTotal;
+  const generatedExpenseTotal = calculatedSummary?.generatedExpenseTotal
+    ?? periodEntries.reduce((total, entry) => total + entry.amount, 0);
+  const fixedExpenseTotal = calculatedSummary?.fixedExpenseTotal ?? null;
+  const totalIncome = calculatedSummary?.totalIncome ?? null;
+  const previousCardBillReady = calculatedSummary?.previousCardBillReady ?? false;
+  const savingsAmount = calculatedSummary?.savingsAmount ?? null;
   const chartColors = ['#e07a45', '#3f9ee8', '#e94c64', '#79bf5a', '#a274d6', '#e6b83f'];
   const categoryBreakdown = ledger.categories
     .map((category, index) => ({
@@ -202,7 +245,7 @@ async function renderLedger(ledger, user, expenseAdapter) {
   let chartCursor = 0;
   const chartSegments = categoryBreakdown.map((category) => {
     const startPercent = chartCursor;
-    chartCursor += (category.amount / expenseTotal) * 100;
+    chartCursor += (category.amount / generatedExpenseTotal) * 100;
     return `${category.color} ${startPercent}% ${chartCursor}%`;
   });
   const pieBackground = chartSegments.length
@@ -212,7 +255,7 @@ async function renderLedger(ledger, user, expenseAdapter) {
     <li>
       <span class="legend-color" style="background:${category.color}"></span>
       <span>${escapeHtml(category.name)}</span>
-      <strong>${Math.round((category.amount / expenseTotal) * 100)}%</strong>
+      <strong>${Math.round((category.amount / generatedExpenseTotal) * 100)}%</strong>
       <small>$${formatAmount(category.amount)}</small>
     </li>`).join('');
   const suggestions = entries.slice(0, 6);
@@ -232,6 +275,74 @@ async function renderLedger(ledger, user, expenseAdapter) {
       </span>
     </button>`).join('');
 
+  const periodLabel = `${formatEntryDate(periodStart)}－${formatEntryDate(new Date(periodEnd.getTime() - 1))}`;
+  const otherIncomeList = financialOverview?.otherIncomeEntries.map((income) => `
+    <li><span>${escapeHtml(income.name)}</span><strong>+$${formatAmount(income.amount)}</strong></li>`).join('') || '';
+  const fixedExpenseList = financialOverview?.fixedExpenseRules.map((rule) => `
+    <li>
+      <span>${rule.scheduled_day} 日・${escapeHtml(rule.item_name)}・${rule.payment_method === 'cash' ? '現金' : '信用卡'}</span>
+      <strong>$${formatAmount(rule.amount)}</strong>
+    </li>`).join('') || '';
+  const financialPanel = financialOverview ? `
+    <section class="finance-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">本期財務</p>
+          <h2>收入、帳單與固定開銷</h2>
+        </div>
+        <span>${escapeHtml(periodLabel)}</span>
+      </div>
+      <form class="compact-form period-finance-form" id="period-finance-form">
+        <label>本期薪水
+          <input name="salaryAmount" type="number" min="0" step="1" inputmode="numeric" value="${financialOverview.period.salary_amount}" required />
+        </label>
+        <label>上期信用卡帳單
+          <input id="previous-card-bill" name="previousCardBillAmount" type="number" min="0" step="1" inputmode="numeric" value="${financialOverview.period.previous_card_bill_amount ?? ''}" placeholder="尚未輸入" ${financialOverview.period.previous_card_bill_zero_confirmed ? 'disabled' : ''} />
+        </label>
+        <label class="inline-check"><input id="zero-card-bill" name="zeroCardBill" type="checkbox" ${financialOverview.period.previous_card_bill_zero_confirmed ? 'checked' : ''} /> 上期帳單確實為 0 元</label>
+        <button class="small-primary-button" type="submit">儲存本期資料</button>
+        <p class="form-status" id="period-finance-status" aria-live="polite"></p>
+      </form>
+      <form class="compact-form default-salary-form" id="default-salary-form">
+        <label>每期預設薪水
+          <input name="defaultSalaryAmount" type="number" min="0" step="1" inputmode="numeric" value="${financialOverview.settings.default_salary_amount}" required />
+        </label>
+        <button class="secondary-button" type="submit">套用至未來週期</button>
+        <p class="form-status" id="default-salary-status" aria-live="polite"></p>
+      </form>
+      <div class="finance-subsection">
+        <h3>其他收入</h3>
+        <ul class="money-list">${otherIncomeList || '<li class="empty-money-list">本期尚無其他收入</li>'}</ul>
+        <form class="inline-money-form" id="other-income-form">
+          <input name="name" type="text" maxlength="100" placeholder="收入名稱" aria-label="其他收入名稱" required />
+          <input name="amount" type="number" min="1" step="1" inputmode="numeric" placeholder="金額" aria-label="其他收入金額" required />
+          <button class="secondary-button" type="submit">新增</button>
+          <p class="form-status" id="other-income-status" aria-live="polite"></p>
+        </form>
+      </div>
+      <div class="finance-subsection">
+        <h3>本期固定開銷</h3>
+        <ul class="money-list">${fixedExpenseList || '<li class="empty-money-list">尚未設定固定開銷</li>'}</ul>
+        <form class="fixed-rule-form" id="fixed-rule-form">
+          <input name="itemName" type="text" maxlength="100" placeholder="項目，例如房租" aria-label="固定開銷項目" required />
+          <input name="amount" type="number" min="1" step="1" inputmode="numeric" placeholder="金額" aria-label="固定開銷金額" required />
+          <select name="categoryId" aria-label="固定開銷分類" required>${categoryOptions}</select>
+          <select name="paymentMethod" aria-label="固定開銷付款方式" required>
+            <option value="cash">現金</option>
+            <option value="credit_card">信用卡</option>
+          </select>
+          <label>每月<input name="scheduledDay" type="number" min="1" max="28" step="1" inputmode="numeric" value="5" aria-label="固定開銷產生日" required />日</label>
+          <button class="secondary-button" type="submit">新增固定開銷</button>
+          <p class="form-status" id="fixed-rule-status" aria-live="polite"></p>
+        </form>
+      </div>
+    </section>` : `
+    <section class="finance-panel migration-notice">
+      <p class="eyebrow">需要資料庫升級</p>
+      <h2>啟用完整本期總覽</h2>
+      <p>請在 Supabase SQL Editor 執行 <code>supabase-0002-financial-overview.sql</code>，即可同步本期薪水、其他收入、上期信用卡帳單、固定開銷與可存額。</p>
+    </section>`;
+
   app.innerHTML = `
     <main class="ledger-home">
       <header class="top-bar">
@@ -250,20 +361,24 @@ async function renderLedger(ledger, user, expenseAdapter) {
             <p class="eyebrow">本期總覽</p>
             <h2>分類占比</h2>
           </div>
-          <span>${escapeHtml(formatEntryDate(periodStart))}－${escapeHtml(formatEntryDate(new Date(periodEnd.getTime() - 1)))}</span>
+          <span>${escapeHtml(periodLabel)}</span>
         </div>
         <div class="chart-body">
           <div class="expense-pie" role="img" aria-label="本期分類圓餅圖" style="background:${pieBackground}">
-            <div><span>本期開銷</span><strong>$${formatAmount(expenseTotal)}</strong></div>
+            <div><span>已產生開銷</span><strong>$${formatAmount(generatedExpenseTotal)}</strong></div>
           </div>
           <ul class="chart-legend">${chartLegend || '<li class="empty-chart">新增開銷後會顯示分類占比</li>'}</ul>
         </div>
       </section>
-      <section class="summary-panel" aria-label="已記錄開銷摘要">
-        <div><span>現金</span><strong>$${formatAmount(cashTotal)}</strong></div>
-        <div><span>信用卡</span><strong>$${formatAmount(creditCardTotal)}</strong></div>
-        <div><span>本期總額</span><strong>$${formatAmount(expenseTotal)}</strong></div>
+      <section class="summary-panel" aria-label="本期帳務摘要">
+        <div><span>本期收入</span><strong>${totalIncome === null ? '—' : `$${formatAmount(totalIncome)}`}</strong></div>
+        <div><span>非固定現金</span><strong>$${formatAmount(cashTotal)}</strong></div>
+        <div><span>非固定信用卡</span><strong>$${formatAmount(creditCardTotal)}</strong></div>
+        <div><span>非固定總開銷</span><strong>$${formatAmount(nonFixedExpenseTotal)}</strong></div>
+        <div><span>本期固定開銷</span><strong>${fixedExpenseTotal === null ? '—' : `$${formatAmount(fixedExpenseTotal)}`}</strong></div>
+        <div class="savings-summary"><span>本期可存額</span><strong>${financialOverview && !previousCardBillReady ? '待輸入帳單' : savingsAmount === null ? '—' : `$${formatAmount(savingsAmount)}`}</strong></div>
       </section>
+      ${financialPanel}
       <section class="quick-entry-panel">
         <div>
           <p class="eyebrow">快速記帳</p>
@@ -336,6 +451,107 @@ async function renderLedger(ledger, user, expenseAdapter) {
       button.disabled = false;
     }
   });
+
+  if (financialOverview) {
+    const zeroCardBill = document.querySelector('#zero-card-bill');
+    const previousCardBill = document.querySelector('#previous-card-bill');
+    zeroCardBill.addEventListener('change', () => {
+      previousCardBill.disabled = zeroCardBill.checked;
+      if (zeroCardBill.checked) previousCardBill.value = '';
+    });
+
+    document.querySelector('#period-finance-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const formData = new FormData(form);
+      const button = form.querySelector('button[type="submit"]');
+      const status = document.querySelector('#period-finance-status');
+      const zeroConfirmed = formData.get('zeroCardBill') === 'on';
+      const billValue = formData.get('previousCardBillAmount');
+      button.disabled = true;
+      status.textContent = '正在儲存…';
+      try {
+        await expenseAdapter.updateAccountingPeriod({
+          ledgerId: ledger.id,
+          startsOn: financialOverview.period.starts_on,
+          salaryAmount: Number(formData.get('salaryAmount')),
+          previousCardBillAmount: zeroConfirmed || billValue === '' ? null : Number(billValue),
+          previousCardBillZeroConfirmed: zeroConfirmed,
+        });
+        await renderLedger(ledger, user, expenseAdapter);
+      } catch (error) {
+        status.textContent = error.message;
+        button.disabled = false;
+      }
+    });
+
+    document.querySelector('#default-salary-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const formData = new FormData(form);
+      const button = form.querySelector('button[type="submit"]');
+      const status = document.querySelector('#default-salary-status');
+      button.disabled = true;
+      status.textContent = '正在儲存…';
+      try {
+        await expenseAdapter.updateFinancialSettings({
+          ledgerId: ledger.id,
+          cycleStartDay: financialOverview.settings.cycle_start_day,
+          defaultSalaryAmount: Number(formData.get('defaultSalaryAmount')),
+        });
+        await renderLedger(ledger, user, expenseAdapter);
+      } catch (error) {
+        status.textContent = error.message;
+        button.disabled = false;
+      }
+    });
+
+    document.querySelector('#other-income-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const formData = new FormData(form);
+      const button = form.querySelector('button[type="submit"]');
+      const status = document.querySelector('#other-income-status');
+      button.disabled = true;
+      status.textContent = '正在新增…';
+      try {
+        await expenseAdapter.createOtherIncomeEntry({
+          ledgerId: ledger.id,
+          name: formData.get('name').trim(),
+          amount: Number(formData.get('amount')),
+          receivedAt: new Date().toISOString(),
+        });
+        await renderLedger(ledger, user, expenseAdapter);
+      } catch (error) {
+        status.textContent = error.message;
+        button.disabled = false;
+      }
+    });
+
+    document.querySelector('#fixed-rule-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const formData = new FormData(form);
+      const button = form.querySelector('button[type="submit"]');
+      const status = document.querySelector('#fixed-rule-status');
+      button.disabled = true;
+      status.textContent = '正在新增…';
+      try {
+        await expenseAdapter.createFixedExpenseRule({
+          ledgerId: ledger.id,
+          categoryId: formData.get('categoryId'),
+          itemName: formData.get('itemName').trim(),
+          amount: Number(formData.get('amount')),
+          paymentMethod: formData.get('paymentMethod'),
+          scheduledDay: Number(formData.get('scheduledDay')),
+        });
+        await renderLedger(ledger, user, expenseAdapter);
+      } catch (error) {
+        status.textContent = error.message;
+        button.disabled = false;
+      }
+    });
+  }
 
   document.querySelectorAll('[data-suggestion-index]').forEach((button) => {
     button.addEventListener('click', () => {
