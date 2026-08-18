@@ -5,6 +5,7 @@ import test from 'node:test';
 const serviceWorker = await readFile(new URL('./service-worker.js', import.meta.url), 'utf8');
 
 test('已部署的設定檔優先從網路讀取，避免舊快取卡住連線設定', () => {
+  assert.match(serviceWorker, /daily-ledger-shell-v3/);
   assert.match(serviceWorker, /event\.request\.url\.endsWith\('\/config\.js'\)/);
   assert.match(serviceWorker, /fetch\(request\)[\s\S]*caches\.open\(CACHE_NAME\)/);
 });
