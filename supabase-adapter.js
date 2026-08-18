@@ -83,6 +83,47 @@ export class SupabaseLedgerAdapter {
   async createPersonalLedger({ displayName }) {
     return this.connection.provisionPersonalLedger(displayName);
   }
+
+  async listExpenseEntries(ledgerId) {
+    const parameters = new URLSearchParams({
+      select: 'id,category_id,item_name,amount,payment_method,occurred_at,created_at',
+      ledger_id: `eq.${ledgerId}`,
+      order: 'occurred_at.desc',
+      limit: '30',
+    });
+    const response = await this.connection.request(`/rest/v1/expense_entries?${parameters}`);
+    if (!response.ok) {
+      throw new Error('無法讀取開銷紀錄，請稍後再試一次。');
+    }
+    return response.json();
+  }
+
+  async createExpenseEntry({
+    ledgerId,
+    categoryId,
+    itemName,
+    amount,
+    paymentMethod,
+    occurredAt,
+  }) {
+    const response = await this.connection.request('/rest/v1/expense_entries', {
+      method: 'POST',
+      headers: { Prefer: 'return=representation' },
+      body: JSON.stringify({
+        ledger_id: ledgerId,
+        category_id: categoryId,
+        item_name: itemName,
+        amount,
+        payment_method: paymentMethod,
+        occurred_at: occurredAt,
+      }),
+    });
+    if (!response.ok) {
+      throw new Error('無法儲存這筆開銷，請確認網路後再試一次。');
+    }
+    const [entry] = await response.json();
+    return entry;
+  }
 }
 
 export function startGoogleSignIn({ supabaseUrl, redirectTo }) {
