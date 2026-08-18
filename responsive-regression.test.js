@@ -14,14 +14,19 @@ test('桌面近期紀錄的每一天維持完整內容高度，不會因資料�
   );
 });
 
-test('iOS 日期時間欄位避開 width 100% 加內距造成的 WebKit 溢位', () => {
-  const datetimeRule = stylesSource.match(
-    /input\[type=['"]datetime-local['"]\]\s*\{([^}]*)\}/s,
-  )?.[1] ?? '';
-  assert.doesNotMatch(datetimeRule, /(^|\n)\s*width:\s*100%/);
-  assert.match(datetimeRule, /width:\s*auto/);
-  assert.match(datetimeRule, /inline-size:\s*auto/);
-  assert.match(datetimeRule, /justify-self:\s*stretch/);
+test('iOS 日期時間欄位由受限外框提供寬度，原生控制不再以內距撐破卡片', () => {
+  assert.match(
+    appSource,
+    /<span class="expense-datetime-control">[\s\S]*id="expense-occurred-at"[\s\S]*<\/span>/,
+  );
+  assert.match(
+    stylesSource,
+    /\.expense-datetime-control\s*\{[^}]*width:\s*100%;[^}]*max-width:\s*100%;[^}]*overflow:\s*hidden;[^}]*padding:\s*13px;/s,
+  );
+  assert.match(
+    stylesSource,
+    /\.expense-datetime-control input\[type="datetime-local"\]\s*\{[^}]*width:\s*100%;[^}]*border:\s*0;[^}]*padding:\s*0;/s,
+  );
 });
 
 test('手機版停用雙指縮放', () => {

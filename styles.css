@@ -388,6 +388,32 @@ input[type="datetime-local"] {
   justify-self: stretch;
 }
 
+.expense-datetime-control {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  border: 1px solid #aeb9ae;
+  border-radius: 13px;
+  padding: 13px;
+  background: white;
+  color: inherit;
+}
+
+.expense-datetime-control input[type="datetime-local"] {
+  width: 100%;
+  inline-size: 100%;
+  min-width: 0;
+  max-width: 100%;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
 .expense-form fieldset { display: flex; flex-wrap: wrap; gap: 14px; margin: 0; padding: 12px; border: 1px solid #d4dbd3; border-radius: 13px; }
 .expense-form legend { padding: 0 4px; font-weight: 800; }
 .expense-form fieldset label { display: flex; gap: 6px; align-items: center; }
@@ -546,6 +572,8 @@ input[type="datetime-local"] {
   .user-menu-popover p { color: #aeb9af; }
   .email-sign-in input { background: #172119; border-color: #526154; }
   .expense-form input:not([type="radio"]), .expense-form select { background: #172119; border-color: #526154; }
+  .expense-datetime-control { border-color: #526154; background: #172119; }
+  .expense-datetime-control input[type="datetime-local"] { border: 0; background: transparent; }
   .expense-form fieldset { border-color: #3b493d; }
   .smart-suggestions-heading strong { color: #a8dbb5; }
   .smart-suggestions-heading small, .smart-suggestion-list small { color: #aeb9af; }
