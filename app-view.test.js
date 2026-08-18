@@ -88,7 +88,17 @@ test('近期紀錄按日折疊，關閉時顯示當日現金與信用卡合計',
   assert.match(appSource, /class="day-expense-summary"/);
   assert.match(appSource, /day\.cashTotal/);
   assert.match(appSource, /day\.creditCardTotal/);
+  assert.match(appSource, /day\.total/);
+  assert.match(appSource, /<small>總開銷<\/small>/);
   assert.match(appSource, /day\.entries\.map/);
   assert.match(stylesSource, /\.day-expense-summary/);
+});
+
+test('展開每日紀錄後，每筆開銷右側提供垃圾桶刪除按鈕', () => {
+  assert.match(appSource, /class="expense-entry-delete"/);
+  assert.match(appSource, /data-action="delete-expense"/);
+  assert.match(appSource, /aria-label="刪除開銷/);
+  assert.match(appSource, /deleteExpenseEntry/);
+  assert.match(stylesSource, /\.expense-entry-delete/);
 });
 

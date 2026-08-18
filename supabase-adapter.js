@@ -125,6 +125,20 @@ export class SupabaseLedgerAdapter {
     return entry;
   }
 
+  async deleteExpenseEntry({ ledgerId, entryId }) {
+    const parameters = new URLSearchParams({
+      id: `eq.${entryId}`,
+      ledger_id: `eq.${ledgerId}`,
+    });
+    const response = await this.connection.request(`/rest/v1/expense_entries?${parameters}`, {
+      method: 'DELETE',
+      headers: { Prefer: 'return=minimal' },
+    });
+    if (!response.ok) {
+      throw new Error('無法刪除這筆開銷，請確認網路後再試一次。');
+    }
+  }
+
   async ensureCurrentAccountingPeriod(ledgerId) {
     const response = await this.connection.request('/rest/v1/rpc/ensure_current_accounting_period', {
       method: 'POST',

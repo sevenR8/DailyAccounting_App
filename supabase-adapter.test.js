@@ -139,6 +139,30 @@ test('快速記帳會以目前帳本與分類新增一筆開銷', async () => {
   });
 });
 
+test('刪除開銷只會刪除目前帳本中指定的一筆紀錄', async () => {
+  const calls = [];
+  const connection = new SupabaseConnection({
+    supabaseUrl: 'https://example.supabase.co',
+    supabaseAnonKey: 'public-key',
+    accessToken: 'access-token',
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      return response(null);
+    },
+  });
+
+  await new SupabaseLedgerAdapter(connection).deleteExpenseEntry({
+    ledgerId: 'ledger-1',
+    entryId: 'expense-1',
+  });
+
+  assert.equal(
+    calls[0].url,
+    'https://example.supabase.co/rest/v1/expense_entries?id=eq.expense-1&ledger_id=eq.ledger-1',
+  );
+  assert.equal(calls[0].options.method, 'DELETE');
+});
+
 test('固定開銷規則會保存日期、分類與付款方式', async () => {
   const calls = [];
   const connection = new SupabaseConnection({

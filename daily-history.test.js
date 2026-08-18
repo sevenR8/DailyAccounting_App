@@ -12,12 +12,13 @@ test('每日紀錄以台灣日期合併並分別加總現金與信用卡', () =>
 
   assert.deepEqual(days.map((day) => ({
     key: day.key,
+    total: day.total,
     cashTotal: day.cashTotal,
     creditCardTotal: day.creditCardTotal,
     entryIds: day.entries.map((entry) => entry.id),
   })), [
-    { key: '2026-08-19', cashTotal: 80, creditCardTotal: 120, entryIds: ['3', '2'] },
-    { key: '2026-08-18', cashTotal: 100, creditCardTotal: 0, entryIds: ['1'] },
+    { key: '2026-08-19', total: 200, cashTotal: 80, creditCardTotal: 120, entryIds: ['3', '2'] },
+    { key: '2026-08-18', total: 100, cashTotal: 100, creditCardTotal: 0, entryIds: ['1'] },
   ]);
 });
 

@@ -1,12 +1,12 @@
-import { LedgerModule } from './ledger-module.js?v=8';
-import { calculateFinancialSummary } from './financial-summary.js?v=8';
-import { groupExpenseEntriesByDay } from './daily-history.js?v=8';
+import { LedgerModule } from './ledger-module.js?v=9';
+import { calculateFinancialSummary } from './financial-summary.js?v=9';
+import { groupExpenseEntriesByDay } from './daily-history.js?v=9';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=8';
+} from './supabase-adapter.js?v=9';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -277,19 +277,33 @@ async function renderLedger(ledger, user, expenseAdapter) {
           <time datetime="${escapeHtml(day.key)}">${escapeHtml(formatEntryDate(day.occurredAt))}</time>
           <small>${day.entries.length} 筆</small>
         </span>
+        <span class="day-payment-total day-total"><small>總開銷</small><strong>$${formatAmount(day.total)}</strong></span>
         <span class="day-payment-total"><small>現金</small><strong>$${formatAmount(day.cashTotal)}</strong></span>
         <span class="day-payment-total"><small>信用卡</small><strong>$${formatAmount(day.creditCardTotal)}</strong></span>
         <span class="day-summary-chevron" aria-hidden="true">⌄</span>
       </summary>
       <div class="day-expense-list">
         ${day.entries.map((entry) => `
-          <button class="day-expense-entry" type="button" data-suggestion-index="${suggestionIndexById.get(entry.id)}">
-            <span class="entry-date"><time datetime="${escapeHtml(entry.occurred_at)}">${escapeHtml(formatEntryTime(entry.occurred_at))}</time></span>
-            <span class="entry-detail">
-              <strong>$${formatAmount(entry.amount)}・${escapeHtml(entry.item_name)}</strong>
-              <small>${escapeHtml(categoryNames.get(entry.category_id) || '未分類')}・${entry.payment_method === 'cash' ? '現金' : '信用卡'}</small>
-            </span>
-          </button>`).join('')}
+          <div class="day-expense-row">
+            <button class="day-expense-entry" type="button" data-suggestion-index="${suggestionIndexById.get(entry.id)}">
+              <span class="entry-date"><time datetime="${escapeHtml(entry.occurred_at)}">${escapeHtml(formatEntryTime(entry.occurred_at))}</time></span>
+              <span class="entry-detail">
+                <strong>$${formatAmount(entry.amount)}・${escapeHtml(entry.item_name)}</strong>
+                <small>${escapeHtml(categoryNames.get(entry.category_id) || '未分類')}・${entry.payment_method === 'cash' ? '現金' : '信用卡'}</small>
+              </span>
+            </button>
+            ${entry.is_fixed ? '<span class="fixed-entry-indicator" aria-label="固定開銷，請至固定開銷面板管理">固定</span>' : `
+              <button
+                class="expense-entry-delete"
+                type="button"
+                data-action="delete-expense"
+                data-entry-id="${escapeHtml(entry.id)}"
+                data-entry-name="${escapeHtml(entry.item_name)}"
+                data-entry-amount="${entry.amount}"
+                aria-label="刪除開銷：${escapeHtml(entry.item_name)}"
+                title="刪除這筆開銷"
+              ><span aria-hidden="true">🗑</span></button>`}
+          </div>`).join('')}
       </div>
     </details>`).join('');
 
@@ -702,6 +716,27 @@ async function renderLedger(ledger, user, expenseAdapter) {
       document.querySelector(`input[name="paymentMethod"][value="${entry.payment_method}"]`).checked = true;
       document.querySelector('#expense-occurred-at').value = toDateTimeLocalValue();
       document.querySelector('#expense-amount').focus();
+    });
+  });
+
+  document.querySelectorAll('[data-action="delete-expense"]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const confirmed = window.confirm(
+        `確定刪除「$${formatAmount(Number(button.dataset.entryAmount))}・${button.dataset.entryName}」？`,
+      );
+      if (!confirmed) return;
+
+      button.disabled = true;
+      try {
+        await expenseAdapter.deleteExpenseEntry({
+          ledgerId: ledger.id,
+          entryId: button.dataset.entryId,
+        });
+        await renderLedger(ledger, user, expenseAdapter);
+      } catch (error) {
+        button.disabled = false;
+        window.alert(error.message);
+      }
     });
   });
 }

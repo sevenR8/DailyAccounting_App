@@ -21,6 +21,7 @@ export function groupExpenseEntriesByDay(entries) {
       days.set(key, {
         key,
         occurredAt: entry.occurred_at,
+        total: 0,
         cashTotal: 0,
         creditCardTotal: 0,
         entries: [],
@@ -29,6 +30,7 @@ export function groupExpenseEntriesByDay(entries) {
 
     const day = days.get(key);
     day.entries.push(entry);
+    day.total += entry.amount;
     if (entry.payment_method === 'cash') {
       day.cashTotal += entry.amount;
     } else if (entry.payment_method === 'credit_card') {

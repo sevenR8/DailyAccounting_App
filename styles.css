@@ -308,7 +308,7 @@ button { font: inherit; cursor: pointer; }
 }
 .day-expense-summary {
   display: grid;
-  grid-template-columns: minmax(82px, 1.25fr) repeat(2, minmax(54px, 0.8fr)) 14px;
+  grid-template-columns: minmax(82px, 1.25fr) repeat(3, minmax(48px, 0.72fr)) 14px;
   gap: 5px;
   align-items: center;
   padding: 12px;
@@ -330,6 +330,7 @@ button { font: inherit; cursor: pointer; }
 .day-payment-total small { color: #68736a; font-size: 0.65rem; }
 .day-payment-total { text-align: right; }
 .day-payment-total strong { font-size: 0.78rem; white-space: nowrap; }
+.day-total small, .day-total strong { color: #bd3e35; }
 .day-summary-chevron {
   color: #68736a;
   font-weight: 900;
@@ -339,19 +340,23 @@ button { font: inherit; cursor: pointer; }
 .day-expense-group[open] .day-summary-chevron { transform: rotate(180deg); }
 .day-expense-group[open] .day-expense-summary { border-bottom: 1px solid #d7ded5; }
 .day-expense-list { display: grid; }
+.day-expense-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 42px;
+  border-top: 1px solid #dfe5dc;
+}
+.day-expense-row:first-child { border-top: 0; }
 .day-expense-entry {
   display: grid;
   grid-template-columns: 76px minmax(0, 1fr);
   gap: 10px;
   width: 100%;
   border: 0;
-  border-top: 1px solid #dfe5dc;
   padding: 12px;
   background: transparent;
   color: #26342a;
   text-align: left;
 }
-.day-expense-entry:first-child { border-top: 0; }
 .day-expense-entry:hover,
 .day-expense-entry:focus-visible { background: #e5eadf; }
 .day-expense-entry:focus-visible { outline: 2px solid #3d7b54; outline-offset: -2px; }
@@ -361,6 +366,21 @@ button { font: inherit; cursor: pointer; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.expense-entry-delete,
+.fixed-entry-indicator {
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-left: 1px solid #dfe5dc;
+  background: transparent;
+  color: #d93d34;
+  font-size: 1.1rem;
+}
+.expense-entry-delete:hover,
+.expense-entry-delete:focus-visible { background: #fbe8e5; }
+.expense-entry-delete:focus-visible { outline: 2px solid #d93d34; outline-offset: -2px; }
+.expense-entry-delete:disabled { cursor: wait; opacity: 0.45; }
+.fixed-entry-indicator { color: #778178; font-size: 0.65rem; font-weight: 800; }
 .entry-date, .entry-detail { display: grid; gap: 4px; }
 .entry-date { padding-right: 12px; border-right: 1px solid #d7ded5; color: #304033; }
 .entry-date time { font-size: 0.78rem; font-weight: 800; }
@@ -405,15 +425,24 @@ button { font: inherit; cursor: pointer; }
   .entry-date { color: #dce5dd; border-color: #3b493d; }
   .day-expense-summary, .day-expense-entry { color: #dce5dd; }
   .day-summary-date small, .day-payment-total small, .day-summary-chevron { color: #aeb9af; }
-  .day-expense-group[open] .day-expense-summary, .day-expense-entry { border-color: #3b493d; }
+  .day-expense-group[open] .day-expense-summary, .day-expense-row, .expense-entry-delete, .fixed-entry-indicator { border-color: #3b493d; }
   .day-expense-entry:hover, .day-expense-entry:focus-visible { background: #29362b; }
+  .day-total small, .day-total strong, .expense-entry-delete { color: #ff9189; }
+  .expense-entry-delete:hover, .expense-entry-delete:focus-visible { background: #3b2725; }
   .sign-in-divider::before, .sign-in-divider::after { background: #3b493d; }
 }
 
 @media (max-width: 380px) {
   .chart-body { grid-template-columns: 1fr; justify-items: center; }
   .chart-legend { width: 100%; }
-  .day-expense-summary { padding-inline: 9px; }
+  .day-expense-summary {
+    grid-template-columns: minmax(72px, 1.2fr) repeat(3, minmax(36px, 0.65fr)) 12px;
+    gap: 3px;
+    padding-inline: 8px;
+  }
+  .day-summary-date time { font-size: 0.66rem; }
+  .day-summary-date small, .day-payment-total small { font-size: 0.58rem; }
+  .day-payment-total strong { font-size: 0.7rem; }
   .day-expense-entry { grid-template-columns: 64px minmax(0, 1fr); padding-inline: 9px; }
   .compact-form, .fixed-rule-form, .inline-money-form { grid-template-columns: 1fr; }
   .inline-money-form .form-status, .fixed-rule-form .form-status { grid-column: 1; }
