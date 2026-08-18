@@ -22,7 +22,7 @@ export class SupabaseConnection {
   async getUser() {
     const response = await this.request('/auth/v1/user');
     if (!response.ok) {
-      throw new Error('登入已失效，請重新使用 Google 登入。');
+      throw new Error('登入已失效，請重新使用登入連結或 Google 登入。');
     }
 
     return response.json();
@@ -90,5 +90,30 @@ export function startGoogleSignIn({ supabaseUrl, redirectTo }) {
   url.searchParams.set('provider', 'google');
   url.searchParams.set('redirect_to', redirectTo);
   window.location.assign(url.toString());
+}
+
+export async function sendMagicLink({
+  supabaseUrl,
+  supabaseAnonKey,
+  email,
+  redirectTo,
+  fetchImpl = fetch,
+}) {
+  const response = await fetchImpl(`${supabaseUrl.replace(/\/$/, '')}/auth/v1/otp`, {
+    method: 'POST',
+    headers: {
+      apikey: supabaseAnonKey,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      email,
+      create_user: true,
+      options: { emailRedirectTo: redirectTo },
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error('無法寄送登入連結。請確認 Supabase 的 Email 登入已啟用後再試一次。');
+  }
 }
 
