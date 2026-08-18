@@ -14,9 +14,19 @@
   <body>
     <div id="app"></div>
     <script src="./config.js"></script>
+    <script>
+      if (window.location.protocol === 'file:') {
+        document.querySelector('#app').innerHTML = `
+          <main class="auth-card">
+            <p class="eyebrow">每日帳本</p>
+            <h1>請改用網站網址開啟</h1>
+            <p>直接雙擊 index.html 會讓瀏覽器封鎖記帳程式，因此畫面會是空白。請先部署到 Vercel，或以本機網站伺服器開啟這個資料夾。</p>
+          </main>`;
+      }
+    </script>
     <script type="module" src="./app.js"></script>
     <script>
-      if ('serviceWorker' in navigator) {
+      if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
         navigator.serviceWorker.register('./service-worker.js');
       }
     </script>
