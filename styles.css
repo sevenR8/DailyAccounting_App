@@ -322,6 +322,34 @@ button { font: inherit; cursor: pointer; }
 .fixed-rule-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
 .fixed-rule-form label { display: flex; align-items: center; gap: 5px; font-size: 0.82rem; }
 .fixed-rule-form label input { width: 64px; }
+.fixed-edit-form,
+.expense-edit-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 13px;
+}
+.fixed-edit-form label,
+.expense-edit-form label { display: grid; gap: 6px; font-size: 0.82rem; font-weight: 800; }
+.fixed-edit-form input,
+.fixed-edit-form select,
+.expense-edit-form input,
+.expense-edit-form select {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #cbd4c9;
+  border-radius: 12px;
+  padding: 11px;
+  background: white;
+  color: inherit;
+  font: inherit;
+}
+.edit-form-wide { grid-column: 1 / -1; }
+.dialog-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.dialog-actions > button { min-height: 42px; }
 .migration-notice { border: 1px dashed #d89949; }
 .migration-notice p { margin: 0; color: #657066; line-height: 1.65; }
 
@@ -458,7 +486,8 @@ button { font: inherit; cursor: pointer; }
   .fixed-rule-icon { background: #3a2e29; }
   .fixed-rule-open:hover .fixed-rule-name strong { color: #a8dbb5; }
   .dialog-close { background: #2a372d; color: #dce5dd; }
-  .compact-form input, .inline-money-form input, .fixed-rule-form input, .fixed-rule-form select { border-color: #526154; background: #172119; }
+  .compact-form input, .inline-money-form input, .fixed-rule-form input, .fixed-rule-form select,
+  .fixed-edit-form input, .fixed-edit-form select, .expense-edit-form input, .expense-edit-form select { border-color: #526154; background: #172119; }
   .secondary-button { background: #2a412e; color: #dce5dd; }
   .fixed-rule-delete { border-color: #875d58; color: #f2aaa0; }
   .fixed-rule-delete:hover { background: #3b2725; }
@@ -492,6 +521,9 @@ button { font: inherit; cursor: pointer; }
   .fixed-rule-row { align-items: flex-start; }
   .income-breakdown { grid-template-columns: 1fr; }
   .fixed-rule-open { grid-template-columns: 12px 34px minmax(0, 1fr) auto; gap: 7px; }
+  .fixed-edit-form, .expense-edit-form { grid-template-columns: 1fr; }
+  .edit-form-wide { grid-column: 1; }
+  .dialog-actions { grid-template-columns: 1fr; }
 }
 
 @media (min-width: 900px) {

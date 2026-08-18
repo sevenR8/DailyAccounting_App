@@ -62,6 +62,26 @@ test('每筆固定開銷都能安全刪除且不移除既有歷史', () => {
   assert.match(appSource, /deleteFixedExpenseRule/);
 });
 
+test('固定開銷點開後可編輯所有欄位並儲存本期與未來設定', () => {
+  assert.match(appSource, /class="fixed-edit-form"/);
+  assert.match(appSource, /name="itemName"/);
+  assert.match(appSource, /name="amount"/);
+  assert.match(appSource, /name="scheduledDay"/);
+  assert.match(appSource, /name="categoryId"/);
+  assert.match(appSource, /name="paymentMethod"/);
+  assert.match(appSource, /updateFixedExpenseRule/);
+  assert.match(appSource, /syncFixedExpenseEntry/);
+  assert.match(stylesSource, /\.fixed-edit-form/);
+});
+
+test('每日一般開銷可開啟編輯視窗修改、刪除或複製', () => {
+  assert.match(appSource, /data-action="open-expense-edit"/);
+  assert.match(appSource, /class="expense-edit-form"/);
+  assert.match(appSource, /data-action="duplicate-expense"/);
+  assert.match(appSource, /updateExpenseEntry/);
+  assert.match(stylesSource, /\.expense-edit-form/);
+});
+
 test('收入與固定開銷平時只顯示摘要，點擊後才開啟輸入或刪除視窗', () => {
   assert.match(appSource, /class="income-overview-card"/);
   assert.match(appSource, /本期收入合計/);

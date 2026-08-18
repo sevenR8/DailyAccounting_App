@@ -191,6 +191,38 @@ test('刪除開銷只會刪除目前帳本中指定的一筆紀錄', async () =>
   assert.equal(calls[0].options.method, 'DELETE');
 });
 
+test('可修改指定的一筆每日開銷', async () => {
+  const calls = [];
+  const connection = new SupabaseConnection({
+    supabaseUrl: 'https://example.supabase.co',
+    supabaseAnonKey: 'public-key',
+    accessToken: 'access-token',
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      return response([{ id: 'expense-1' }]);
+    },
+  });
+
+  await new SupabaseLedgerAdapter(connection).updateExpenseEntry({
+    ledgerId: 'ledger-1',
+    entryId: 'expense-1',
+    categoryId: 'category-2',
+    itemName: '午餐',
+    amount: 150,
+    paymentMethod: 'credit_card',
+    occurredAt: '2026-08-19T04:00:00.000Z',
+  });
+
+  assert.equal(calls[0].options.method, 'PATCH');
+  assert.deepEqual(JSON.parse(calls[0].options.body), {
+    category_id: 'category-2',
+    item_name: '午餐',
+    amount: 150,
+    payment_method: 'credit_card',
+    occurred_at: '2026-08-19T04:00:00.000Z',
+  });
+});
+
 test('固定開銷規則會保存日期、分類與付款方式', async () => {
   const calls = [];
   const connection = new SupabaseConnection({
@@ -221,6 +253,35 @@ test('固定開銷規則會保存日期、分類與付款方式', async () => {
     payment_method: 'cash',
     scheduled_day: 5,
   });
+});
+
+test('可修改固定開銷規則並同步本期已產生的固定開銷', async () => {
+  const calls = [];
+  const connection = new SupabaseConnection({
+    supabaseUrl: 'https://example.supabase.co',
+    supabaseAnonKey: 'public-key',
+    accessToken: 'access-token',
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      return response([{ id: 'fixed-1' }]);
+    },
+  });
+  const adapter = new SupabaseLedgerAdapter(connection);
+
+  await adapter.updateFixedExpenseRule({
+    ledgerId: 'ledger-1', ruleId: 'fixed-1', categoryId: 'category-2',
+    itemName: '新房租', amount: 10000, paymentMethod: 'cash', scheduledDay: 1,
+  });
+  await adapter.syncFixedExpenseEntry({
+    ledgerId: 'ledger-1', ruleId: 'fixed-1', accountingPeriodStart: '2026-08-05',
+    categoryId: 'category-2', itemName: '新房租', amount: 10000,
+    paymentMethod: 'cash', occurredAt: '2026-09-01T00:00:00+08:00', shouldExist: true,
+  });
+
+  assert.equal(calls[0].options.method, 'PATCH');
+  assert.match(calls[0].url, /fixed_expense_rules/);
+  assert.equal(calls[1].options.method, 'PATCH');
+  assert.match(calls[1].url, /fixed_expense_rule_id=eq\.fixed-1/);
 });
 
 test('刪除固定開銷會停用規則並保留既有支出紀錄', async () => {

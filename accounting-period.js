@@ -18,6 +18,26 @@ export function accountingPeriodFromStart(startsOn) {
   };
 }
 
+export function scheduledDateInAccountingPeriod(startsOn, endsOn, scheduledDay) {
+  const [year, month] = dateParts(startsOn);
+  const day = Number(scheduledDay);
+  if (!Number.isInteger(day) || day < 1 || day > 28) {
+    throw new RangeError('固定開銷日期必須介於 1 到 28 日。');
+  }
+
+  let scheduledDate = new Date(Date.UTC(year, month - 1, day));
+  let scheduledOn = scheduledDate.toISOString().slice(0, 10);
+  if (scheduledOn < startsOn) {
+    scheduledDate = new Date(Date.UTC(year, month, day));
+    scheduledOn = scheduledDate.toISOString().slice(0, 10);
+  }
+
+  if (scheduledOn > endsOn) {
+    throw new RangeError('固定開銷日期不在這個帳務週期內。');
+  }
+  return scheduledOn;
+}
+
 export function compareExpenseTotals(currentTotal, previousTotal) {
   if (previousTotal === 0) {
     if (currentTotal === 0) return { direction: 'same', percent: 0, hasBaseline: true };

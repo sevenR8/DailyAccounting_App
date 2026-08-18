@@ -1,17 +1,18 @@
-import { LedgerModule } from './ledger-module.js?v=11';
-import { calculateFinancialSummary } from './financial-summary.js?v=11';
-import { groupExpenseEntriesByDay } from './daily-history.js?v=11';
+import { LedgerModule } from './ledger-module.js?v=12';
+import { calculateFinancialSummary } from './financial-summary.js?v=12';
+import { groupExpenseEntriesByDay } from './daily-history.js?v=12';
 import {
   accountingPeriodFromStart,
   compareExpenseTotals,
+  scheduledDateInAccountingPeriod,
   shiftAccountingPeriodStart,
-} from './accounting-period.js?v=11';
+} from './accounting-period.js?v=12';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=11';
+} from './supabase-adapter.js?v=12';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -140,6 +141,17 @@ function renderSignIn() {
 function toDateTimeLocalValue(date = new Date()) {
   const timezoneOffset = date.getTimezoneOffset() * 60_000;
   return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 16);
+}
+
+function taiwanDateISO(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Taipei',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${values.year}-${values.month}-${values.day}`;
 }
 
 function formatAmount(amount) {
@@ -320,10 +332,11 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
   const suggestionIndexById = new Map(
     suggestions.map((entry, index) => [entry.id, index]),
   );
-  const categoryOptions = ledger.categories
-    .filter((category) => !category.retiredAt)
-    .map((category) => `<option value="${escapeHtml(category.id)}">${escapeHtml(category.name)}</option>`)
+  const categoryOptionsFor = (selectedId = null) => ledger.categories
+    .filter((category) => !category.retiredAt || category.id === selectedId)
+    .map((category) => `<option value="${escapeHtml(category.id)}" ${category.id === selectedId ? 'selected' : ''}>${escapeHtml(category.name)}</option>`)
     .join('');
+  const categoryOptions = categoryOptionsFor();
   const dailyHistory = groupExpenseEntriesByDay(suggestions);
   const suggestionButtons = dailyHistory.map((day) => `
     <details class="day-expense-group">
@@ -340,7 +353,14 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
       <div class="day-expense-list">
         ${day.entries.map((entry) => `
           <div class="day-expense-row">
-            <button class="day-expense-entry" type="button" data-suggestion-index="${suggestionIndexById.get(entry.id)}">
+            <button
+              class="day-expense-entry"
+              type="button"
+              ${entry.is_fixed
+                ? `data-suggestion-index="${suggestionIndexById.get(entry.id)}"`
+                : `data-action="open-expense-edit" data-dialog-id="expense-edit-${escapeHtml(entry.id)}"`}
+              aria-label="${entry.is_fixed ? '複製' : '編輯'}開銷：${escapeHtml(entry.item_name)}"
+            >
               <span class="entry-date"><time datetime="${escapeHtml(entry.occurred_at)}">${escapeHtml(formatEntryTime(entry.occurred_at))}</time></span>
               <span class="entry-detail">
                 <strong>$${formatAmount(entry.amount)}・${escapeHtml(entry.item_name)}</strong>
@@ -361,6 +381,55 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
           </div>`).join('')}
       </div>
     </details>`).join('');
+  const expenseEditDialogs = suggestions
+    .filter((entry) => !entry.is_fixed)
+    .map((entry) => `
+      <dialog class="finance-dialog expense-edit-dialog" id="expense-edit-${escapeHtml(entry.id)}">
+        <div class="dialog-content">
+          <div class="dialog-heading">
+            <div><p class="eyebrow">每日開銷</p><h2>編輯開銷</h2></div>
+            <button class="dialog-close" type="button" data-action="close-dialog" aria-label="關閉">×</button>
+          </div>
+          <form class="expense-edit-form" data-entry-id="${escapeHtml(entry.id)}">
+            <label>項目名稱
+              <input name="itemName" type="text" maxlength="100" value="${escapeHtml(entry.item_name)}" required />
+            </label>
+            <label>金額（TWD）
+              <input name="amount" type="number" min="1" step="1" inputmode="numeric" value="${entry.amount}" required />
+            </label>
+            <label>分類
+              <select name="categoryId" required>${categoryOptionsFor(entry.category_id)}</select>
+            </label>
+            <label>付款方式
+              <select name="paymentMethod" required>
+                <option value="cash" ${entry.payment_method === 'cash' ? 'selected' : ''}>現金</option>
+                <option value="credit_card" ${entry.payment_method === 'credit_card' ? 'selected' : ''}>信用卡</option>
+              </select>
+            </label>
+            <label class="edit-form-wide">日期與時間
+              <input name="occurredAt" type="datetime-local" value="${toDateTimeLocalValue(new Date(entry.occurred_at))}" required />
+            </label>
+            <p class="form-status edit-form-wide" aria-live="polite"></p>
+            <div class="dialog-actions edit-form-wide">
+              <button
+                class="fixed-rule-delete"
+                type="button"
+                data-action="delete-expense"
+                data-entry-id="${escapeHtml(entry.id)}"
+                data-entry-name="${escapeHtml(entry.item_name)}"
+                data-entry-amount="${entry.amount}"
+              >刪除</button>
+              <button
+                class="secondary-button"
+                type="button"
+                data-action="duplicate-expense"
+                data-suggestion-index="${suggestionIndexById.get(entry.id)}"
+              >複製一筆</button>
+              <button class="small-primary-button" type="submit">儲存變更</button>
+            </div>
+          </form>
+        </div>
+      </dialog>`).join('');
 
   const periodLabel = `${formatEntryDate(periodStart)}－${formatEntryDate(new Date(periodEnd.getTime() - 1))}`;
   const periodMonthLabel = new Intl.DateTimeFormat('zh-TW', {
@@ -419,23 +488,42 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
     <dialog class="finance-dialog fixed-detail-dialog" id="fixed-rule-detail-${escapeHtml(rule.id)}">
       <div class="dialog-content">
         <div class="dialog-heading">
-          <div><p class="eyebrow">固定開銷明細</p><h2>${escapeHtml(rule.item_name)}</h2></div>
+          <div><p class="eyebrow">${escapeHtml(periodMonthLabel)}固定開銷</p><h2>編輯固定開銷</h2></div>
           <button class="dialog-close" type="button" data-action="close-dialog" aria-label="關閉">×</button>
         </div>
-        <dl class="fixed-detail-list">
-          <div><dt>金額</dt><dd>$${formatAmount(rule.amount)}</dd></div>
-          <div><dt>分類</dt><dd>${escapeHtml(categoryNames.get(rule.category_id) || '未分類')}</dd></div>
-          <div><dt>付款方式</dt><dd>${rule.payment_method === 'cash' ? '現金' : '信用卡'}</dd></div>
-          <div><dt>每月產生日</dt><dd>${rule.scheduled_day} 日</dd></div>
-        </dl>
-        <p class="dialog-note">刪除後未來不再自動產生，已經產生的歷史紀錄仍會保留。</p>
-        <button
-          class="fixed-rule-delete"
-          type="button"
-          data-action="delete-fixed-expense"
-          data-rule-id="${escapeHtml(rule.id)}"
-          data-rule-name="${escapeHtml(rule.item_name)}"
-        >刪除這筆固定開銷</button>
+        <form class="fixed-edit-form" data-rule-id="${escapeHtml(rule.id)}">
+          <label class="edit-form-wide">項目名稱
+            <input name="itemName" type="text" maxlength="100" value="${escapeHtml(rule.item_name)}" required />
+          </label>
+          <label>每月金額（TWD）
+            <input name="amount" type="number" min="1" step="1" inputmode="numeric" value="${rule.amount}" required />
+          </label>
+          <label>扣款日
+            <input name="scheduledDay" type="number" min="1" max="28" step="1" inputmode="numeric" value="${rule.scheduled_day}" required />
+          </label>
+          <label>分類
+            <select name="categoryId" required>${categoryOptionsFor(rule.category_id)}</select>
+          </label>
+          <label>付款方式
+            <select name="paymentMethod" required>
+              <option value="cash" ${rule.payment_method === 'cash' ? 'selected' : ''}>現金</option>
+              <option value="credit_card" ${rule.payment_method === 'credit_card' ? 'selected' : ''}>信用卡</option>
+            </select>
+          </label>
+          <p class="dialog-note edit-form-wide">儲存後會同步本期與未來週期；已結束週期的歷史紀錄不會變動。</p>
+          <p class="form-status edit-form-wide" aria-live="polite"></p>
+          <div class="dialog-actions edit-form-wide">
+            <button
+              class="fixed-rule-delete"
+              type="button"
+              data-action="delete-fixed-expense"
+              data-rule-id="${escapeHtml(rule.id)}"
+              data-rule-name="${escapeHtml(rule.item_name)}"
+            >刪除這筆固定開銷</button>
+            <button class="secondary-button" type="button" data-action="close-dialog">取消</button>
+            <button class="small-primary-button" type="submit">儲存變更</button>
+          </div>
+        </form>
       </div>
     </dialog>`).join('') || '';
   const financialPanel = financialOverview ? `
@@ -623,6 +711,7 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
         </div>
         ${suggestionButtons || '<p class="next-step">第一筆開銷會出現在這裡，之後可點選快速帶入。</p>'}
       </section>
+      ${expenseEditDialogs}
     </main>`;
 
   document.querySelector('#sign-out').addEventListener('click', () => {
@@ -676,12 +765,57 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
     }
   });
 
-  if (financialOverview && isCurrentPeriod) {
-    const openDialog = (dialogId) => {
-      const dialog = document.getElementById(dialogId);
-      if (dialog && !dialog.open) dialog.showModal();
-    };
+  const openDialog = (dialogId) => {
+    const dialog = document.getElementById(dialogId);
+    if (dialog && !dialog.open) dialog.showModal();
+  };
 
+  document.querySelectorAll('[data-action="open-expense-edit"]').forEach((button) => {
+    button.addEventListener('click', () => openDialog(button.dataset.dialogId));
+  });
+  document.querySelectorAll('[data-action="close-dialog"]').forEach((button) => {
+    button.addEventListener('click', () => button.closest('dialog').close());
+  });
+  document.querySelectorAll('.finance-dialog').forEach((dialog) => {
+    dialog.addEventListener('click', (event) => {
+      if (event.target === dialog) dialog.close();
+    });
+  });
+
+  document.querySelectorAll('.expense-edit-form').forEach((form) => {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const formData = new FormData(form);
+      const button = form.querySelector('button[type="submit"]');
+      const status = form.querySelector('.form-status');
+      const itemName = formData.get('itemName').trim();
+      const amount = Number(formData.get('amount'));
+      if (!itemName || !Number.isInteger(amount) || amount <= 0) {
+        status.textContent = '請填寫正確的整數金額與項目名稱。';
+        return;
+      }
+
+      button.disabled = true;
+      status.textContent = '正在儲存…';
+      try {
+        await expenseAdapter.updateExpenseEntry({
+          ledgerId: ledger.id,
+          entryId: form.dataset.entryId,
+          categoryId: formData.get('categoryId'),
+          itemName,
+          amount,
+          paymentMethod: formData.get('paymentMethod'),
+          occurredAt: new Date(formData.get('occurredAt')).toISOString(),
+        });
+        await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
+      } catch (error) {
+        status.textContent = error.message;
+        button.disabled = false;
+      }
+    });
+  });
+
+  if (financialOverview && isCurrentPeriod) {
     document.querySelectorAll('[data-action="open-income-dialog"]').forEach((button) => {
       button.addEventListener('click', () => openDialog('income-dialog'));
     });
@@ -690,14 +824,6 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
     });
     document.querySelectorAll('[data-action="open-fixed-expense"]').forEach((button) => {
       button.addEventListener('click', () => openDialog(button.dataset.dialogId));
-    });
-    document.querySelectorAll('[data-action="close-dialog"]').forEach((button) => {
-      button.addEventListener('click', () => button.closest('dialog').close());
-    });
-    document.querySelectorAll('.finance-dialog').forEach((dialog) => {
-      dialog.addEventListener('click', (event) => {
-        if (event.target === dialog) dialog.close();
-      });
     });
 
     const zeroCardBill = document.querySelector('#zero-card-bill');
@@ -786,6 +912,65 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
       }
     });
 
+    document.querySelectorAll('.fixed-edit-form').forEach((form) => {
+      form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const formData = new FormData(form);
+        const button = form.querySelector('button[type="submit"]');
+        const status = form.querySelector('.form-status');
+        const itemName = formData.get('itemName').trim();
+        const amount = Number(formData.get('amount'));
+        const scheduledDay = Number(formData.get('scheduledDay'));
+        if (
+          !itemName
+          || !Number.isInteger(amount)
+          || amount <= 0
+          || !Number.isInteger(scheduledDay)
+          || scheduledDay < 1
+          || scheduledDay > 28
+        ) {
+          status.textContent = '請填寫正確的項目、整數金額與 1～28 日扣款日。';
+          return;
+        }
+
+        const categoryId = formData.get('categoryId');
+        const paymentMethod = formData.get('paymentMethod');
+        const scheduledOn = scheduledDateInAccountingPeriod(
+          financialOverview.period.starts_on,
+          financialOverview.period.ends_on,
+          scheduledDay,
+        );
+        button.disabled = true;
+        status.textContent = '正在儲存…';
+        try {
+          await expenseAdapter.updateFixedExpenseRule({
+            ledgerId: ledger.id,
+            ruleId: form.dataset.ruleId,
+            categoryId,
+            itemName,
+            amount,
+            paymentMethod,
+            scheduledDay,
+          });
+          await expenseAdapter.syncFixedExpenseEntry({
+            ledgerId: ledger.id,
+            ruleId: form.dataset.ruleId,
+            accountingPeriodStart: financialOverview.period.starts_on,
+            categoryId,
+            itemName,
+            amount,
+            paymentMethod,
+            occurredAt: `${scheduledOn}T00:00:00+08:00`,
+            shouldExist: scheduledOn <= taiwanDateISO(),
+          });
+          await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
+        } catch (error) {
+          status.textContent = error.message;
+          button.disabled = false;
+        }
+      });
+    });
+
     document.querySelectorAll('[data-action="delete-fixed-expense"]').forEach((button) => {
       button.addEventListener('click', async () => {
         const confirmed = window.confirm(
@@ -801,6 +986,12 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
             ledgerId: ledger.id,
             ruleId: button.dataset.ruleId,
             retiredAt: new Date().toISOString(),
+          });
+          await expenseAdapter.syncFixedExpenseEntry({
+            ledgerId: ledger.id,
+            ruleId: button.dataset.ruleId,
+            accountingPeriodStart: financialOverview.period.starts_on,
+            shouldExist: false,
           });
           await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
         } catch (error) {
@@ -820,6 +1011,10 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
       document.querySelector('#expense-category').value = entry.category_id;
       document.querySelector(`input[name="paymentMethod"][value="${entry.payment_method}"]`).checked = true;
       document.querySelector('#expense-occurred-at').value = toDateTimeLocalValue();
+      if (button.dataset.action === 'duplicate-expense') {
+        const dialog = button.closest('dialog');
+        if (dialog?.open) dialog.close();
+      }
       document.querySelector('#expense-amount').focus();
     });
   });

@@ -125,6 +125,38 @@ export class SupabaseLedgerAdapter {
     return entry;
   }
 
+  async updateExpenseEntry({
+    ledgerId,
+    entryId,
+    categoryId,
+    itemName,
+    amount,
+    paymentMethod,
+    occurredAt,
+  }) {
+    const parameters = new URLSearchParams({
+      id: `eq.${entryId}`,
+      ledger_id: `eq.${ledgerId}`,
+      is_fixed: 'eq.false',
+    });
+    const response = await this.connection.request(`/rest/v1/expense_entries?${parameters}`, {
+      method: 'PATCH',
+      headers: { Prefer: 'return=representation' },
+      body: JSON.stringify({
+        category_id: categoryId,
+        item_name: itemName,
+        amount,
+        payment_method: paymentMethod,
+        occurred_at: occurredAt,
+      }),
+    });
+    if (!response.ok) {
+      throw new Error('無法更新這筆開銷，請確認網路後再試一次。');
+    }
+    const [entry] = await response.json();
+    return entry;
+  }
+
   async deleteExpenseEntry({ ledgerId, entryId }) {
     const parameters = new URLSearchParams({
       id: `eq.${entryId}`,
@@ -281,6 +313,66 @@ export class SupabaseLedgerAdapter {
     if (!response.ok) throw new Error('無法儲存固定開銷。');
     const [rule] = await response.json();
     return rule;
+  }
+
+  async updateFixedExpenseRule({
+    ledgerId,
+    ruleId,
+    categoryId,
+    itemName,
+    amount,
+    paymentMethod,
+    scheduledDay,
+  }) {
+    const parameters = new URLSearchParams({
+      id: `eq.${ruleId}`,
+      ledger_id: `eq.${ledgerId}`,
+    });
+    const response = await this.connection.request(`/rest/v1/fixed_expense_rules?${parameters}`, {
+      method: 'PATCH',
+      headers: { Prefer: 'return=representation' },
+      body: JSON.stringify({
+        category_id: categoryId,
+        item_name: itemName,
+        amount,
+        payment_method: paymentMethod,
+        scheduled_day: scheduledDay,
+      }),
+    });
+    if (!response.ok) throw new Error('無法更新固定開銷，請稍後再試一次。');
+    const [rule] = await response.json();
+    return rule;
+  }
+
+  async syncFixedExpenseEntry({
+    ledgerId,
+    ruleId,
+    accountingPeriodStart,
+    categoryId,
+    itemName,
+    amount,
+    paymentMethod,
+    occurredAt,
+    shouldExist,
+  }) {
+    const parameters = new URLSearchParams({
+      ledger_id: `eq.${ledgerId}`,
+      fixed_expense_rule_id: `eq.${ruleId}`,
+      accounting_period_start: `eq.${accountingPeriodStart}`,
+    });
+    const response = await this.connection.request(`/rest/v1/expense_entries?${parameters}`, {
+      method: shouldExist ? 'PATCH' : 'DELETE',
+      headers: { Prefer: shouldExist ? 'return=representation' : 'return=minimal' },
+      body: shouldExist ? JSON.stringify({
+        category_id: categoryId,
+        item_name: itemName,
+        amount,
+        payment_method: paymentMethod,
+        occurred_at: occurredAt,
+      }) : undefined,
+    });
+    if (!response.ok) throw new Error('固定開銷已更新，但本期紀錄同步失敗，請重新整理後再試。');
+    return shouldExist ? response.json() : null;
   }
 
   async deleteFixedExpenseRule({ ledgerId, ruleId, retiredAt }) {

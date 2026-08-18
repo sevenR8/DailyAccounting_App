@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   accountingPeriodFromStart,
   compareExpenseTotals,
+  scheduledDateInAccountingPeriod,
   shiftAccountingPeriodStart,
 } from './accounting-period.js';
 
@@ -14,6 +15,11 @@ test('帳務週期可按月前後移動並維持自訂起始日', () => {
     startsOn: '2026-08-05',
     endsOn: '2026-09-04',
   });
+});
+
+test('固定開銷日期會落在跨月帳務週期內的正確月份', () => {
+  assert.equal(scheduledDateInAccountingPeriod('2026-08-05', '2026-09-04', 25), '2026-08-25');
+  assert.equal(scheduledDateInAccountingPeriod('2026-08-05', '2026-09-04', 1), '2026-09-01');
 });
 
 test('與上月比較可分辨增加、減少、持平與無比較基準', () => {
