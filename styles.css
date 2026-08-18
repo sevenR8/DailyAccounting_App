@@ -427,6 +427,7 @@ button { font: inherit; cursor: pointer; }
 
 .day-expense-group {
   overflow: hidden;
+  min-height: 58px;
   border-radius: 14px;
   background: #f0f3ed;
 }
@@ -435,6 +436,7 @@ button { font: inherit; cursor: pointer; }
   grid-template-columns: minmax(82px, 1.25fr) repeat(3, minmax(48px, 0.72fr)) 14px;
   gap: 5px;
   align-items: center;
+  min-height: 58px;
   padding: 12px;
   color: #26342a;
   cursor: pointer;
@@ -444,17 +446,18 @@ button { font: inherit; cursor: pointer; }
 .day-summary-date,
 .day-payment-total { display: grid; gap: 2px; min-width: 0; }
 .day-summary-date time {
-  overflow: hidden;
   font-size: 0.72rem;
   font-weight: 900;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 .day-summary-date small,
 .day-payment-total small { color: #68736a; font-size: 0.65rem; }
 .day-payment-total { text-align: right; }
 .day-payment-total strong { font-size: 0.78rem; white-space: nowrap; }
-.day-total small, .day-total strong { color: #bd3e35; }
+.day-total.total-white small, .day-total.total-white strong { color: #26342a; }
+.day-total.total-green small, .day-total.total-green strong { color: #33804d; }
+.day-total.total-blue small, .day-total.total-blue strong { color: #3478c8; }
+.day-total.total-red small, .day-total.total-red strong { color: #bd3e35; }
 .day-summary-chevron {
   color: #68736a;
   font-weight: 900;
@@ -559,7 +562,10 @@ button { font: inherit; cursor: pointer; }
   .day-summary-date small, .day-payment-total small, .day-summary-chevron { color: #aeb9af; }
   .day-expense-group[open] .day-expense-summary, .day-expense-row, .expense-entry-delete, .fixed-entry-indicator { border-color: #3b493d; }
   .day-expense-entry:hover, .day-expense-entry:focus-visible { background: #29362b; }
-  .day-total small, .day-total strong, .expense-entry-delete { color: #ff9189; }
+  .day-total.total-white small, .day-total.total-white strong { color: #f4f7f3; }
+  .day-total.total-green small, .day-total.total-green strong { color: #76d891; }
+  .day-total.total-blue small, .day-total.total-blue strong { color: #68b5ff; }
+  .day-total.total-red small, .day-total.total-red strong, .expense-entry-delete { color: #ff8178; }
   .expense-entry-delete:hover, .expense-entry-delete:focus-visible { background: #3b2725; }
   .sign-in-divider::before, .sign-in-divider::after { background: #3b493d; }
 }
@@ -579,7 +585,13 @@ button { font: inherit; cursor: pointer; }
   .summary-panel { order: 2; }
   .finance-panel { order: 3; }
   .quick-entry-panel,
-  .history-panel { padding: 16px; }
+  .history-panel {
+    grid-auto-rows: max-content;
+    align-content: start;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 16px;
+  }
   .quick-entry-panel { gap: 10px; }
   .period-navigation,
   .chart-panel,
@@ -680,7 +692,7 @@ button { font: inherit; cursor: pointer; }
   .chart-body { grid-template-columns: 1fr; justify-items: center; }
   .chart-legend { width: 100%; }
   .day-expense-summary {
-    grid-template-columns: minmax(72px, 1.2fr) repeat(3, minmax(36px, 0.65fr)) 12px;
+    grid-template-columns: minmax(84px, 1.2fr) repeat(3, minmax(36px, 0.65fr)) 12px;
     gap: 3px;
     padding-inline: 8px;
   }
@@ -737,4 +749,3 @@ button { font: inherit; cursor: pointer; }
   .history-panel { grid-template-columns: 1fr; max-height: 360px; overflow-y: auto; }
   .finance-panel { max-height: 720px; overflow-y: auto; }
 }
-

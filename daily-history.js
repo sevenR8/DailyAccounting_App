@@ -83,3 +83,10 @@ export function findExpenseTemplates(templates, amount, limit = 5) {
   return matchingTemplates.slice(0, limit);
 }
 
+export function dailyExpenseTotalTone(total) {
+  const amount = Number(total);
+  if (amount >= 1000) return 'red';
+  if (amount > 350) return 'blue';
+  if (amount > 150) return 'green';
+  return 'white';
+}

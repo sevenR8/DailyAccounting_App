@@ -14,7 +14,7 @@ test('本期總覽包含分類圓餅圖與各分類占比', () => {
 test('近期紀錄清楚顯示每筆開銷的日期與時間', () => {
   assert.match(appSource, /class="entry-date"/);
   assert.match(appSource, /<time datetime=/);
-  assert.match(appSource, /formatEntryDate\(day\.occurredAt\)/);
+  assert.match(appSource, /day\.key\.replaceAll\('-', '\/'\)/);
   assert.match(appSource, /formatEntryTime\(entry\.occurred_at\)/);
 });
 
@@ -163,6 +163,17 @@ test('近期紀錄按日折疊，關閉時顯示當日現金與信用卡合計',
   assert.match(stylesSource, /\.day-expense-summary/);
 });
 
+test('手機近期紀錄完整顯示日期且總開銷依門檻套用顏色', () => {
+  assert.match(appSource, /dailyExpenseTotalTone/);
+  assert.match(appSource, /total-\$\{dailyExpenseTotalTone\(day\.total\)\}/);
+  assert.match(appSource, /day\.key\.replaceAll\('-', '\/'\)/);
+  assert.match(stylesSource, /\.day-total\.total-white/);
+  assert.match(stylesSource, /\.day-total\.total-green/);
+  assert.match(stylesSource, /\.day-total\.total-blue/);
+  assert.match(stylesSource, /\.day-total\.total-red/);
+  assert.match(stylesSource, /grid-auto-rows: max-content/);
+});
+
 test('展開每日紀錄後，每筆開銷右側提供垃圾桶刪除按鈕', () => {
   assert.match(appSource, /class="expense-entry-delete"/);
   assert.match(appSource, /data-action="delete-expense"/);
@@ -170,4 +181,3 @@ test('展開每日紀錄後，每筆開銷右側提供垃圾桶刪除按鈕', ()
   assert.match(appSource, /deleteExpenseEntry/);
   assert.match(stylesSource, /\.expense-entry-delete/);
 });
-

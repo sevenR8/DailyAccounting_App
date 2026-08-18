@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   buildExpenseTemplates,
+  dailyExpenseTotalTone,
   findExpenseTemplates,
   groupExpenseEntriesByDay,
 } from './daily-history.js';
@@ -24,6 +25,16 @@ test('每日紀錄以台灣日期合併並分別加總現金與信用卡', () =>
     { key: '2026-08-19', total: 200, cashTotal: 80, creditCardTotal: 120, entryIds: ['3', '2'] },
     { key: '2026-08-18', total: 100, cashTotal: 100, creditCardTotal: 0, entryIds: ['1'] },
   ]);
+});
+
+test('每日總開銷依金額門檻顯示白、綠、藍、紅色', () => {
+  assert.equal(dailyExpenseTotalTone(150), 'white');
+  assert.equal(dailyExpenseTotalTone(151), 'green');
+  assert.equal(dailyExpenseTotalTone(350), 'green');
+  assert.equal(dailyExpenseTotalTone(351), 'blue');
+  assert.equal(dailyExpenseTotalTone(550), 'blue');
+  assert.equal(dailyExpenseTotalTone(999), 'blue');
+  assert.equal(dailyExpenseTotalTone(1000), 'red');
 });
 
 test('每日紀錄不限制筆數且維持日期與時間由新到舊', () => {
@@ -72,4 +83,3 @@ test('輸入金額後只顯示相同金額的多筆常用與最近範本', () =>
     ['茶葉蛋', '早餐'],
   );
 });
-

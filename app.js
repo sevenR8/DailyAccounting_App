@@ -1,22 +1,23 @@
-import { LedgerModule } from './ledger-module.js?v=16';
-import { calculateFinancialSummary } from './financial-summary.js?v=16';
+import { LedgerModule } from './ledger-module.js?v=17';
+import { calculateFinancialSummary } from './financial-summary.js?v=17';
 import {
   buildExpenseTemplates,
+  dailyExpenseTotalTone,
   findExpenseTemplates,
   groupExpenseEntriesByDay,
-} from './daily-history.js?v=16';
+} from './daily-history.js?v=17';
 import {
   accountingPeriodFromStart,
   compareExpenseTotals,
   scheduledDateInAccountingPeriod,
   shiftAccountingPeriodStart,
-} from './accounting-period.js?v=16';
+} from './accounting-period.js?v=17';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=16';
+} from './supabase-adapter.js?v=17';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -355,10 +356,10 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
     <details class="day-expense-group">
       <summary class="day-expense-summary">
         <span class="day-summary-date">
-          <time datetime="${escapeHtml(day.key)}">${escapeHtml(formatEntryDate(day.occurredAt))}</time>
-          <small>${day.entries.length} 筆</small>
+          <time datetime="${escapeHtml(day.key)}">${escapeHtml(day.key.replaceAll('-', '/'))}</time>
+          <small>${escapeHtml(new Intl.DateTimeFormat('zh-TW', { timeZone: 'Asia/Taipei', weekday: 'short' }).format(new Date(day.occurredAt)))}・${day.entries.length} 筆</small>
         </span>
-        <span class="day-payment-total day-total"><small>總開銷</small><strong>$${formatAmount(day.total)}</strong></span>
+        <span class="day-payment-total day-total total-${dailyExpenseTotalTone(day.total)}"><small>總開銷</small><strong>$${formatAmount(day.total)}</strong></span>
         <span class="day-payment-total"><small>現金</small><strong>$${formatAmount(day.cashTotal)}</strong></span>
         <span class="day-payment-total"><small>信用卡</small><strong>$${formatAmount(day.creditCardTotal)}</strong></span>
         <span class="day-summary-chevron" aria-hidden="true">⌄</span>
@@ -1288,4 +1289,3 @@ async function bootstrap() {
 }
 
 bootstrap();
-

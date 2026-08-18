@@ -1,4 +1,4 @@
-const CACHE_NAME = 'daily-ledger-shell-v16';
+const CACHE_NAME = 'daily-ledger-shell-v17';
 const APP_SHELL = [
   './',
   './index.html',
@@ -59,4 +59,3 @@ self.addEventListener('fetch', (event) => {
     caches.match(event.request).then((cachedResponse) => cachedResponse || fetch(event.request)),
   );
 });
-
