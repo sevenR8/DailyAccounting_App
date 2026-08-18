@@ -1,10 +1,10 @@
-import { LedgerModule } from './ledger-module.js';
+import { LedgerModule } from './ledger-module.js?v=4';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js';
+} from './supabase-adapter.js?v=4';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
