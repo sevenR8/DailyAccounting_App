@@ -86,7 +86,7 @@ export class SupabaseLedgerAdapter {
 
   async listExpenseEntries(ledgerId) {
     const parameters = new URLSearchParams({
-      select: 'id,category_id,item_name,amount,payment_method,occurred_at,created_at',
+      select: 'id,category_id,item_name,amount,payment_method,occurred_at,is_fixed,fixed_expense_rule_id,created_at',
       ledger_id: `eq.${ledgerId}`,
       order: 'occurred_at.desc',
       limit: '1000',
@@ -123,6 +123,137 @@ export class SupabaseLedgerAdapter {
     }
     const [entry] = await response.json();
     return entry;
+  }
+
+  async ensureCurrentAccountingPeriod(ledgerId) {
+    const response = await this.connection.request('/rest/v1/rpc/ensure_current_accounting_period', {
+      method: 'POST',
+      body: JSON.stringify({ p_ledger_id: ledgerId }),
+    });
+    if (!response.ok) {
+      throw new Error('financial_overview_migration_required');
+    }
+    return response.json();
+  }
+
+  async getFinancialSettings(ledgerId) {
+    const parameters = new URLSearchParams({
+      select: 'ledger_id,cycle_start_day,default_salary_amount,quick_entry_enabled',
+      ledger_id: `eq.${ledgerId}`,
+      limit: '1',
+    });
+    const response = await this.connection.request(`/rest/v1/ledger_financial_settings?${parameters}`);
+    if (!response.ok) throw new Error('無法讀取帳務設定。');
+    const [settings] = await response.json();
+    return settings;
+  }
+
+  async updateFinancialSettings({ ledgerId, cycleStartDay, defaultSalaryAmount }) {
+    const response = await this.connection.request('/rest/v1/ledger_financial_settings', {
+      method: 'POST',
+      headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
+      body: JSON.stringify({
+        ledger_id: ledgerId,
+        cycle_start_day: cycleStartDay,
+        default_salary_amount: defaultSalaryAmount,
+      }),
+    });
+    if (!response.ok) throw new Error('無法儲存帳務設定。');
+    const [settings] = await response.json();
+    return settings;
+  }
+
+  async updateAccountingPeriod({
+    ledgerId,
+    startsOn,
+    salaryAmount,
+    previousCardBillAmount,
+    previousCardBillZeroConfirmed,
+  }) {
+    const parameters = new URLSearchParams({
+      ledger_id: `eq.${ledgerId}`,
+      starts_on: `eq.${startsOn}`,
+    });
+    const response = await this.connection.request(`/rest/v1/accounting_periods?${parameters}`, {
+      method: 'PATCH',
+      headers: { Prefer: 'return=representation' },
+      body: JSON.stringify({
+        salary_amount: salaryAmount,
+        previous_card_bill_amount: previousCardBillAmount,
+        previous_card_bill_zero_confirmed: previousCardBillZeroConfirmed,
+      }),
+    });
+    if (!response.ok) throw new Error('無法儲存本期收入與信用卡帳單。');
+    const [period] = await response.json();
+    return period;
+  }
+
+  async listOtherIncomeEntries({ ledgerId, startsOn, endsOn }) {
+    const endExclusive = new Date(`${endsOn}T00:00:00Z`);
+    endExclusive.setUTCDate(endExclusive.getUTCDate() + 1);
+    const parameters = new URLSearchParams({
+      select: 'id,name,amount,received_at,created_at',
+      ledger_id: `eq.${ledgerId}`,
+      order: 'received_at.desc',
+    });
+    parameters.append('received_at', `gte.${startsOn}T00:00:00+08:00`);
+    parameters.append('received_at', `lt.${endExclusive.toISOString().slice(0, 10)}T00:00:00+08:00`);
+    const response = await this.connection.request(`/rest/v1/other_income_entries?${parameters}`);
+    if (!response.ok) throw new Error('無法讀取其他收入。');
+    return response.json();
+  }
+
+  async createOtherIncomeEntry({ ledgerId, name, amount, receivedAt }) {
+    const response = await this.connection.request('/rest/v1/other_income_entries', {
+      method: 'POST',
+      headers: { Prefer: 'return=representation' },
+      body: JSON.stringify({
+        ledger_id: ledgerId,
+        name,
+        amount,
+        received_at: receivedAt,
+      }),
+    });
+    if (!response.ok) throw new Error('無法儲存其他收入。');
+    const [income] = await response.json();
+    return income;
+  }
+
+  async listFixedExpenseRules(ledgerId) {
+    const parameters = new URLSearchParams({
+      select: 'id,category_id,item_name,amount,payment_method,scheduled_day,active_from,retired_at',
+      ledger_id: `eq.${ledgerId}`,
+      retired_at: 'is.null',
+      order: 'scheduled_day.asc',
+    });
+    const response = await this.connection.request(`/rest/v1/fixed_expense_rules?${parameters}`);
+    if (!response.ok) throw new Error('無法讀取固定開銷。');
+    return response.json();
+  }
+
+  async createFixedExpenseRule({
+    ledgerId,
+    categoryId,
+    itemName,
+    amount,
+    paymentMethod,
+    scheduledDay,
+  }) {
+    const response = await this.connection.request('/rest/v1/fixed_expense_rules', {
+      method: 'POST',
+      headers: { Prefer: 'return=representation' },
+      body: JSON.stringify({
+        ledger_id: ledgerId,
+        category_id: categoryId,
+        item_name: itemName,
+        amount,
+        payment_method: paymentMethod,
+        scheduled_day: scheduledDay,
+      }),
+    });
+    if (!response.ok) throw new Error('無法儲存固定開銷。');
+    const [rule] = await response.json();
+    return rule;
   }
 }
 
