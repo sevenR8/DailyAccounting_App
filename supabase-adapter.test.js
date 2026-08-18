@@ -139,3 +139,35 @@ test('快速記帳會以目前帳本與分類新增一筆開銷', async () => {
   });
 });
 
+test('固定開銷規則會保存日期、分類與付款方式', async () => {
+  const calls = [];
+  const connection = new SupabaseConnection({
+    supabaseUrl: 'https://example.supabase.co',
+    supabaseAnonKey: 'public-key',
+    accessToken: 'access-token',
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      return response([{ id: 'fixed-1' }]);
+    },
+  });
+
+  await new SupabaseLedgerAdapter(connection).createFixedExpenseRule({
+    ledgerId: 'ledger-1',
+    categoryId: 'category-1',
+    itemName: '房租',
+    amount: 12000,
+    paymentMethod: 'cash',
+    scheduledDay: 5,
+  });
+
+  assert.equal(calls[0].url, 'https://example.supabase.co/rest/v1/fixed_expense_rules');
+  assert.deepEqual(JSON.parse(calls[0].options.body), {
+    ledger_id: 'ledger-1',
+    category_id: 'category-1',
+    item_name: '房租',
+    amount: 12000,
+    payment_method: 'cash',
+    scheduled_day: 5,
+  });
+});
+
