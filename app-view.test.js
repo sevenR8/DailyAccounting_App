@@ -43,6 +43,13 @@ test('桌面版使用多欄一頁式總覽，手機版仍維持單欄', () => {
   assert.match(stylesSource, /grid-template-columns: repeat\(6, minmax\(0, 1fr\)\)/);
 });
 
+test('手機版打開先顯示快速記帳與近期紀錄，並移除佔空間的大標題', () => {
+  assert.doesNotMatch(appSource, /<h2>新增一筆開銷<\/h2>/);
+  assert.match(stylesSource, /@media \(max-width: 899px\)/);
+  assert.match(stylesSource, /\.quick-entry-panel \{ order: -20;/);
+  assert.match(stylesSource, /\.history-panel \{ order: -10;/);
+});
+
 test('上方可切換帳務月份並顯示與前一個月的開銷比較', () => {
   assert.match(appSource, /class="period-navigation"/);
   assert.match(appSource, /data-period-direction="previous"/);

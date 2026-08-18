@@ -504,6 +504,23 @@ button { font: inherit; cursor: pointer; }
   .sign-in-divider::before, .sign-in-divider::after { background: #3b493d; }
 }
 
+@media (max-width: 899px) {
+  .ledger-home {
+    padding: 16px 12px 28px;
+    gap: 16px;
+  }
+  .top-bar { order: -30; min-height: 38px; }
+  .quick-entry-panel { order: -20; }
+  .history-panel { order: -10; }
+  .period-navigation { order: 0; }
+  .chart-panel { order: 1; }
+  .summary-panel { order: 2; }
+  .finance-panel { order: 3; }
+  .quick-entry-panel,
+  .history-panel { padding: 16px; }
+  .quick-entry-panel { gap: 10px; }
+}
+
 @media (max-width: 380px) {
   .chart-body { grid-template-columns: 1fr; justify-items: center; }
   .chart-legend { width: 100%; }

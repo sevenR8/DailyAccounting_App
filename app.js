@@ -1,18 +1,18 @@
-import { LedgerModule } from './ledger-module.js?v=12';
-import { calculateFinancialSummary } from './financial-summary.js?v=12';
-import { groupExpenseEntriesByDay } from './daily-history.js?v=12';
+import { LedgerModule } from './ledger-module.js?v=13';
+import { calculateFinancialSummary } from './financial-summary.js?v=13';
+import { groupExpenseEntriesByDay } from './daily-history.js?v=13';
 import {
   accountingPeriodFromStart,
   compareExpenseTotals,
   scheduledDateInAccountingPeriod,
   shiftAccountingPeriodStart,
-} from './accounting-period.js?v=12';
+} from './accounting-period.js?v=13';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=12';
+} from './supabase-adapter.js?v=13';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -680,7 +680,6 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
       <section class="quick-entry-panel">
         <div>
           <p class="eyebrow">快速記帳</p>
-          <h2>新增一筆開銷</h2>
         </div>
         <form class="expense-form" id="expense-form">
           <label>金額
