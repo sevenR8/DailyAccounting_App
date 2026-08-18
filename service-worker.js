@@ -5,6 +5,7 @@ const APP_SHELL = [
   './styles.css',
   './app.js',
   './ledger-module.js',
+  './financial-summary.js',
   './supabase-adapter.js',
   './config.js',
   './manifest.webmanifest',
@@ -42,6 +43,7 @@ self.addEventListener('fetch', (event) => {
     '/styles.css',
     '/app.js',
     '/ledger-module.js',
+    '/financial-summary.js',
     '/supabase-adapter.js',
     '/config.js',
   ].some((path) => pathname.endsWith(path))) {
