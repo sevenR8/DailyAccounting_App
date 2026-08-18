@@ -197,7 +197,8 @@ button { font: inherit; cursor: pointer; }
 .quick-entry-panel,
 .history-panel { display: grid; gap: 16px; }
 
-.mobile-bottom-nav { display: none; }
+.mobile-bottom-nav,
+.mobile-pull-refresh { display: none; }
 
 .finance-panel { display: grid; align-content: start; gap: 30px; }
 .income-overview-section,
@@ -507,6 +508,7 @@ button { font: inherit; cursor: pointer; }
 }
 
 @media (max-width: 899px) {
+  body { overscroll-behavior-y: contain; }
   .ledger-home {
     padding: 16px 12px 28px;
     padding-bottom: calc(96px + env(safe-area-inset-bottom));
@@ -567,7 +569,36 @@ button { font: inherit; cursor: pointer; }
     stroke-linecap: round;
     stroke-linejoin: round;
   }
+  .mobile-pull-refresh {
+    --pull-distance: 0px;
+    position: fixed;
+    z-index: 40;
+    top: calc(6px + env(safe-area-inset-top));
+    left: 50%;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    border: 1px solid rgb(95 120 102 / 20%);
+    border-radius: 999px;
+    padding: 8px 13px;
+    background: rgb(250 251 247 / 96%);
+    color: #315b43;
+    box-shadow: 0 8px 24px rgb(23 33 25 / 14%);
+    opacity: 0;
+    pointer-events: none;
+    transform: translate(-50%, calc(-54px + var(--pull-distance)));
+    transition: opacity 120ms ease, transform 120ms ease;
+  }
+  .mobile-pull-refresh strong { font-size: 0.76rem; white-space: nowrap; }
+  .mobile-pull-refresh span { font-size: 1.1rem; transition: transform 160ms ease; }
+  .mobile-pull-refresh.is-pulling,
+  .mobile-pull-refresh.is-refreshing { opacity: 1; }
+  .mobile-pull-refresh.is-ready span { transform: rotate(180deg); }
+  .mobile-pull-refresh.is-refreshing { transform: translate(-50%, 0); }
+  .mobile-pull-refresh.is-refreshing span { animation: pull-refresh-spin 700ms linear infinite; }
 }
+
+@keyframes pull-refresh-spin { to { transform: rotate(360deg); } }
 
 @media (prefers-color-scheme: dark) and (max-width: 899px) {
   .mobile-bottom-nav {
@@ -579,6 +610,12 @@ button { font: inherit; cursor: pointer; }
   .mobile-bottom-nav button[aria-current="page"] {
     background: #253b2a;
     color: #b9e3c2;
+  }
+  .mobile-pull-refresh {
+    border-color: rgb(135 155 140 / 24%);
+    background: rgb(23 33 25 / 96%);
+    color: #b9e3c2;
+    box-shadow: 0 8px 24px rgb(0 0 0 / 28%);
   }
 }
 

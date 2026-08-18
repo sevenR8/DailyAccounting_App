@@ -1,18 +1,18 @@
-import { LedgerModule } from './ledger-module.js?v=14';
-import { calculateFinancialSummary } from './financial-summary.js?v=14';
-import { groupExpenseEntriesByDay } from './daily-history.js?v=14';
+import { LedgerModule } from './ledger-module.js?v=15';
+import { calculateFinancialSummary } from './financial-summary.js?v=15';
+import { groupExpenseEntriesByDay } from './daily-history.js?v=15';
 import {
   accountingPeriodFromStart,
   compareExpenseTotals,
   scheduledDateInAccountingPeriod,
   shiftAccountingPeriodStart,
-} from './accounting-period.js?v=14';
+} from './accounting-period.js?v=15';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=14';
+} from './supabase-adapter.js?v=15';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -714,6 +714,10 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
         ${suggestionButtons || '<p class="next-step">第一筆開銷會出現在這裡，之後可點選快速帶入。</p>'}
       </section>
       ${expenseEditDialogs}
+      <div class="mobile-pull-refresh" role="status" aria-live="polite">
+        <span aria-hidden="true">↻</span>
+        <strong>下拉更新</strong>
+      </div>
       <nav class="mobile-bottom-nav" aria-label="手機版主要功能">
         <button type="button" data-mobile-nav="record" data-scroll-target="quick-entry-section" aria-current="page">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6zM9 11h6M9 15h6M15 3v4h4" /></svg>
@@ -774,9 +778,79 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
   };
   window.addEventListener('scroll', syncMobileNavigation, { passive: true });
   window.addEventListener('resize', syncMobileNavigation);
+
+  const pullRefreshIndicator = document.querySelector('.mobile-pull-refresh');
+  const pullRefreshText = pullRefreshIndicator.querySelector('strong');
+  const pullRefreshThreshold = 72;
+  let pullRefreshStartY = null;
+  let pullRefreshDistance = 0;
+  let pullRefreshStarted = false;
+  const resetPullRefresh = () => {
+    pullRefreshStartY = null;
+    pullRefreshDistance = 0;
+    pullRefreshIndicator.classList.remove('is-pulling', 'is-ready');
+    pullRefreshIndicator.style.removeProperty('--pull-distance');
+    pullRefreshText.textContent = '下拉更新';
+  };
+  const startPullRefresh = (event) => {
+    if (
+      window.innerWidth >= 900
+      || window.scrollY > 0
+      || event.touches.length !== 1
+      || document.querySelector('dialog[open]')
+    ) return;
+    pullRefreshStartY = event.touches[0].clientY;
+    pullRefreshDistance = 0;
+  };
+  const movePullRefresh = (event) => {
+    if (pullRefreshStartY === null || pullRefreshStarted || event.touches.length !== 1) return;
+    const rawDistance = event.touches[0].clientY - pullRefreshStartY;
+    if (rawDistance <= 0) {
+      resetPullRefresh();
+      return;
+    }
+    pullRefreshDistance = Math.min(rawDistance * 0.55, 104);
+    if (pullRefreshDistance > 4 && event.cancelable) event.preventDefault();
+    pullRefreshIndicator.classList.add('is-pulling');
+    pullRefreshIndicator.classList.toggle('is-ready', pullRefreshDistance >= pullRefreshThreshold);
+    pullRefreshIndicator.style.setProperty('--pull-distance', `${pullRefreshDistance}px`);
+    pullRefreshText.textContent = pullRefreshDistance >= pullRefreshThreshold
+      ? '放開更新'
+      : '下拉更新';
+  };
+  const finishPullRefresh = () => {
+    if (pullRefreshStartY === null || pullRefreshStarted) return;
+    if (pullRefreshDistance < pullRefreshThreshold) {
+      resetPullRefresh();
+      return;
+    }
+    pullRefreshStarted = true;
+    pullRefreshIndicator.classList.remove('is-pulling', 'is-ready');
+    pullRefreshIndicator.classList.add('is-refreshing');
+    pullRefreshIndicator.style.removeProperty('--pull-distance');
+    pullRefreshText.textContent = '正在更新最新資料…';
+    const updatePromise = navigator.serviceWorker?.getRegistration
+      ? navigator.serviceWorker.getRegistration().then((registration) => registration?.update())
+      : Promise.resolve();
+    Promise.race([
+      updatePromise.catch(() => null),
+      new Promise((resolve) => window.setTimeout(resolve, 1200)),
+    ]).finally(() => window.location.reload());
+  };
+  const cancelPullRefresh = () => {
+    if (!pullRefreshStarted) resetPullRefresh();
+  };
+  document.addEventListener('touchstart', startPullRefresh, { passive: true });
+  document.addEventListener('touchmove', movePullRefresh, { passive: false });
+  document.addEventListener('touchend', finishPullRefresh, { passive: true });
+  document.addEventListener('touchcancel', cancelPullRefresh, { passive: true });
   mobileNavigationCleanup = () => {
     window.removeEventListener('scroll', syncMobileNavigation);
     window.removeEventListener('resize', syncMobileNavigation);
+    document.removeEventListener('touchstart', startPullRefresh);
+    document.removeEventListener('touchmove', movePullRefresh);
+    document.removeEventListener('touchend', finishPullRefresh);
+    document.removeEventListener('touchcancel', cancelPullRefresh);
     if (mobileNavigationFrame !== null) window.cancelAnimationFrame(mobileNavigationFrame);
     mobileNavigationFrame = null;
   };

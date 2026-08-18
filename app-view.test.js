@@ -60,6 +60,16 @@ test('手機版底部提供記帳、總覽與帳務三個快速跳轉入口', ()
   assert.match(stylesSource, /env\(safe-area-inset-bottom\)/);
 });
 
+test('手機版在頁面頂端下拉可重新取得最新頁面與帳務資料', () => {
+  assert.match(appSource, /class="mobile-pull-refresh"/);
+  assert.match(appSource, /下拉更新/);
+  assert.match(appSource, /touchstart/);
+  assert.match(appSource, /touchmove/);
+  assert.match(appSource, /touchend/);
+  assert.match(appSource, /window\.location\.reload\(\)/);
+  assert.match(stylesSource, /\.mobile-pull-refresh/);
+});
+
 test('上方可切換帳務月份並顯示與前一個月的開銷比較', () => {
   assert.match(appSource, /class="period-navigation"/);
   assert.match(appSource, /data-period-direction="previous"/);
