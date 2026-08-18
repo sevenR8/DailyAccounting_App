@@ -165,10 +165,6 @@ function currentAccountingPeriod(now = new Date(), startDay = 5) {
 }
 
 async function renderLedger(ledger, user, expenseAdapter) {
-  const categories = ledger.categories
-    .map((category) => `<li>${escapeHtml(category.name)}</li>`)
-    .join('');
-
   let entries = [];
   try {
     entries = await expenseAdapter.listExpenseEntries(ledger.id);
@@ -177,6 +173,9 @@ async function renderLedger(ledger, user, expenseAdapter) {
   }
 
   const categoryNames = new Map(ledger.categories.map((category) => [category.id, category.name]));
+  const userEmail = user.email || '目前使用者';
+  const userDisplayName = user.user_metadata?.full_name || userEmail.split('@')[0];
+  const userInitial = Array.from(userDisplayName.trim())[0]?.toUpperCase() || '我';
   const { start: periodStart, end: periodEnd } = currentAccountingPeriod();
   const periodEntries = entries.filter((entry) => {
     const occurredAt = new Date(entry.occurred_at);
@@ -235,12 +234,15 @@ async function renderLedger(ledger, user, expenseAdapter) {
 
   app.innerHTML = `
     <main class="ledger-home">
-      <header>
-        <div>
-          <p class="eyebrow">${escapeHtml(ledger.name)}</p>
-          <h1>你好，${escapeHtml(user.user_metadata?.full_name || user.email)}</h1>
-        </div>
-        <button class="text-button" type="button" id="sign-out">登出</button>
+      <header class="top-bar">
+        <span class="user-avatar" title="${escapeHtml(userEmail)}" aria-label="目前使用者：${escapeHtml(userEmail)}">${escapeHtml(userInitial)}</span>
+        <details class="user-menu">
+          <summary aria-label="開啟帳號選單">…</summary>
+          <div class="user-menu-popover">
+            <p>${escapeHtml(userEmail)}</p>
+            <button class="menu-sign-out" type="button" id="sign-out">登出</button>
+          </div>
+        </details>
       </header>
       <section class="chart-panel" aria-label="本期開銷分類占比">
         <div class="chart-heading">
@@ -256,17 +258,6 @@ async function renderLedger(ledger, user, expenseAdapter) {
           </div>
           <ul class="chart-legend">${chartLegend || '<li class="empty-chart">新增開銷後會顯示分類占比</li>'}</ul>
         </div>
-      </section>
-      <section class="welcome-panel">
-        <span class="success-mark">✓</span>
-        <div>
-          <h2>帳本已準備好</h2>
-          <p>你的個人帳本、擁有者身分與預設分類已安全建立。</p>
-        </div>
-      </section>
-      <section class="category-panel">
-        <h2>預設分類</h2>
-        <ul>${categories}</ul>
       </section>
       <section class="summary-panel" aria-label="已記錄開銷摘要">
         <div><span>現金</span><strong>$${formatAmount(cashTotal)}</strong></div>
