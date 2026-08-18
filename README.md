@@ -1,13 +1,14 @@
 # 每日帳本
 
-每日帳本是可加入手機主畫面的個人記帳 PWA。第一個版本提供 Google 登入、個人帳本、預設分類與資料列權限基礎。
+每日帳本是可加入手機主畫面的個人記帳 PWA。第一個版本提供 Email 登入連結與 Google 登入、個人帳本、預設分類與資料列權限基礎。
 
 ## 啟動方式
 
 1. 在 Supabase SQL Editor 執行 `supabase-0001-personal-ledger.sql`。
-2. 在 Supabase Auth 啟用 Google Provider，並把網站網址加入允許的 redirect URL。
-3. 在 `config.js` 填入 Supabase Project URL 與 **公開匿名金鑰**。服務角色金鑰絕不可放入這個檔案。
-4. 使用任何靜態網站伺服器開啟專案根目錄；部署時可直接交給 Vercel。
+2. 在 Supabase Auth 的 `Sign In / Providers` 確認 Email 已啟用。使用者輸入 Email 後會收到一次性的登入連結。
+3. Google 登入需要另行啟用 Google Provider；若尚未完成 Google Cloud OAuth 設定，Email 登入連結仍可正常使用。
+4. 在 `config.js` 填入 Supabase Project URL 與 **公開匿名金鑰**。服務角色金鑰絕不可放入這個檔案。
+5. 使用任何靜態網站伺服器開啟專案根目錄；部署時可直接交給 Vercel。
 
 ## 驗證
 
