@@ -27,3 +27,14 @@ test('手機版停用雙指縮放', () => {
   assert.match(appSource, /gesturestart/);
   assert.match(appSource, /event\.preventDefault\(\)/);
 });
+
+test('桌面快速記帳的日期時間欄位獨占整列，完整保留日期、時間與行事曆按鈕', () => {
+  assert.match(
+    appSource,
+    /<label class="expense-datetime-field">日期與時間[\s\S]*id="expense-occurred-at"/,
+  );
+  assert.match(
+    stylesSource,
+    /@media \(min-width: 900px\)[\s\S]*\.expense-form \.expense-datetime-field\s*\{[^}]*grid-column:\s*1\s*\/\s*-1;/,
+  );
+});

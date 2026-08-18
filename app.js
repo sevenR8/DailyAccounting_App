@@ -1,23 +1,23 @@
-import { LedgerModule } from './ledger-module.js?v=18';
-import { calculateFinancialSummary } from './financial-summary.js?v=18';
+import { LedgerModule } from './ledger-module.js?v=19';
+import { calculateFinancialSummary } from './financial-summary.js?v=19';
 import {
   buildExpenseTemplates,
   dailyExpenseTotalTone,
   findExpenseTemplates,
   groupExpenseEntriesByDay,
-} from './daily-history.js?v=18';
+} from './daily-history.js?v=19';
 import {
   accountingPeriodFromStart,
   compareExpenseTotals,
   scheduledDateInAccountingPeriod,
   shiftAccountingPeriodStart,
-} from './accounting-period.js?v=18';
+} from './accounting-period.js?v=19';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=18';
+} from './supabase-adapter.js?v=19';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -727,7 +727,7 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
             <label><input type="radio" name="paymentMethod" value="cash" checked /> 現金</label>
             <label><input type="radio" name="paymentMethod" value="credit_card" /> 信用卡</label>
           </fieldset>
-          <label>日期與時間
+          <label class="expense-datetime-field">日期與時間
             <input id="expense-occurred-at" name="occurredAt" type="datetime-local" value="${toDateTimeLocalValue()}" required />
           </label>
           <button class="email-button" type="submit">儲存開銷</button>

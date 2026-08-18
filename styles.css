@@ -745,6 +745,7 @@ input[type="datetime-local"] {
   .history-panel { grid-area: history; grid-template-columns: 1fr; align-items: start; }
   .chart-panel, .summary-panel, .finance-panel, .quick-entry-panel, .history-panel { padding: 18px; }
   .expense-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .expense-form .expense-datetime-field { grid-column: 1 / -1; }
   .expense-form fieldset, .expense-form .email-button, .expense-form .form-status { grid-column: 1 / -1; }
 }
 
