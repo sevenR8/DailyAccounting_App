@@ -50,6 +50,16 @@ test('手機版打開先顯示快速記帳與近期紀錄，並移除佔空間�
   assert.match(stylesSource, /\.history-panel \{ order: -10;/);
 });
 
+test('手機版底部提供記帳、總覽與帳務三個快速跳轉入口', () => {
+  assert.match(appSource, /class="mobile-bottom-nav"/);
+  assert.match(appSource, /data-mobile-nav="record"/);
+  assert.match(appSource, /data-mobile-nav="overview"/);
+  assert.match(appSource, /data-mobile-nav="finance"/);
+  assert.match(appSource, /scrollIntoView/);
+  assert.match(stylesSource, /\.mobile-bottom-nav/);
+  assert.match(stylesSource, /env\(safe-area-inset-bottom\)/);
+});
+
 test('上方可切換帳務月份並顯示與前一個月的開銷比較', () => {
   assert.match(appSource, /class="period-navigation"/);
   assert.match(appSource, /data-period-direction="previous"/);

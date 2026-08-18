@@ -1,21 +1,22 @@
-import { LedgerModule } from './ledger-module.js?v=13';
-import { calculateFinancialSummary } from './financial-summary.js?v=13';
-import { groupExpenseEntriesByDay } from './daily-history.js?v=13';
+import { LedgerModule } from './ledger-module.js?v=14';
+import { calculateFinancialSummary } from './financial-summary.js?v=14';
+import { groupExpenseEntriesByDay } from './daily-history.js?v=14';
 import {
   accountingPeriodFromStart,
   compareExpenseTotals,
   scheduledDateInAccountingPeriod,
   shiftAccountingPeriodStart,
-} from './accounting-period.js?v=13';
+} from './accounting-period.js?v=14';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=13';
+} from './supabase-adapter.js?v=14';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
+let mobileNavigationCleanup = () => {};
 
 function configured() {
   return Boolean(config.supabaseUrl && config.supabaseAnonKey);
@@ -80,6 +81,7 @@ async function getAccessToken() {
 }
 
 function renderSetup() {
+  mobileNavigationCleanup();
   app.innerHTML = `
     <main class="auth-card">
       <p class="eyebrow">每日帳本</p>
@@ -90,6 +92,7 @@ function renderSetup() {
 }
 
 function renderSignIn() {
+  mobileNavigationCleanup();
   app.innerHTML = `
     <main class="auth-card">
       <p class="eyebrow">每日帳本</p>
@@ -527,7 +530,7 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
       </div>
     </dialog>`).join('') || '';
   const financialPanel = financialOverview ? `
-    <section class="finance-panel">
+    <section class="finance-panel" id="financial-management-section" data-mobile-section="finance">
       <section class="income-overview-section">
         <div class="finance-overview-heading">
           <div>
@@ -626,7 +629,7 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
       </dialog>
       ${fixedExpenseDialogs}
     </section>` : `
-    <section class="finance-panel migration-notice">
+    <section class="finance-panel migration-notice" id="financial-management-section" data-mobile-section="finance">
       <p class="eyebrow">需要資料庫升級</p>
       <h2>啟用完整本期總覽</h2>
       <p>請在 Supabase SQL Editor 執行 <code>supabase-0002-financial-overview.sql</code>，即可同步本期薪水、其他收入、上期信用卡帳單、固定開銷與可存額。</p>
@@ -645,7 +648,7 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
         </details>
       </header>
       ${financialOverview ? `
-        <section class="period-navigation" aria-label="切換帳務月份">
+        <section class="period-navigation" data-mobile-section="overview" aria-label="切換帳務月份">
           <div class="period-switcher">
             <button type="button" data-period-direction="previous" aria-label="查看上一個月">‹</button>
             <span><strong>${escapeHtml(periodMonthLabel)}</strong><small>${escapeHtml(periodShortLabel)}</small></span>
@@ -653,7 +656,7 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
           </div>
           <div class="period-comparison comparison-${periodComparison.direction}">${escapeHtml(comparisonText)}</div>
         </section>` : ''}
-      <section class="chart-panel" aria-label="本期開銷分類占比">
+      <section class="chart-panel" id="period-overview-section" data-mobile-section="overview" aria-label="本期開銷分類占比">
         <div class="chart-heading">
           <div>
             <p class="eyebrow">本期總覽</p>
@@ -668,7 +671,7 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
           <ul class="chart-legend">${chartLegend || '<li class="empty-chart">新增開銷後會顯示分類占比</li>'}</ul>
         </div>
       </section>
-      <section class="summary-panel" aria-label="本期帳務摘要">
+      <section class="summary-panel" data-mobile-section="overview" aria-label="本期帳務摘要">
         <div><span>本期收入</span><strong>${totalIncome === null ? '—' : `$${formatAmount(totalIncome)}`}</strong></div>
         <div><span>現金</span><strong>$${formatAmount(cashTotal)}</strong></div>
         <div><span>信用卡</span><strong>$${formatAmount(creditCardTotal)}</strong></div>
@@ -677,7 +680,7 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
         <div class="savings-summary"><span>本期可存額</span><strong>${financialOverview && !previousCardBillReady ? '待輸入帳單' : savingsAmount === null ? '—' : `$${formatAmount(savingsAmount)}`}</strong></div>
       </section>
       ${financialPanel}
-      <section class="quick-entry-panel">
+      <section class="quick-entry-panel" id="quick-entry-section" data-mobile-section="record">
         <div>
           <p class="eyebrow">快速記帳</p>
         </div>
@@ -703,7 +706,7 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
           <p class="form-status" id="expense-status" aria-live="polite"></p>
         </form>
       </section>
-      <section class="history-panel">
+      <section class="history-panel" data-mobile-section="record">
         <div>
           <p class="eyebrow">歷史建議</p>
           <h2>近期紀錄</h2>
@@ -711,7 +714,73 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
         ${suggestionButtons || '<p class="next-step">第一筆開銷會出現在這裡，之後可點選快速帶入。</p>'}
       </section>
       ${expenseEditDialogs}
+      <nav class="mobile-bottom-nav" aria-label="手機版主要功能">
+        <button type="button" data-mobile-nav="record" data-scroll-target="quick-entry-section" aria-current="page">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6zM9 11h6M9 15h6M15 3v4h4" /></svg>
+          <span>記帳</span>
+        </button>
+        <button type="button" data-mobile-nav="overview" data-scroll-target="period-overview-section">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9h-9zM15 3.5A8.5 8.5 0 0 1 20.5 9H15z" /></svg>
+          <span>總覽</span>
+        </button>
+        <button type="button" data-mobile-nav="finance" data-scroll-target="financial-management-section">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v13H3zM3 7l3-4h12l3 4M16 13h3" /></svg>
+          <span>帳務</span>
+        </button>
+      </nav>
     </main>`;
+
+  mobileNavigationCleanup();
+  const mobileNavigationButtons = [...document.querySelectorAll('[data-mobile-nav]')];
+  const setActiveMobileNavigation = (sectionName) => {
+    mobileNavigationButtons.forEach((button) => {
+      if (button.dataset.mobileNav === sectionName) {
+        button.setAttribute('aria-current', 'page');
+      } else {
+        button.removeAttribute('aria-current');
+      }
+    });
+  };
+  mobileNavigationButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+      const target = document.getElementById(button.dataset.scrollTarget);
+      if (!target) return;
+      setActiveMobileNavigation(button.dataset.mobileNav);
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
+  let mobileNavigationFrame = null;
+  const syncMobileNavigation = () => {
+    if (window.innerWidth >= 900) return;
+    if (mobileNavigationFrame !== null) return;
+    mobileNavigationFrame = window.requestAnimationFrame(() => {
+      mobileNavigationFrame = null;
+      const referenceY = Math.min(window.innerHeight * 0.38, 300);
+      const sections = [...document.querySelectorAll('[data-mobile-section]')];
+      const nearestSection = sections.reduce((nearest, section) => {
+        const bounds = section.getBoundingClientRect();
+        const distance = referenceY < bounds.top
+          ? bounds.top - referenceY
+          : referenceY > bounds.bottom
+            ? referenceY - bounds.bottom
+            : 0;
+        return !nearest || distance < nearest.distance
+          ? { name: section.dataset.mobileSection, distance }
+          : nearest;
+      }, null);
+      if (nearestSection) setActiveMobileNavigation(nearestSection.name);
+    });
+  };
+  window.addEventListener('scroll', syncMobileNavigation, { passive: true });
+  window.addEventListener('resize', syncMobileNavigation);
+  mobileNavigationCleanup = () => {
+    window.removeEventListener('scroll', syncMobileNavigation);
+    window.removeEventListener('resize', syncMobileNavigation);
+    if (mobileNavigationFrame !== null) window.cancelAnimationFrame(mobileNavigationFrame);
+    mobileNavigationFrame = null;
+  };
+  syncMobileNavigation();
 
   document.querySelector('#sign-out').addEventListener('click', () => {
     window.localStorage.removeItem('daily-ledger-session');

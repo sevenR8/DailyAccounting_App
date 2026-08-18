@@ -197,6 +197,8 @@ button { font: inherit; cursor: pointer; }
 .quick-entry-panel,
 .history-panel { display: grid; gap: 16px; }
 
+.mobile-bottom-nav { display: none; }
+
 .finance-panel { display: grid; align-content: start; gap: 30px; }
 .income-overview-section,
 .card-bill-overview-section,
@@ -507,6 +509,7 @@ button { font: inherit; cursor: pointer; }
 @media (max-width: 899px) {
   .ledger-home {
     padding: 16px 12px 28px;
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
     gap: 16px;
   }
   .top-bar { order: -30; min-height: 38px; }
@@ -519,6 +522,64 @@ button { font: inherit; cursor: pointer; }
   .quick-entry-panel,
   .history-panel { padding: 16px; }
   .quick-entry-panel { gap: 10px; }
+  .period-navigation,
+  .chart-panel,
+  .finance-panel,
+  .quick-entry-panel { scroll-margin-top: 12px; }
+  .mobile-bottom-nav {
+    position: fixed;
+    z-index: 30;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+    border-top: 1px solid rgb(111 128 115 / 24%);
+    background: rgb(250 251 247 / 94%);
+    box-shadow: 0 -8px 28px rgb(23 33 25 / 10%);
+    backdrop-filter: blur(18px);
+  }
+  .mobile-bottom-nav button {
+    display: grid;
+    justify-items: center;
+    gap: 3px;
+    border: 0;
+    border-radius: 14px;
+    padding: 6px 4px;
+    background: transparent;
+    color: #7a857d;
+    font-size: 0.72rem;
+    font-weight: 800;
+    touch-action: manipulation;
+  }
+  .mobile-bottom-nav button[aria-current="page"] {
+    background: #e8f0e5;
+    color: #174b35;
+  }
+  .mobile-bottom-nav svg {
+    width: 23px;
+    height: 23px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+}
+
+@media (prefers-color-scheme: dark) and (max-width: 899px) {
+  .mobile-bottom-nav {
+    border-color: rgb(135 155 140 / 24%);
+    background: rgb(16 24 18 / 94%);
+    box-shadow: 0 -8px 28px rgb(0 0 0 / 24%);
+  }
+  .mobile-bottom-nav button { color: #93a197; }
+  .mobile-bottom-nav button[aria-current="page"] {
+    background: #253b2a;
+    color: #b9e3c2;
+  }
 }
 
 @media (max-width: 380px) {
