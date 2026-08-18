@@ -1,27 +1,37 @@
-import { LedgerModule } from './ledger-module.js?v=17';
-import { calculateFinancialSummary } from './financial-summary.js?v=17';
+import { LedgerModule } from './ledger-module.js?v=18';
+import { calculateFinancialSummary } from './financial-summary.js?v=18';
 import {
   buildExpenseTemplates,
   dailyExpenseTotalTone,
   findExpenseTemplates,
   groupExpenseEntriesByDay,
-} from './daily-history.js?v=17';
+} from './daily-history.js?v=18';
 import {
   accountingPeriodFromStart,
   compareExpenseTotals,
   scheduledDateInAccountingPeriod,
   shiftAccountingPeriodStart,
-} from './accounting-period.js?v=17';
+} from './accounting-period.js?v=18';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=17';
+} from './supabase-adapter.js?v=18';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
 let mobileNavigationCleanup = () => {};
+
+const preventZoomGesture = (event) => {
+  if (event.cancelable) event.preventDefault();
+};
+document.addEventListener('gesturestart', preventZoomGesture, { passive: false });
+document.addEventListener('gesturechange', preventZoomGesture, { passive: false });
+document.addEventListener('gestureend', preventZoomGesture, { passive: false });
+document.addEventListener('touchmove', (event) => {
+  if (event.touches.length > 1) preventZoomGesture(event);
+}, { passive: false });
 
 function configured() {
   return Boolean(config.supabaseUrl && config.supabaseAnonKey);

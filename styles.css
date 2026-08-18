@@ -194,8 +194,13 @@ button { font: inherit; cursor: pointer; }
 .summary-panel strong { font-size: 1rem; }
 .savings-summary { padding: 10px; border-radius: 14px; background: #e9f4df; }
 
-.quick-entry-panel,
-.history-panel { display: grid; gap: 16px; }
+.quick-entry-panel { display: grid; gap: 16px; }
+.history-panel {
+  display: grid;
+  grid-auto-rows: max-content;
+  align-content: start;
+  gap: 16px;
+}
 
 .mobile-bottom-nav,
 .mobile-pull-refresh { display: none; }
@@ -357,7 +362,7 @@ button { font: inherit; cursor: pointer; }
 .migration-notice p { margin: 0; color: #657066; line-height: 1.65; }
 
 .expense-form { display: grid; gap: 14px; }
-.expense-form > label { display: grid; gap: 7px; font-weight: 800; }
+.expense-form > label { display: grid; gap: 7px; min-width: 0; font-weight: 800; }
 .expense-form input:not([type="radio"]),
 .expense-form select {
   width: 100%;
@@ -367,6 +372,13 @@ button { font: inherit; cursor: pointer; }
   background: white;
   color: inherit;
   font: inherit;
+}
+
+input[type="datetime-local"] {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  display: block;
 }
 
 .expense-form fieldset { display: flex; flex-wrap: wrap; gap: 14px; margin: 0; padding: 12px; border: 1px solid #d4dbd3; border-radius: 13px; }
