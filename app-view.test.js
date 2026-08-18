@@ -43,6 +43,17 @@ test('桌面版使用多欄一頁式總覽，手機版仍維持單欄', () => {
   assert.match(stylesSource, /grid-template-columns: repeat\(6, minmax\(0, 1fr\)\)/);
 });
 
+test('上方可切換帳務月份並顯示與前一個月的開銷比較', () => {
+  assert.match(appSource, /class="period-navigation"/);
+  assert.match(appSource, /data-period-direction="previous"/);
+  assert.match(appSource, /data-period-direction="next"/);
+  assert.match(appSource, /class="period-comparison/);
+  assert.match(appSource, /compareExpenseTotals/);
+  assert.match(appSource, /較上月/);
+  assert.match(stylesSource, /\.period-switcher/);
+  assert.match(stylesSource, /\.period-comparison/);
+});
+
 test('每筆固定開銷都能安全刪除且不移除既有歷史', () => {
   assert.match(appSource, /class="fixed-rule-row"/);
   assert.match(appSource, /data-action="delete-fixed-expense"/);

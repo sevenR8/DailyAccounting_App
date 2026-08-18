@@ -124,6 +124,44 @@ button { font: inherit; cursor: pointer; }
 .user-menu-popover p { overflow: hidden; margin: 0 0 10px; color: #566157; font-size: 0.82rem; text-overflow: ellipsis; white-space: nowrap; }
 .menu-sign-out { width: 100%; border: 0; border-radius: 10px; padding: 10px 12px; background: #edf0e9; color: #294333; font-weight: 800; text-align: left; }
 
+.period-navigation { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
+.period-switcher {
+  display: grid;
+  grid-template-columns: 34px minmax(150px, auto) 34px;
+  align-items: stretch;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #315548;
+  color: white;
+}
+.period-switcher button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: #e8f36b;
+  font-size: 1.45rem;
+  font-weight: 900;
+}
+.period-switcher button:hover:not(:disabled),
+.period-switcher button:focus-visible { background: rgb(255 255 255 / 10%); }
+.period-switcher button:disabled { cursor: default; color: #85988f; }
+.period-switcher > span { display: flex; justify-content: center; align-items: center; gap: 7px; padding: 9px 4px; }
+.period-switcher strong { font-size: 0.78rem; white-space: nowrap; }
+.period-switcher small { color: #d5e1da; font-size: 0.68rem; white-space: nowrap; }
+.period-comparison {
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  padding: 9px 12px;
+  background: #537832;
+  color: #efff78;
+  font-size: 0.75rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+.period-comparison.comparison-down { background: #e7f2e6; color: #287145; }
+.period-comparison.comparison-same { background: #e7ece7; color: #5e6b61; }
+
 .chart-panel,
 .summary-panel,
 .finance-panel,
@@ -168,6 +206,7 @@ button { font: inherit; cursor: pointer; }
 .finance-overview-heading p { margin: 3px 0 0; color: #69746b; font-size: 0.76rem; }
 .text-action { flex: 0 0 auto; border: 0; padding: 4px 0; background: transparent; color: #23593a; font-weight: 900; cursor: pointer; }
 .text-action:hover { text-decoration: underline; }
+.period-read-only { color: #7a847c; font-size: 0.72rem; font-weight: 800; }
 .income-overview-card {
   display: grid;
   gap: 14px;
@@ -202,6 +241,7 @@ button { font: inherit; cursor: pointer; }
 }
 .credit-card-payment-card:hover,
 .credit-card-payment-card:focus-visible { background: #efecff; }
+.credit-card-payment-card:disabled { cursor: default; opacity: 1; }
 .credit-card-payment-card:focus-visible { outline: 2px solid #6656c4; outline-offset: 2px; }
 .credit-card-payment-copy { display: grid; gap: 4px; min-width: 0; }
 .credit-card-payment-copy strong { font-size: 0.92rem; }
@@ -217,6 +257,7 @@ button { font: inherit; cursor: pointer; }
 .fixed-rule-name strong { overflow: hidden; font-size: 0.88rem; text-overflow: ellipsis; white-space: nowrap; }
 .fixed-rule-name small { color: #768178; font-size: 0.7rem; }
 .fixed-rule-amount { font-size: 0.9rem; white-space: nowrap; }
+.historical-fixed-row { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 9px; align-items: center; padding: 13px 0; }
 .fixed-empty-state { padding: 18px 0; color: #6d776f; font-size: 0.82rem; line-height: 1.5; }
 .finance-dialog { width: min(92vw, 560px); max-height: 88vh; border: 0; border-radius: 22px; padding: 0; background: white; color: #253229; box-shadow: 0 24px 70px rgb(15 29 19 / 28%); }
 .finance-dialog::backdrop { background: rgb(15 28 18 / 55%); backdrop-filter: blur(3px); }
@@ -392,6 +433,8 @@ button { font: inherit; cursor: pointer; }
   .auth-card p,
   .next-step { color: #bdc9bf; }
   .notice, .day-expense-group { background: #202c22; color: #d3ded3; }
+  .period-comparison.comparison-down { background: #23422d; color: #a8e6b7; }
+  .period-comparison.comparison-same { background: #29352c; color: #b6c2b8; }
   .chart-panel, .summary-panel, .finance-panel, .quick-entry-panel, .history-panel { background: #172119; box-shadow: none; }
   .user-menu summary:hover, .menu-sign-out { background: #202c22; color: #dce5dd; }
   .user-menu-popover { border-color: #3b493d; background: #172119; box-shadow: 0 14px 32px rgb(0 0 0 / 30%); }
@@ -458,6 +501,7 @@ button { font: inherit; cursor: pointer; }
     grid-template-columns: minmax(330px, 0.9fr) minmax(360px, 1fr);
     grid-template-areas:
       "header header"
+      "navigator navigator"
       "summary summary"
       "chart finance"
       "quick finance"
@@ -465,6 +509,7 @@ button { font: inherit; cursor: pointer; }
     gap: 16px;
   }
   .top-bar { grid-area: header; }
+  .period-navigation { grid-area: navigator; }
   .summary-panel { grid-area: summary; grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .chart-panel { grid-area: chart; }
   .finance-panel { grid-area: finance; }
@@ -480,6 +525,7 @@ button { font: inherit; cursor: pointer; }
     grid-template-columns: minmax(320px, 0.85fr) minmax(360px, 1fr) minmax(390px, 1.05fr);
     grid-template-areas:
       "header header header"
+      "navigator navigator navigator"
       "summary summary summary"
       "chart quick finance"
       "history quick finance";

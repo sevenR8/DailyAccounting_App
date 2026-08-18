@@ -1,12 +1,17 @@
-import { LedgerModule } from './ledger-module.js?v=10';
-import { calculateFinancialSummary } from './financial-summary.js?v=10';
-import { groupExpenseEntriesByDay } from './daily-history.js?v=10';
+import { LedgerModule } from './ledger-module.js?v=11';
+import { calculateFinancialSummary } from './financial-summary.js?v=11';
+import { groupExpenseEntriesByDay } from './daily-history.js?v=11';
+import {
+  accountingPeriodFromStart,
+  compareExpenseTotals,
+  shiftAccountingPeriodStart,
+} from './accounting-period.js?v=11';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=10';
+} from './supabase-adapter.js?v=11';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -173,12 +178,26 @@ function localDateFromISO(value) {
   return new Date(year, month - 1, day);
 }
 
-async function renderLedger(ledger, user, expenseAdapter) {
+async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = null) {
   let financialOverview = null;
   try {
-    const period = await expenseAdapter.ensureCurrentAccountingPeriod(ledger.id);
-    const [settings, otherIncomeEntries, fixedExpenseRules] = await Promise.all([
-      expenseAdapter.getFinancialSettings(ledger.id),
+    const currentPeriod = await expenseAdapter.ensureCurrentAccountingPeriod(ledger.id);
+    const settings = await expenseAdapter.getFinancialSettings(ledger.id);
+    const targetStartsOn = selectedStartsOn ?? currentPeriod.starts_on;
+    const isCurrentPeriod = targetStartsOn === currentPeriod.starts_on;
+    const storedPeriod = isCurrentPeriod
+      ? currentPeriod
+      : await expenseAdapter.getAccountingPeriod({ ledgerId: ledger.id, startsOn: targetStartsOn });
+    const targetBounds = accountingPeriodFromStart(targetStartsOn);
+    const period = storedPeriod ?? {
+      ledger_id: ledger.id,
+      starts_on: targetBounds.startsOn,
+      ends_on: targetBounds.endsOn,
+      salary_amount: 0,
+      previous_card_bill_amount: null,
+      previous_card_bill_zero_confirmed: false,
+    };
+    const [otherIncomeEntries, fixedExpenseRules] = await Promise.all([
       expenseAdapter.listOtherIncomeEntries({
         ledgerId: ledger.id,
         startsOn: period.starts_on,
@@ -186,7 +205,15 @@ async function renderLedger(ledger, user, expenseAdapter) {
       }),
       expenseAdapter.listFixedExpenseRules(ledger.id),
     ]);
-    financialOverview = { period, settings, otherIncomeEntries, fixedExpenseRules };
+    financialOverview = {
+      period,
+      settings,
+      otherIncomeEntries,
+      fixedExpenseRules,
+      currentStartsOn: currentPeriod.starts_on,
+      isCurrentPeriod,
+      hasStoredPeriod: Boolean(storedPeriod),
+    };
   } catch (error) {
     financialOverview = null;
   }
@@ -213,9 +240,13 @@ async function renderLedger(ledger, user, expenseAdapter) {
     const occurredAt = new Date(entry.occurred_at);
     return occurredAt >= periodStart && occurredAt < periodEnd;
   });
+  const isCurrentPeriod = financialOverview?.isCurrentPeriod ?? true;
+  const fixedExpensesForSummary = isCurrentPeriod
+    ? (financialOverview?.fixedExpenseRules ?? [])
+    : periodEntries.filter((entry) => entry.is_fixed);
   const calculatedSummary = financialOverview ? calculateFinancialSummary({
     periodEntries,
-    fixedExpenseRules: financialOverview.fixedExpenseRules,
+    fixedExpenseRules: fixedExpensesForSummary,
     salaryAmount: financialOverview.period.salary_amount,
     otherIncomeEntries: financialOverview.otherIncomeEntries,
     previousCardBillAmount: financialOverview.period.previous_card_bill_amount,
@@ -234,6 +265,30 @@ async function renderLedger(ledger, user, expenseAdapter) {
   const totalIncome = calculatedSummary?.totalIncome ?? null;
   const previousCardBillReady = calculatedSummary?.previousCardBillReady ?? false;
   const savingsAmount = calculatedSummary?.savingsAmount ?? null;
+  const activeStartsOn = financialOverview?.period.starts_on;
+  const previousStartsOn = activeStartsOn
+    ? shiftAccountingPeriodStart(activeStartsOn, -1)
+    : null;
+  const nextStartsOn = activeStartsOn
+    ? shiftAccountingPeriodStart(activeStartsOn, 1)
+    : null;
+  const previousPeriodStart = previousStartsOn ? localDateFromISO(previousStartsOn) : periodStart;
+  const previousEntries = entries.filter((entry) => {
+    const occurredAt = new Date(entry.occurred_at);
+    return occurredAt >= previousPeriodStart && occurredAt < periodStart;
+  });
+  const previousExpenseTotal = previousEntries.reduce((total, entry) => total + entry.amount, 0);
+  const periodComparison = compareExpenseTotals(generatedExpenseTotal, previousExpenseTotal);
+  const comparisonPercent = periodComparison.percent === null
+    ? null
+    : new Intl.NumberFormat('zh-TW', { maximumFractionDigits: 1 }).format(periodComparison.percent);
+  const comparisonText = !periodComparison.hasBaseline
+    ? '上月無開銷'
+    : periodComparison.direction === 'same'
+      ? '→ 0% 與上月相同'
+      : periodComparison.direction === 'up'
+        ? `↗ ${comparisonPercent}% 較上月`
+        : `↘ ${comparisonPercent}% 較上月少`;
   const chartColors = ['#e07a45', '#3f9ee8', '#e94c64', '#79bf5a', '#a274d6', '#e6b83f'];
   const categoryBreakdown = ledger.categories
     .map((category, index) => ({
@@ -312,6 +367,16 @@ async function renderLedger(ledger, user, expenseAdapter) {
     year: 'numeric',
     month: 'long',
   }).format(periodStart);
+  const periodShortDate = new Intl.DateTimeFormat('zh-TW', {
+    month: 'numeric',
+    day: 'numeric',
+  });
+  const periodShortLabel = `${periodShortDate.format(periodStart)}－${periodShortDate.format(new Date(periodEnd.getTime() - 1))}`;
+  const canGoNext = Boolean(
+    financialOverview
+      && nextStartsOn
+      && nextStartsOn <= financialOverview.currentStartsOn,
+  );
   const salaryAmount = financialOverview?.period.salary_amount ?? 0;
   const otherIncomeTotal = calculatedSummary?.otherIncomeTotal ?? 0;
   const previousCardBillAmount = financialOverview?.period.previous_card_bill_zero_confirmed
@@ -319,7 +384,9 @@ async function renderLedger(ledger, user, expenseAdapter) {
     : financialOverview?.period.previous_card_bill_amount;
   const previousCardBillNote = previousCardBillReady
     ? '上期實際帳單・已納入本期可存額'
-    : '待輸入上期實際帳單，點此更新';
+    : isCurrentPeriod
+      ? '待輸入上期實際帳單，點此更新'
+      : '該期未記錄上期實際帳單';
   const otherIncomeList = financialOverview?.otherIncomeEntries.map((income) => `
     <li><span>${escapeHtml(income.name)}</span><strong>+$${formatAmount(income.amount)}</strong></li>`).join('') || '';
   const fixedExpenseList = financialOverview?.fixedExpenseRules.map((rule) => `
@@ -337,6 +404,17 @@ async function renderLedger(ledger, user, expenseAdapter) {
         <strong class="fixed-rule-amount">$${formatAmount(rule.amount)}</strong>
       </button>
     </li>`).join('') || '';
+  const historicalFixedExpenseList = periodEntries
+    .filter((entry) => entry.is_fixed)
+    .map((entry) => `
+      <li class="fixed-rule-row">
+        <div class="historical-fixed-row">
+          <span class="fixed-rule-icon" aria-hidden="true">${escapeHtml((categoryNames.get(entry.category_id) || '固').slice(0, 1))}</span>
+          <span class="fixed-rule-name"><strong>${escapeHtml(entry.item_name)}</strong><small>${escapeHtml(formatEntryDate(entry.occurred_at))}・${entry.payment_method === 'cash' ? '現金' : '信用卡'}</small></span>
+          <strong class="fixed-rule-amount">$${formatAmount(entry.amount)}</strong>
+        </div>
+      </li>`).join('');
+  const displayedFixedExpenseList = isCurrentPeriod ? fixedExpenseList : historicalFixedExpenseList;
   const fixedExpenseDialogs = financialOverview?.fixedExpenseRules.map((rule) => `
     <dialog class="finance-dialog fixed-detail-dialog" id="fixed-rule-detail-${escapeHtml(rule.id)}">
       <div class="dialog-content">
@@ -368,7 +446,9 @@ async function renderLedger(ledger, user, expenseAdapter) {
             <h2>本期收入</h2>
             <p>${escapeHtml(periodMonthLabel)}・合計 NT$ ${formatAmount(totalIncome)}</p>
           </div>
-          <button class="text-action" type="button" data-action="open-income-dialog">更新收入</button>
+          ${isCurrentPeriod
+            ? '<button class="text-action" type="button" data-action="open-income-dialog">更新收入</button>'
+            : '<span class="period-read-only">歷史紀錄</span>'}
         </div>
         <div class="income-overview-card">
           <div class="income-total-row"><span>本期收入合計</span><strong>$ ${formatAmount(totalIncome)}</strong></div>
@@ -382,7 +462,7 @@ async function renderLedger(ledger, user, expenseAdapter) {
         <button
           class="credit-card-payment-card"
           type="button"
-          data-action="open-income-dialog"
+          ${isCurrentPeriod ? 'data-action="open-income-dialog"' : 'disabled'}
           aria-label="更新本月信用卡繳納"
         >
           <span class="credit-card-payment-copy">
@@ -398,9 +478,11 @@ async function renderLedger(ledger, user, expenseAdapter) {
             <h2>每期固定開銷</h2>
             <p>${escapeHtml(periodMonthLabel)}・合計 NT$ ${formatAmount(fixedExpenseTotal)}／期</p>
           </div>
-          <button class="text-action" type="button" data-action="open-fixed-rule-dialog">＋ 新增</button>
+          ${isCurrentPeriod
+            ? '<button class="text-action" type="button" data-action="open-fixed-rule-dialog">＋ 新增</button>'
+            : '<span class="period-read-only">實際產生</span>'}
         </div>
-        <ul class="fixed-overview-list">${fixedExpenseList || '<li class="fixed-empty-state">尚未設定固定開銷，點「＋新增」開始設定。</li>'}</ul>
+        <ul class="fixed-overview-list">${displayedFixedExpenseList || `<li class="fixed-empty-state">${isCurrentPeriod ? '尚未設定固定開銷，點「＋新增」開始設定。' : '這個週期沒有已產生的固定開銷。'}</li>`}</ul>
       </section>
 
       <dialog class="finance-dialog" id="income-dialog">
@@ -474,6 +556,15 @@ async function renderLedger(ledger, user, expenseAdapter) {
           </div>
         </details>
       </header>
+      ${financialOverview ? `
+        <section class="period-navigation" aria-label="切換帳務月份">
+          <div class="period-switcher">
+            <button type="button" data-period-direction="previous" aria-label="查看上一個月">‹</button>
+            <span><strong>${escapeHtml(periodMonthLabel)}</strong><small>${escapeHtml(periodShortLabel)}</small></span>
+            <button type="button" data-period-direction="next" aria-label="查看下一個月" ${canGoNext ? '' : 'disabled'}>›</button>
+          </div>
+          <div class="period-comparison comparison-${periodComparison.direction}">${escapeHtml(comparisonText)}</div>
+        </section>` : ''}
       <section class="chart-panel" aria-label="本期開銷分類占比">
         <div class="chart-heading">
           <div>
@@ -539,6 +630,20 @@ async function renderLedger(ledger, user, expenseAdapter) {
     renderSignIn();
   });
 
+  if (financialOverview) {
+    const previousPeriodButton = document.querySelector('[data-period-direction="previous"]');
+    const nextPeriodButton = document.querySelector('[data-period-direction="next"]');
+    previousPeriodButton.addEventListener('click', async () => {
+      previousPeriodButton.disabled = true;
+      await renderLedger(ledger, user, expenseAdapter, previousStartsOn);
+    });
+    nextPeriodButton.addEventListener('click', async () => {
+      if (!canGoNext) return;
+      nextPeriodButton.disabled = true;
+      await renderLedger(ledger, user, expenseAdapter, nextStartsOn);
+    });
+  }
+
   document.querySelector('#expense-form').addEventListener('submit', async (event) => {
     event.preventDefault();
     const form = event.currentTarget;
@@ -564,14 +669,14 @@ async function renderLedger(ledger, user, expenseAdapter) {
         paymentMethod: formData.get('paymentMethod'),
         occurredAt: new Date(formData.get('occurredAt')).toISOString(),
       });
-      await renderLedger(ledger, user, expenseAdapter);
+      await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
     } catch (error) {
       status.textContent = error.message;
       button.disabled = false;
     }
   });
 
-  if (financialOverview) {
+  if (financialOverview && isCurrentPeriod) {
     const openDialog = (dialogId) => {
       const dialog = document.getElementById(dialogId);
       if (dialog && !dialog.open) dialog.showModal();
@@ -628,7 +733,7 @@ async function renderLedger(ledger, user, expenseAdapter) {
             defaultSalaryAmount: updatedSalaryAmount,
           }),
         ]);
-        await renderLedger(ledger, user, expenseAdapter);
+        await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
       } catch (error) {
         status.textContent = error.message;
         button.disabled = false;
@@ -650,7 +755,7 @@ async function renderLedger(ledger, user, expenseAdapter) {
           amount: Number(formData.get('amount')),
           receivedAt: new Date().toISOString(),
         });
-        await renderLedger(ledger, user, expenseAdapter);
+        await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
       } catch (error) {
         status.textContent = error.message;
         button.disabled = false;
@@ -674,7 +779,7 @@ async function renderLedger(ledger, user, expenseAdapter) {
           paymentMethod: formData.get('paymentMethod'),
           scheduledDay: Number(formData.get('scheduledDay')),
         });
-        await renderLedger(ledger, user, expenseAdapter);
+        await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
       } catch (error) {
         status.textContent = error.message;
         button.disabled = false;
@@ -697,7 +802,7 @@ async function renderLedger(ledger, user, expenseAdapter) {
             ruleId: button.dataset.ruleId,
             retiredAt: new Date().toISOString(),
           });
-          await renderLedger(ledger, user, expenseAdapter);
+          await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
         } catch (error) {
           button.disabled = false;
           button.textContent = originalLabel;
@@ -732,7 +837,7 @@ async function renderLedger(ledger, user, expenseAdapter) {
           ledgerId: ledger.id,
           entryId: button.dataset.entryId,
         });
-        await renderLedger(ledger, user, expenseAdapter);
+        await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
       } catch (error) {
         button.disabled = false;
         window.alert(error.message);

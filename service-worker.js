@@ -1,4 +1,4 @@
-const CACHE_NAME = 'daily-ledger-shell-v10';
+const CACHE_NAME = 'daily-ledger-shell-v11';
 const APP_SHELL = [
   './',
   './index.html',
@@ -7,6 +7,7 @@ const APP_SHELL = [
   './ledger-module.js',
   './financial-summary.js',
   './daily-history.js',
+  './accounting-period.js',
   './supabase-adapter.js',
   './config.js',
   './manifest.webmanifest',
@@ -46,6 +47,7 @@ self.addEventListener('fetch', (event) => {
     '/ledger-module.js',
     '/financial-summary.js',
     '/daily-history.js',
+    '/accounting-period.js',
     '/supabase-adapter.js',
     '/config.js',
   ].some((path) => pathname.endsWith(path))) {

@@ -80,6 +80,34 @@ test('帳本查詢只使用目前使用者的個人帳本，並轉成帳本模�
   });
 });
 
+test('可讀取指定月份既有的帳務週期資料', async () => {
+  let requestUrl;
+  const connection = new SupabaseConnection({
+    supabaseUrl: 'https://example.supabase.co',
+    supabaseAnonKey: 'public-key',
+    accessToken: 'access-token',
+    fetchImpl: async (url) => {
+      requestUrl = url;
+      return response([{
+        starts_on: '2026-07-05',
+        ends_on: '2026-08-04',
+        salary_amount: 45000,
+        previous_card_bill_amount: 6000,
+        previous_card_bill_zero_confirmed: false,
+      }]);
+    },
+  });
+
+  const period = await new SupabaseLedgerAdapter(connection).getAccountingPeriod({
+    ledgerId: 'ledger-1',
+    startsOn: '2026-07-05',
+  });
+
+  assert.match(requestUrl, /accounting_periods/);
+  assert.match(requestUrl, /starts_on=eq\.2026-07-05/);
+  assert.equal(period.salary_amount, 45000);
+});
+
 test('Email 登入連結會使用公開匿名金鑰並回到目前網站', async () => {
   const calls = [];
   await sendMagicLink({

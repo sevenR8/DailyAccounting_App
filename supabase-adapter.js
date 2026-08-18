@@ -150,6 +150,19 @@ export class SupabaseLedgerAdapter {
     return response.json();
   }
 
+  async getAccountingPeriod({ ledgerId, startsOn }) {
+    const parameters = new URLSearchParams({
+      select: 'ledger_id,starts_on,ends_on,salary_amount,previous_card_bill_amount,previous_card_bill_zero_confirmed',
+      ledger_id: `eq.${ledgerId}`,
+      starts_on: `eq.${startsOn}`,
+      limit: '1',
+    });
+    const response = await this.connection.request(`/rest/v1/accounting_periods?${parameters}`);
+    if (!response.ok) throw new Error('無法讀取指定帳務週期。');
+    const [period] = await response.json();
+    return period ?? null;
+  }
+
   async getFinancialSettings(ledgerId) {
     const parameters = new URLSearchParams({
       select: 'ledger_id,cycle_start_day,default_salary_amount,quick_entry_enabled',
