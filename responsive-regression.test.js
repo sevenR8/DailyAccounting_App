@@ -14,11 +14,14 @@ test('桌面近期紀錄的每一天維持完整內容高度，不會因資料�
   );
 });
 
-test('手機日期時間欄位會縮入卡片寬度內', () => {
-  assert.match(
-    stylesSource,
-    /input\[type=['"]datetime-local['"]\]\s*\{[^}]*width:\s*100%;[^}]*min-width:\s*0;[^}]*max-width:\s*100%;/s,
-  );
+test('iOS 日期時間欄位避開 width 100% 加內距造成的 WebKit 溢位', () => {
+  const datetimeRule = stylesSource.match(
+    /input\[type=['"]datetime-local['"]\]\s*\{([^}]*)\}/s,
+  )?.[1] ?? '';
+  assert.doesNotMatch(datetimeRule, /(^|\n)\s*width:\s*100%/);
+  assert.match(datetimeRule, /width:\s*auto/);
+  assert.match(datetimeRule, /inline-size:\s*auto/);
+  assert.match(datetimeRule, /justify-self:\s*stretch/);
 });
 
 test('手機版停用雙指縮放', () => {
