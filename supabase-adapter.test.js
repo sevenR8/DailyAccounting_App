@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { SupabaseConnection, SupabaseLedgerAdapter } from './supabase-adapter.js';
+import { sendMagicLink, SupabaseConnection, SupabaseLedgerAdapter } from './supabase-adapter.js';
 
 const response = (body, ok = true) => ({
   ok,
@@ -60,6 +60,31 @@ test('帳本查詢只使用目前使用者的個人帳本，並轉成帳本模�
       { id: 'category-1', name: '飲食', retiredAt: null },
       { id: 'category-2', name: '娛樂', retiredAt: null },
     ],
+  });
+});
+
+test('Email 登入連結會使用公開匿名金鑰並回到目前網站', async () => {
+  const calls = [];
+  await sendMagicLink({
+    supabaseUrl: 'https://example.supabase.co/',
+    supabaseAnonKey: 'public-key',
+    email: 'me@example.com',
+    redirectTo: 'https://daily-accounting-app.vercel.app/',
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      return response({});
+    },
+  });
+
+  assert.equal(calls[0].url, 'https://example.supabase.co/auth/v1/otp');
+  assert.deepEqual(calls[0].options.headers, {
+    apikey: 'public-key',
+    'Content-Type': 'application/json',
+  });
+  assert.deepEqual(JSON.parse(calls[0].options.body), {
+    email: 'me@example.com',
+    create_user: true,
+    options: { emailRedirectTo: 'https://daily-accounting-app.vercel.app/' },
   });
 });
 
