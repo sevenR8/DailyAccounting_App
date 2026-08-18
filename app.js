@@ -1,11 +1,11 @@
-import { LedgerModule } from './ledger-module.js?v=5';
-import { calculateFinancialSummary } from './financial-summary.js?v=5';
+import { LedgerModule } from './ledger-module.js?v=6';
+import { calculateFinancialSummary } from './financial-summary.js?v=6';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=5';
+} from './supabase-adapter.js?v=6';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -276,76 +276,139 @@ async function renderLedger(ledger, user, expenseAdapter) {
     </button>`).join('');
 
   const periodLabel = `${formatEntryDate(periodStart)}－${formatEntryDate(new Date(periodEnd.getTime() - 1))}`;
+  const periodMonthLabel = new Intl.DateTimeFormat('zh-TW', {
+    year: 'numeric',
+    month: 'long',
+  }).format(periodStart);
+  const salaryAmount = financialOverview?.period.salary_amount ?? 0;
+  const otherIncomeTotal = calculatedSummary?.otherIncomeTotal ?? 0;
   const otherIncomeList = financialOverview?.otherIncomeEntries.map((income) => `
     <li><span>${escapeHtml(income.name)}</span><strong>+$${formatAmount(income.amount)}</strong></li>`).join('') || '';
   const fixedExpenseList = financialOverview?.fixedExpenseRules.map((rule) => `
     <li class="fixed-rule-row">
-      <span>${rule.scheduled_day} 日・${escapeHtml(rule.item_name)}・${rule.payment_method === 'cash' ? '現金' : '信用卡'}</span>
-      <span class="fixed-rule-actions">
-        <strong>$${formatAmount(rule.amount)}</strong>
+      <button
+        class="fixed-rule-open"
+        type="button"
+        data-action="open-fixed-expense"
+        data-dialog-id="fixed-rule-detail-${escapeHtml(rule.id)}"
+        aria-label="查看固定開銷：${escapeHtml(rule.item_name)}"
+      >
+        <span class="fixed-rule-grip" aria-hidden="true">⠿</span>
+        <span class="fixed-rule-icon" aria-hidden="true">${escapeHtml((categoryNames.get(rule.category_id) || '固').slice(0, 1))}</span>
+        <span class="fixed-rule-name"><strong>${escapeHtml(rule.item_name)}</strong><small>每月 ${rule.scheduled_day} 日・${rule.payment_method === 'cash' ? '現金' : '信用卡'}</small></span>
+        <strong class="fixed-rule-amount">$${formatAmount(rule.amount)}</strong>
+      </button>
+    </li>`).join('') || '';
+  const fixedExpenseDialogs = financialOverview?.fixedExpenseRules.map((rule) => `
+    <dialog class="finance-dialog fixed-detail-dialog" id="fixed-rule-detail-${escapeHtml(rule.id)}">
+      <div class="dialog-content">
+        <div class="dialog-heading">
+          <div><p class="eyebrow">固定開銷明細</p><h2>${escapeHtml(rule.item_name)}</h2></div>
+          <button class="dialog-close" type="button" data-action="close-dialog" aria-label="關閉">×</button>
+        </div>
+        <dl class="fixed-detail-list">
+          <div><dt>金額</dt><dd>$${formatAmount(rule.amount)}</dd></div>
+          <div><dt>分類</dt><dd>${escapeHtml(categoryNames.get(rule.category_id) || '未分類')}</dd></div>
+          <div><dt>付款方式</dt><dd>${rule.payment_method === 'cash' ? '現金' : '信用卡'}</dd></div>
+          <div><dt>每月產生日</dt><dd>${rule.scheduled_day} 日</dd></div>
+        </dl>
+        <p class="dialog-note">刪除後未來不再自動產生，已經產生的歷史紀錄仍會保留。</p>
         <button
           class="fixed-rule-delete"
           type="button"
           data-action="delete-fixed-expense"
           data-rule-id="${escapeHtml(rule.id)}"
           data-rule-name="${escapeHtml(rule.item_name)}"
-          aria-label="刪除固定開銷：${escapeHtml(rule.item_name)}"
-        >刪除</button>
-      </span>
-    </li>`).join('') || '';
+        >刪除這筆固定開銷</button>
+      </div>
+    </dialog>`).join('') || '';
   const financialPanel = financialOverview ? `
     <section class="finance-panel">
-      <div class="panel-heading">
-        <div>
-          <p class="eyebrow">本期財務</p>
-          <h2>收入、帳單與固定開銷</h2>
+      <section class="income-overview-section">
+        <div class="finance-overview-heading">
+          <div>
+            <h2>本期收入</h2>
+            <p>${escapeHtml(periodMonthLabel)}・合計 NT$ ${formatAmount(totalIncome)}</p>
+          </div>
+          <button class="text-action" type="button" data-action="open-income-dialog">更新收入</button>
         </div>
-        <span>${escapeHtml(periodLabel)}</span>
-      </div>
-      <form class="compact-form period-finance-form" id="period-finance-form">
-        <label>本期薪水
-          <input name="salaryAmount" type="number" min="0" step="1" inputmode="numeric" value="${financialOverview.period.salary_amount}" required />
-        </label>
-        <label>上期信用卡帳單
-          <input id="previous-card-bill" name="previousCardBillAmount" type="number" min="0" step="1" inputmode="numeric" value="${financialOverview.period.previous_card_bill_amount ?? ''}" placeholder="尚未輸入" ${financialOverview.period.previous_card_bill_zero_confirmed ? 'disabled' : ''} />
-        </label>
-        <label class="inline-check"><input id="zero-card-bill" name="zeroCardBill" type="checkbox" ${financialOverview.period.previous_card_bill_zero_confirmed ? 'checked' : ''} /> 上期帳單確實為 0 元</label>
-        <button class="small-primary-button" type="submit">儲存本期資料</button>
-        <p class="form-status" id="period-finance-status" aria-live="polite"></p>
-      </form>
-      <form class="compact-form default-salary-form" id="default-salary-form">
-        <label>每期預設薪水
-          <input name="defaultSalaryAmount" type="number" min="0" step="1" inputmode="numeric" value="${financialOverview.settings.default_salary_amount}" required />
-        </label>
-        <button class="secondary-button" type="submit">套用至未來週期</button>
-        <p class="form-status" id="default-salary-status" aria-live="polite"></p>
-      </form>
-      <div class="finance-subsection">
-        <h3>其他收入</h3>
-        <ul class="money-list">${otherIncomeList || '<li class="empty-money-list">本期尚無其他收入</li>'}</ul>
-        <form class="inline-money-form" id="other-income-form">
-          <input name="name" type="text" maxlength="100" placeholder="收入名稱" aria-label="其他收入名稱" required />
-          <input name="amount" type="number" min="1" step="1" inputmode="numeric" placeholder="金額" aria-label="其他收入金額" required />
-          <button class="secondary-button" type="submit">新增</button>
-          <p class="form-status" id="other-income-status" aria-live="polite"></p>
-        </form>
-      </div>
-      <div class="finance-subsection">
-        <h3>本期固定開銷</h3>
-        <ul class="money-list">${fixedExpenseList || '<li class="empty-money-list">尚未設定固定開銷</li>'}</ul>
-        <form class="fixed-rule-form" id="fixed-rule-form">
-          <input name="itemName" type="text" maxlength="100" placeholder="項目，例如房租" aria-label="固定開銷項目" required />
-          <input name="amount" type="number" min="1" step="1" inputmode="numeric" placeholder="金額" aria-label="固定開銷金額" required />
-          <select name="categoryId" aria-label="固定開銷分類" required>${categoryOptions}</select>
-          <select name="paymentMethod" aria-label="固定開銷付款方式" required>
-            <option value="cash">現金</option>
-            <option value="credit_card">信用卡</option>
-          </select>
-          <label>每月<input name="scheduledDay" type="number" min="1" max="28" step="1" inputmode="numeric" value="5" aria-label="固定開銷產生日" required />日</label>
-          <button class="secondary-button" type="submit">新增固定開銷</button>
-          <p class="form-status" id="fixed-rule-status" aria-live="polite"></p>
-        </form>
-      </div>
+        <div class="income-overview-card">
+          <div class="income-total-row"><span>本期收入合計</span><strong>$ ${formatAmount(totalIncome)}</strong></div>
+          <div class="income-breakdown">
+            <div><span class="income-marker salary-marker">＋</span><span><small>薪資收入</small><strong>$ ${formatAmount(salaryAmount)}</strong></span></div>
+            <div><span class="income-marker other-marker">＋</span><span><small>其他收入</small><strong>$ ${formatAmount(otherIncomeTotal)}</strong></span></div>
+          </div>
+        </div>
+      </section>
+      <section class="fixed-overview-section">
+        <div class="finance-overview-heading">
+          <div>
+            <h2>每期固定開銷</h2>
+            <p>${escapeHtml(periodMonthLabel)}・合計 NT$ ${formatAmount(fixedExpenseTotal)}／期</p>
+          </div>
+          <button class="text-action" type="button" data-action="open-fixed-rule-dialog">＋ 新增</button>
+        </div>
+        <ul class="fixed-overview-list">${fixedExpenseList || '<li class="fixed-empty-state">尚未設定固定開銷，點「＋新增」開始設定。</li>'}</ul>
+      </section>
+
+      <dialog class="finance-dialog" id="income-dialog">
+        <div class="dialog-content">
+          <div class="dialog-heading">
+            <div><p class="eyebrow">${escapeHtml(periodMonthLabel)}</p><h2>更新收入與帳單</h2></div>
+            <button class="dialog-close" type="button" data-action="close-dialog" aria-label="關閉">×</button>
+          </div>
+          <form class="compact-form period-finance-form" id="period-finance-form">
+            <label>本期薪水
+              <input name="salaryAmount" type="number" min="0" step="1" inputmode="numeric" value="${financialOverview.period.salary_amount}" required />
+            </label>
+            <label>上期信用卡帳單
+              <input id="previous-card-bill" name="previousCardBillAmount" type="number" min="0" step="1" inputmode="numeric" value="${financialOverview.period.previous_card_bill_amount ?? ''}" placeholder="尚未輸入" ${financialOverview.period.previous_card_bill_zero_confirmed ? 'disabled' : ''} />
+            </label>
+            <label class="inline-check"><input id="zero-card-bill" name="zeroCardBill" type="checkbox" ${financialOverview.period.previous_card_bill_zero_confirmed ? 'checked' : ''} /> 上期帳單確實為 0 元</label>
+            <button class="small-primary-button" type="submit">儲存本期資料</button>
+            <p class="form-status" id="period-finance-status" aria-live="polite"></p>
+          </form>
+          <form class="compact-form default-salary-form" id="default-salary-form">
+            <label>每期預設薪水
+              <input name="defaultSalaryAmount" type="number" min="0" step="1" inputmode="numeric" value="${financialOverview.settings.default_salary_amount}" required />
+            </label>
+            <button class="secondary-button" type="submit">套用至未來週期</button>
+            <p class="form-status" id="default-salary-status" aria-live="polite"></p>
+          </form>
+          <div class="dialog-subsection">
+            <h3>其他收入</h3>
+            <ul class="money-list">${otherIncomeList || '<li class="empty-money-list">本期尚無其他收入</li>'}</ul>
+            <form class="inline-money-form" id="other-income-form">
+              <input name="name" type="text" maxlength="100" placeholder="收入名稱" aria-label="其他收入名稱" required />
+              <input name="amount" type="number" min="1" step="1" inputmode="numeric" placeholder="金額" aria-label="其他收入金額" required />
+              <button class="secondary-button" type="submit">新增</button>
+              <p class="form-status" id="other-income-status" aria-live="polite"></p>
+            </form>
+          </div>
+        </div>
+      </dialog>
+
+      <dialog class="finance-dialog" id="fixed-rule-dialog">
+        <div class="dialog-content">
+          <div class="dialog-heading">
+            <div><p class="eyebrow">每期自動產生</p><h2>新增固定開銷</h2></div>
+            <button class="dialog-close" type="button" data-action="close-dialog" aria-label="關閉">×</button>
+          </div>
+          <form class="fixed-rule-form" id="fixed-rule-form">
+            <input name="itemName" type="text" maxlength="100" placeholder="項目，例如房租" aria-label="固定開銷項目" required />
+            <input name="amount" type="number" min="1" step="1" inputmode="numeric" placeholder="金額" aria-label="固定開銷金額" required />
+            <select name="categoryId" aria-label="固定開銷分類" required>${categoryOptions}</select>
+            <select name="paymentMethod" aria-label="固定開銷付款方式" required>
+              <option value="cash">現金</option>
+              <option value="credit_card">信用卡</option>
+            </select>
+            <label>每月<input name="scheduledDay" type="number" min="1" max="28" step="1" inputmode="numeric" value="5" aria-label="固定開銷產生日" required />日</label>
+            <button class="secondary-button" type="submit">新增固定開銷</button>
+            <p class="form-status" id="fixed-rule-status" aria-live="polite"></p>
+          </form>
+        </div>
+      </dialog>
+      ${fixedExpenseDialogs}
     </section>` : `
     <section class="finance-panel migration-notice">
       <p class="eyebrow">需要資料庫升級</p>
@@ -463,6 +526,29 @@ async function renderLedger(ledger, user, expenseAdapter) {
   });
 
   if (financialOverview) {
+    const openDialog = (dialogId) => {
+      const dialog = document.getElementById(dialogId);
+      if (dialog && !dialog.open) dialog.showModal();
+    };
+
+    document.querySelector('[data-action="open-income-dialog"]').addEventListener('click', () => {
+      openDialog('income-dialog');
+    });
+    document.querySelector('[data-action="open-fixed-rule-dialog"]').addEventListener('click', () => {
+      openDialog('fixed-rule-dialog');
+    });
+    document.querySelectorAll('[data-action="open-fixed-expense"]').forEach((button) => {
+      button.addEventListener('click', () => openDialog(button.dataset.dialogId));
+    });
+    document.querySelectorAll('[data-action="close-dialog"]').forEach((button) => {
+      button.addEventListener('click', () => button.closest('dialog').close());
+    });
+    document.querySelectorAll('.finance-dialog').forEach((dialog) => {
+      dialog.addEventListener('click', (event) => {
+        if (event.target === dialog) dialog.close();
+      });
+    });
+
     const zeroCardBill = document.querySelector('#zero-card-bill');
     const previousCardBill = document.querySelector('#previous-card-bill');
     zeroCardBill.addEventListener('change', () => {

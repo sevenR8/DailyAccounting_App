@@ -44,8 +44,21 @@ test('桌面版使用多欄一頁式總覽，手機版仍維持單欄', () => {
 test('每筆固定開銷都能安全刪除且不移除既有歷史', () => {
   assert.match(appSource, /class="fixed-rule-row"/);
   assert.match(appSource, /data-action="delete-fixed-expense"/);
-  assert.match(appSource, /刪除固定開銷/);
+  assert.match(appSource, /刪除這筆固定開銷/);
   assert.match(appSource, /已產生的歷史紀錄會保留/);
   assert.match(appSource, /deleteFixedExpenseRule/);
+});
+
+test('收入與固定開銷平時只顯示摘要，點擊後才開啟輸入或刪除視窗', () => {
+  assert.match(appSource, /class="income-overview-card"/);
+  assert.match(appSource, /本期收入合計/);
+  assert.match(appSource, /薪資收入/);
+  assert.match(appSource, /其他收入/);
+  assert.match(appSource, /data-action="open-income-dialog"/);
+  assert.match(appSource, /<dialog class="finance-dialog" id="income-dialog">/);
+  assert.match(appSource, /data-action="open-fixed-rule-dialog"/);
+  assert.match(appSource, /data-action="open-fixed-expense"/);
+  assert.match(appSource, /<dialog class="finance-dialog fixed-detail-dialog"/);
+  assert.match(stylesSource, /\.finance-dialog::backdrop/);
 });
 

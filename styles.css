@@ -159,7 +159,57 @@ button { font: inherit; cursor: pointer; }
 .quick-entry-panel,
 .history-panel { display: grid; gap: 16px; }
 
-.finance-panel { display: grid; align-content: start; gap: 18px; }
+.finance-panel { display: grid; align-content: start; gap: 30px; }
+.income-overview-section,
+.fixed-overview-section { display: grid; gap: 12px; }
+.finance-overview-heading { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
+.finance-overview-heading h2 { margin: 0; font-size: 1.2rem; }
+.finance-overview-heading p { margin: 3px 0 0; color: #69746b; font-size: 0.76rem; }
+.text-action { flex: 0 0 auto; border: 0; padding: 4px 0; background: transparent; color: #23593a; font-weight: 900; cursor: pointer; }
+.text-action:hover { text-decoration: underline; }
+.income-overview-card {
+  display: grid;
+  gap: 14px;
+  border: 1px solid #dce7a8;
+  border-radius: 20px;
+  padding: 16px;
+  background: linear-gradient(135deg, #fbffe6, #fff 74%);
+}
+.income-total-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-bottom: 13px; border-bottom: 1px solid #e5e8d8; }
+.income-total-row span { color: #667166; font-size: 0.82rem; }
+.income-total-row strong { font-size: 1.35rem; }
+.income-breakdown { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.income-breakdown > div { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.income-breakdown > div > span:last-child { display: grid; min-width: 0; }
+.income-breakdown small { color: #6d776f; }
+.income-breakdown strong { margin-top: 2px; font-size: 0.92rem; }
+.income-marker { display: grid; place-items: center; width: 28px; aspect-ratio: 1; flex: 0 0 auto; border-radius: 9px; font-size: 1.25rem; }
+.salary-marker { background: #e5f567; color: #183626; }
+.other-marker { background: #ded8ff; color: #433990; }
+.fixed-overview-list { overflow: hidden; padding: 0 14px; margin: 0; border: 1px solid #e1e5df; border-radius: 20px; background: #fff; list-style: none; }
+.fixed-rule-row + .fixed-rule-row { border-top: 1px solid #edf0eb; }
+.fixed-rule-open { display: grid; grid-template-columns: 14px 36px minmax(0, 1fr) auto; gap: 9px; align-items: center; width: 100%; border: 0; padding: 13px 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.fixed-rule-open:hover .fixed-rule-name strong { color: #29603d; }
+.fixed-rule-grip { color: #9ab5ae; font-weight: 900; }
+.fixed-rule-icon { display: grid; place-items: center; width: 36px; aspect-ratio: 1; border-radius: 12px; background: #fff0e9; font-weight: 900; }
+.fixed-rule-name { display: flex; flex-wrap: wrap; gap: 3px; min-width: 0; align-items: baseline; }
+.fixed-rule-name strong { overflow: hidden; font-size: 0.88rem; text-overflow: ellipsis; white-space: nowrap; }
+.fixed-rule-name small { color: #768178; font-size: 0.7rem; }
+.fixed-rule-amount { font-size: 0.9rem; white-space: nowrap; }
+.fixed-empty-state { padding: 18px 0; color: #6d776f; font-size: 0.82rem; line-height: 1.5; }
+.finance-dialog { width: min(92vw, 560px); max-height: 88vh; border: 0; border-radius: 22px; padding: 0; background: white; color: #253229; box-shadow: 0 24px 70px rgb(15 29 19 / 28%); }
+.finance-dialog::backdrop { background: rgb(15 28 18 / 55%); backdrop-filter: blur(3px); }
+.dialog-content { display: grid; gap: 16px; overflow-y: auto; max-height: 88vh; padding: 20px; }
+.dialog-heading { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
+.dialog-heading h2 { margin: 2px 0 0; font-size: 1.25rem; }
+.dialog-close { display: grid; place-items: center; width: 34px; aspect-ratio: 1; border: 0; border-radius: 50%; background: #edf1eb; color: #34443a; font-size: 1.3rem; cursor: pointer; }
+.dialog-subsection { display: grid; gap: 10px; padding-top: 4px; border-top: 1px solid #e1e6df; }
+.dialog-subsection h3 { margin: 0; font-size: 1rem; }
+.fixed-detail-list { display: grid; gap: 0; margin: 0; }
+.fixed-detail-list div { display: flex; justify-content: space-between; gap: 12px; padding: 11px 0; border-bottom: 1px solid #e7ebe5; }
+.fixed-detail-list dt { color: #6d776f; }
+.fixed-detail-list dd { margin: 0; font-weight: 900; }
+.dialog-note { margin: 0; color: #6d776f; font-size: 0.82rem; line-height: 1.6; }
 .panel-heading { display: flex; justify-content: space-between; align-items: end; gap: 12px; }
 .panel-heading > span { color: #657066; font-size: 0.75rem; text-align: right; }
 .compact-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 14px; border-radius: 16px; background: #f4f6f1; }
@@ -202,6 +252,7 @@ button { font: inherit; cursor: pointer; }
 }
 .fixed-rule-delete:hover { background: #fbe9e6; }
 .fixed-rule-delete:disabled { cursor: wait; opacity: 0.65; }
+.fixed-detail-dialog .fixed-rule-delete { width: 100%; padding: 11px; }
 .inline-money-form { display: grid; grid-template-columns: minmax(0, 1fr) 100px auto; gap: 7px; }
 .inline-money-form .form-status,
 .fixed-rule-form .form-status { grid-column: 1 / -1; }
@@ -260,6 +311,15 @@ button { font: inherit; cursor: pointer; }
   .summary-panel span, .chart-heading > span, .expense-pie span, .chart-legend li small, .chart-legend .empty-chart, .entry-date small, .entry-detail small { color: #aeb9af; }
   .savings-summary { background: #263b29; }
   .compact-form, .money-list li { background: #202c22; }
+  .finance-overview-heading p, .income-total-row span, .income-breakdown small, .fixed-rule-name small, .fixed-empty-state, .dialog-note, .fixed-detail-list dt { color: #aeb9af; }
+  .text-action { color: #9ed7ad; }
+  .income-overview-card { border-color: #4a5937; background: linear-gradient(135deg, #26331d, #202c22 74%); }
+  .income-total-row { border-color: #46513f; }
+  .fixed-overview-list, .finance-dialog { border-color: #3b493d; background: #172119; color: #eff4ed; }
+  .fixed-rule-row + .fixed-rule-row, .fixed-detail-list div, .dialog-subsection { border-color: #3b493d; }
+  .fixed-rule-icon { background: #3a2e29; }
+  .fixed-rule-open:hover .fixed-rule-name strong { color: #a8dbb5; }
+  .dialog-close { background: #2a372d; color: #dce5dd; }
   .compact-form input, .inline-money-form input, .fixed-rule-form input, .fixed-rule-form select { border-color: #526154; background: #172119; }
   .secondary-button { background: #2a412e; color: #dce5dd; }
   .fixed-rule-delete { border-color: #875d58; color: #f2aaa0; }
@@ -278,6 +338,8 @@ button { font: inherit; cursor: pointer; }
   .compact-form, .fixed-rule-form, .inline-money-form { grid-template-columns: 1fr; }
   .inline-money-form .form-status, .fixed-rule-form .form-status { grid-column: 1; }
   .fixed-rule-row { align-items: flex-start; }
+  .income-breakdown { grid-template-columns: 1fr; }
+  .fixed-rule-open { grid-template-columns: 12px 34px minmax(0, 1fr) auto; gap: 7px; }
 }
 
 @media (min-width: 900px) {
