@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { groupExpenseEntriesByDay } from './daily-history.js';
+import {
+  buildExpenseTemplates,
+  findExpenseTemplates,
+  groupExpenseEntriesByDay,
+} from './daily-history.js';
 
 test('每日紀錄以台灣日期合併並分別加總現金與信用卡', () => {
   const days = groupExpenseEntriesByDay([
@@ -34,5 +38,38 @@ test('每日紀錄不限制筆數且維持日期與時間由新到舊', () => {
 
   assert.equal(day.entries.length, 8);
   assert.deepEqual(day.entries.map((entry) => entry.id), ['7', '6', '5', '4', '3', '2', '1', '0']);
+});
+
+test('重複歷史帳目會合併成常用範本並依使用次數與最近使用排序', () => {
+  const templates = buildExpenseTemplates([
+    { id: '1', amount: 39, item_name: '早餐', category_id: 'food', payment_method: 'credit_card', occurred_at: '2026-08-17T01:00:00Z', is_fixed: false },
+    { id: '2', amount: 39, item_name: '早餐', category_id: 'food', payment_method: 'credit_card', occurred_at: '2026-08-18T01:00:00Z', is_fixed: false },
+    { id: '3', amount: 100, item_name: '午餐', category_id: 'food', payment_method: 'cash', occurred_at: '2026-08-19T01:00:00Z', is_fixed: false },
+    { id: '4', amount: 9500, item_name: '房租', category_id: 'life', payment_method: 'cash', occurred_at: '2026-08-05T01:00:00Z', is_fixed: true },
+  ]);
+
+  assert.equal(templates.length, 2);
+  assert.deepEqual(templates[0], {
+    key: '[39,"早餐","food","credit_card"]',
+    amount: 39,
+    itemName: '早餐',
+    categoryId: 'food',
+    paymentMethod: 'credit_card',
+    usageCount: 2,
+    lastUsedAt: '2026-08-18T01:00:00Z',
+  });
+});
+
+test('輸入金額後只顯示相同金額的多筆常用與最近範本', () => {
+  const templates = buildExpenseTemplates([
+    { amount: 39, item_name: '早餐', category_id: 'food', payment_method: 'credit_card', occurred_at: '2026-08-18T01:00:00Z' },
+    { amount: 39, item_name: '茶葉蛋', category_id: 'food', payment_method: 'cash', occurred_at: '2026-08-19T01:00:00Z' },
+    { amount: 100, item_name: '晚餐', category_id: 'food', payment_method: 'cash', occurred_at: '2026-08-19T02:00:00Z' },
+  ]);
+
+  assert.deepEqual(
+    findExpenseTemplates(templates, '39', 5).map((template) => template.itemName),
+    ['茶葉蛋', '早餐'],
+  );
 });
 

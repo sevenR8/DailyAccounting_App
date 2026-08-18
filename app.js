@@ -1,18 +1,22 @@
-import { LedgerModule } from './ledger-module.js?v=15';
-import { calculateFinancialSummary } from './financial-summary.js?v=15';
-import { groupExpenseEntriesByDay } from './daily-history.js?v=15';
+import { LedgerModule } from './ledger-module.js?v=16';
+import { calculateFinancialSummary } from './financial-summary.js?v=16';
+import {
+  buildExpenseTemplates,
+  findExpenseTemplates,
+  groupExpenseEntriesByDay,
+} from './daily-history.js?v=16';
 import {
   accountingPeriodFromStart,
   compareExpenseTotals,
   scheduledDateInAccountingPeriod,
   shiftAccountingPeriodStart,
-} from './accounting-period.js?v=15';
+} from './accounting-period.js?v=16';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=15';
+} from './supabase-adapter.js?v=16';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -340,6 +344,12 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
     .map((category) => `<option value="${escapeHtml(category.id)}" ${category.id === selectedId ? 'selected' : ''}>${escapeHtml(category.name)}</option>`)
     .join('');
   const categoryOptions = categoryOptionsFor();
+  const activeCategoryIds = new Set(
+    ledger.categories.filter((category) => !category.retiredAt).map((category) => category.id),
+  );
+  const quickEntryTemplates = buildExpenseTemplates(
+    entries.filter((entry) => activeCategoryIds.has(entry.category_id)),
+  );
   const dailyHistory = groupExpenseEntriesByDay(suggestions);
   const suggestionButtons = dailyHistory.map((day) => `
     <details class="day-expense-group">
@@ -688,6 +698,13 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
           <label>金額
             <input id="expense-amount" name="amount" type="number" min="1" step="1" inputmode="numeric" placeholder="例如 100" required autofocus />
           </label>
+          <section class="smart-suggestions" id="smart-suggestions" ${quickEntryTemplates.length ? '' : 'hidden'} aria-label="常用記帳紀錄">
+            <div class="smart-suggestions-heading">
+              <strong id="smart-suggestions-title">常用紀錄</strong>
+              <small>點一下自動帶入</small>
+            </div>
+            <div class="smart-suggestion-list" id="smart-suggestion-list"></div>
+          </section>
           <label>項目名稱
             <input id="expense-item-name" name="itemName" type="text" maxlength="100" placeholder="例如 晚餐" required />
           </label>
@@ -733,6 +750,50 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
         </button>
       </nav>
     </main>`;
+
+  const smartSuggestions = document.querySelector('#smart-suggestions');
+  const smartSuggestionsTitle = document.querySelector('#smart-suggestions-title');
+  const smartSuggestionList = document.querySelector('#smart-suggestion-list');
+  const expenseAmountInput = document.querySelector('#expense-amount');
+  const renderSmartSuggestions = () => {
+    const matchingTemplates = findExpenseTemplates(
+      quickEntryTemplates,
+      expenseAmountInput.value,
+      5,
+    );
+    smartSuggestions.hidden = matchingTemplates.length === 0;
+    smartSuggestionsTitle.textContent = expenseAmountInput.value
+      ? `符合 $${formatAmount(Number(expenseAmountInput.value))}`
+      : '常用紀錄';
+    smartSuggestionList.innerHTML = matchingTemplates.map((template) => {
+      const templateIndex = quickEntryTemplates.indexOf(template);
+      const paymentLabel = template.paymentMethod === 'cash' ? '現金' : '信用卡';
+      const usageLabel = template.usageCount > 1 ? `${template.usageCount} 次` : '最近';
+      return `
+        <button type="button" data-quick-template-index="${templateIndex}">
+          <span>
+            <strong>$${formatAmount(template.amount)}・${escapeHtml(template.itemName)}</strong>
+            <small>${escapeHtml(categoryNames.get(template.categoryId) || '未分類')}・${paymentLabel}</small>
+          </span>
+          <em>${usageLabel}</em>
+        </button>`;
+    }).join('');
+  };
+  expenseAmountInput.addEventListener('input', renderSmartSuggestions);
+  smartSuggestionList.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-quick-template-index]');
+    if (!button) return;
+    const template = quickEntryTemplates[Number(button.dataset.quickTemplateIndex)];
+    document.querySelector('#expense-amount').value = template.amount;
+    document.querySelector('#expense-item-name').value = template.itemName;
+    document.querySelector('#expense-category').value = template.categoryId;
+    document.querySelector(`input[name="paymentMethod"][value="${template.paymentMethod}"]`).checked = true;
+    document.querySelector('#expense-occurred-at').value = toDateTimeLocalValue();
+    document.querySelector('#expense-status').textContent = `已帶入「${template.itemName}」，可直接儲存或修改。`;
+    document.activeElement?.blur();
+    renderSmartSuggestions();
+  });
+  renderSmartSuggestions();
 
   mobileNavigationCleanup();
   const mobileNavigationButtons = [...document.querySelectorAll('[data-mobile-nav]')];

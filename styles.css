@@ -373,6 +373,58 @@ button { font: inherit; cursor: pointer; }
 .expense-form legend { padding: 0 4px; font-weight: 800; }
 .expense-form fieldset label { display: flex; gap: 6px; align-items: center; }
 
+.smart-suggestions {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 8px;
+  min-width: 0;
+}
+.smart-suggestions[hidden] { display: none; }
+.smart-suggestions-heading { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.smart-suggestions-heading strong { color: #315d42; font-size: 0.82rem; }
+.smart-suggestions-heading small { color: #758077; font-size: 0.7rem; }
+.smart-suggestion-list {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 1px 1px 5px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+.smart-suggestion-list::-webkit-scrollbar { display: none; }
+.smart-suggestion-list button {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  width: min(78vw, 280px);
+  flex: 0 0 auto;
+  border: 1px solid #d3ddd1;
+  border-radius: 13px;
+  padding: 10px 11px;
+  background: #f4f7f1;
+  color: #26342a;
+  text-align: left;
+  scroll-snap-align: start;
+}
+.smart-suggestion-list button:hover,
+.smart-suggestion-list button:focus-visible { border-color: #6f9b79; background: #ebf3e8; }
+.smart-suggestion-list button > span { display: grid; gap: 3px; min-width: 0; }
+.smart-suggestion-list strong,
+.smart-suggestion-list small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.smart-suggestion-list strong { font-size: 0.82rem; }
+.smart-suggestion-list small { color: #6e796f; font-size: 0.7rem; }
+.smart-suggestion-list em {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 3px 7px;
+  background: #dfeadd;
+  color: #315d42;
+  font-size: 0.66rem;
+  font-style: normal;
+  font-weight: 800;
+}
+
 .day-expense-group {
   overflow: hidden;
   border-radius: 14px;
@@ -473,6 +525,11 @@ button { font: inherit; cursor: pointer; }
   .email-sign-in input { background: #172119; border-color: #526154; }
   .expense-form input:not([type="radio"]), .expense-form select { background: #172119; border-color: #526154; }
   .expense-form fieldset { border-color: #3b493d; }
+  .smart-suggestions-heading strong { color: #a8dbb5; }
+  .smart-suggestions-heading small, .smart-suggestion-list small { color: #aeb9af; }
+  .smart-suggestion-list button { border-color: #425146; background: #202c22; color: #dce5dd; }
+  .smart-suggestion-list button:hover, .smart-suggestion-list button:focus-visible { border-color: #71947a; background: #29382c; }
+  .smart-suggestion-list em { background: #304634; color: #b9e3c2; }
   .summary-panel span, .chart-heading > span, .expense-pie span, .chart-legend li small, .chart-legend .empty-chart, .entry-date small, .entry-detail small { color: #aeb9af; }
   .savings-summary { background: #263b29; }
   .compact-form, .money-list li { background: #202c22; }

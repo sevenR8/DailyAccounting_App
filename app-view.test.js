@@ -70,6 +70,15 @@ test('手機版在頁面頂端下拉可重新取得最新頁面與帳務資料',
   assert.match(stylesSource, /\.mobile-pull-refresh/);
 });
 
+test('快速記帳會依金額顯示常用歷史範本並一鍵帶入所有欄位', () => {
+  assert.match(appSource, /buildExpenseTemplates/);
+  assert.match(appSource, /findExpenseTemplates/);
+  assert.match(appSource, /class="smart-suggestions"/);
+  assert.match(appSource, /data-quick-template-index/);
+  assert.match(appSource, /點一下自動帶入/);
+  assert.match(stylesSource, /\.smart-suggestions/);
+});
+
 test('上方可切換帳務月份並顯示與前一個月的開銷比較', () => {
   assert.match(appSource, /class="period-navigation"/);
   assert.match(appSource, /data-period-direction="previous"/);
