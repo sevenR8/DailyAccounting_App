@@ -14,7 +14,7 @@ test('本期總覽包含分類圓餅圖與各分類占比', () => {
 test('近期紀錄清楚顯示每筆開銷的日期與時間', () => {
   assert.match(appSource, /class="entry-date"/);
   assert.match(appSource, /<time datetime=/);
-  assert.match(appSource, /formatEntryDate\(entry\.occurred_at\)/);
+  assert.match(appSource, /formatEntryDate\(day\.occurredAt\)/);
   assert.match(appSource, /formatEntryTime\(entry\.occurred_at\)/);
 });
 
@@ -60,5 +60,15 @@ test('收入與固定開銷平時只顯示摘要，點擊後才開啟輸入或�
   assert.match(appSource, /data-action="open-fixed-expense"/);
   assert.match(appSource, /<dialog class="finance-dialog fixed-detail-dialog"/);
   assert.match(stylesSource, /\.finance-dialog::backdrop/);
+});
+
+test('近期紀錄按日折疊，關閉時顯示當日現金與信用卡合計', () => {
+  assert.match(appSource, /groupExpenseEntriesByDay/);
+  assert.match(appSource, /class="day-expense-group"/);
+  assert.match(appSource, /class="day-expense-summary"/);
+  assert.match(appSource, /day\.cashTotal/);
+  assert.match(appSource, /day\.creditCardTotal/);
+  assert.match(appSource, /day\.entries\.map/);
+  assert.match(stylesSource, /\.day-expense-summary/);
 });
 

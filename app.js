@@ -1,11 +1,12 @@
-import { LedgerModule } from './ledger-module.js?v=6';
-import { calculateFinancialSummary } from './financial-summary.js?v=6';
+import { LedgerModule } from './ledger-module.js?v=7';
+import { calculateFinancialSummary } from './financial-summary.js?v=7';
+import { groupExpenseEntriesByDay } from './daily-history.js?v=7';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=6';
+} from './supabase-adapter.js?v=7';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -142,6 +143,7 @@ function formatAmount(amount) {
 
 function formatEntryTime(value) {
   return new Intl.DateTimeFormat('zh-TW', {
+    timeZone: 'Asia/Taipei',
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(value));
@@ -149,6 +151,7 @@ function formatEntryTime(value) {
 
 function formatEntryDate(value) {
   return new Intl.DateTimeFormat('zh-TW', {
+    timeZone: 'Asia/Taipei',
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -258,22 +261,37 @@ async function renderLedger(ledger, user, expenseAdapter) {
       <strong>${Math.round((category.amount / generatedExpenseTotal) * 100)}%</strong>
       <small>$${formatAmount(category.amount)}</small>
     </li>`).join('');
-  const suggestions = entries.slice(0, 6);
+  const suggestions = periodEntries;
+  const suggestionIndexById = new Map(
+    suggestions.map((entry, index) => [entry.id, index]),
+  );
   const categoryOptions = ledger.categories
     .filter((category) => !category.retiredAt)
     .map((category) => `<option value="${escapeHtml(category.id)}">${escapeHtml(category.name)}</option>`)
     .join('');
-  const suggestionButtons = suggestions.map((entry, index) => `
-    <button class="suggestion-button" type="button" data-suggestion-index="${index}">
-      <span class="entry-date">
-        <time datetime="${escapeHtml(entry.occurred_at)}">${escapeHtml(formatEntryDate(entry.occurred_at))}</time>
-        <small>${escapeHtml(formatEntryTime(entry.occurred_at))}</small>
-      </span>
-      <span class="entry-detail">
-        <strong>$${formatAmount(entry.amount)}・${escapeHtml(entry.item_name)}</strong>
-        <small>${escapeHtml(categoryNames.get(entry.category_id) || '未分類')}・${entry.payment_method === 'cash' ? '現金' : '信用卡'}</small>
-      </span>
-    </button>`).join('');
+  const dailyHistory = groupExpenseEntriesByDay(suggestions);
+  const suggestionButtons = dailyHistory.map((day) => `
+    <details class="day-expense-group">
+      <summary class="day-expense-summary">
+        <span class="day-summary-date">
+          <time datetime="${escapeHtml(day.key)}">${escapeHtml(formatEntryDate(day.occurredAt))}</time>
+          <small>${day.entries.length} 筆</small>
+        </span>
+        <span class="day-payment-total"><small>現金</small><strong>$${formatAmount(day.cashTotal)}</strong></span>
+        <span class="day-payment-total"><small>信用卡</small><strong>$${formatAmount(day.creditCardTotal)}</strong></span>
+        <span class="day-summary-chevron" aria-hidden="true">⌄</span>
+      </summary>
+      <div class="day-expense-list">
+        ${day.entries.map((entry) => `
+          <button class="day-expense-entry" type="button" data-suggestion-index="${suggestionIndexById.get(entry.id)}">
+            <span class="entry-date"><time datetime="${escapeHtml(entry.occurred_at)}">${escapeHtml(formatEntryTime(entry.occurred_at))}</time></span>
+            <span class="entry-detail">
+              <strong>$${formatAmount(entry.amount)}・${escapeHtml(entry.item_name)}</strong>
+              <small>${escapeHtml(categoryNames.get(entry.category_id) || '未分類')}・${entry.payment_method === 'cash' ? '現金' : '信用卡'}</small>
+            </span>
+          </button>`).join('')}
+      </div>
+    </details>`).join('');
 
   const periodLabel = `${formatEntryDate(periodStart)}－${formatEntryDate(new Date(periodEnd.getTime() - 1))}`;
   const periodMonthLabel = new Intl.DateTimeFormat('zh-TW', {

@@ -279,16 +279,65 @@ button { font: inherit; cursor: pointer; }
 .expense-form legend { padding: 0 4px; font-weight: 800; }
 .expense-form fieldset label { display: flex; gap: 6px; align-items: center; }
 
-.suggestion-button {
-  display: grid;
-  grid-template-columns: 108px 1fr;
-  gap: 12px;
-  border: 0;
+.day-expense-group {
+  overflow: hidden;
   border-radius: 14px;
-  padding: 14px;
   background: #f0f3ed;
+}
+.day-expense-summary {
+  display: grid;
+  grid-template-columns: minmax(82px, 1.25fr) repeat(2, minmax(54px, 0.8fr)) 14px;
+  gap: 5px;
+  align-items: center;
+  padding: 12px;
+  color: #26342a;
+  cursor: pointer;
+  list-style: none;
+}
+.day-expense-summary::-webkit-details-marker { display: none; }
+.day-summary-date,
+.day-payment-total { display: grid; gap: 2px; min-width: 0; }
+.day-summary-date time {
+  overflow: hidden;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.day-summary-date small,
+.day-payment-total small { color: #68736a; font-size: 0.65rem; }
+.day-payment-total { text-align: right; }
+.day-payment-total strong { font-size: 0.78rem; white-space: nowrap; }
+.day-summary-chevron {
+  color: #68736a;
+  font-weight: 900;
+  text-align: center;
+  transition: transform 160ms ease;
+}
+.day-expense-group[open] .day-summary-chevron { transform: rotate(180deg); }
+.day-expense-group[open] .day-expense-summary { border-bottom: 1px solid #d7ded5; }
+.day-expense-list { display: grid; }
+.day-expense-entry {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 10px;
+  width: 100%;
+  border: 0;
+  border-top: 1px solid #dfe5dc;
+  padding: 12px;
+  background: transparent;
   color: #26342a;
   text-align: left;
+}
+.day-expense-entry:first-child { border-top: 0; }
+.day-expense-entry:hover,
+.day-expense-entry:focus-visible { background: #e5eadf; }
+.day-expense-entry:focus-visible { outline: 2px solid #3d7b54; outline-offset: -2px; }
+.day-expense-entry .entry-date { align-content: center; }
+.day-expense-entry .entry-detail strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .entry-date, .entry-detail { display: grid; gap: 4px; }
 .entry-date { padding-right: 12px; border-right: 1px solid #d7ded5; color: #304033; }
@@ -300,7 +349,7 @@ button { font: inherit; cursor: pointer; }
   :root { background: #101812; color: #eff4ed; }
   .auth-card p,
   .next-step { color: #bdc9bf; }
-  .notice, .suggestion-button { background: #202c22; color: #d3ded3; }
+  .notice, .day-expense-group { background: #202c22; color: #d3ded3; }
   .chart-panel, .summary-panel, .finance-panel, .quick-entry-panel, .history-panel { background: #172119; box-shadow: none; }
   .user-menu summary:hover, .menu-sign-out { background: #202c22; color: #dce5dd; }
   .user-menu-popover { border-color: #3b493d; background: #172119; box-shadow: 0 14px 32px rgb(0 0 0 / 30%); }
@@ -328,13 +377,18 @@ button { font: inherit; cursor: pointer; }
   .panel-heading > span, .money-list .empty-money-list, .migration-notice p { color: #aeb9af; }
   .expense-pie::after { background: #172119; }
   .entry-date { color: #dce5dd; border-color: #3b493d; }
+  .day-expense-summary, .day-expense-entry { color: #dce5dd; }
+  .day-summary-date small, .day-payment-total small, .day-summary-chevron { color: #aeb9af; }
+  .day-expense-group[open] .day-expense-summary, .day-expense-entry { border-color: #3b493d; }
+  .day-expense-entry:hover, .day-expense-entry:focus-visible { background: #29362b; }
   .sign-in-divider::before, .sign-in-divider::after { background: #3b493d; }
 }
 
 @media (max-width: 380px) {
   .chart-body { grid-template-columns: 1fr; justify-items: center; }
   .chart-legend { width: 100%; }
-  .suggestion-button { grid-template-columns: 94px 1fr; }
+  .day-expense-summary { padding-inline: 9px; }
+  .day-expense-entry { grid-template-columns: 64px minmax(0, 1fr); padding-inline: 9px; }
   .compact-form, .fixed-rule-form, .inline-money-form { grid-template-columns: 1fr; }
   .inline-money-form .form-status, .fixed-rule-form .form-status { grid-column: 1; }
   .fixed-rule-row { align-items: flex-start; }
@@ -360,8 +414,7 @@ button { font: inherit; cursor: pointer; }
   .chart-panel { grid-area: chart; }
   .finance-panel { grid-area: finance; }
   .quick-entry-panel { grid-area: quick; }
-  .history-panel { grid-area: history; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
-  .history-panel > div:first-child { grid-column: 1 / -1; }
+  .history-panel { grid-area: history; grid-template-columns: 1fr; align-items: start; }
   .chart-panel, .summary-panel, .finance-panel, .quick-entry-panel, .history-panel { padding: 18px; }
   .expense-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .expense-form fieldset, .expense-form .email-button, .expense-form .form-status { grid-column: 1 / -1; }
@@ -377,7 +430,6 @@ button { font: inherit; cursor: pointer; }
       "history quick finance";
   }
   .history-panel { grid-template-columns: 1fr; max-height: 360px; overflow-y: auto; }
-  .history-panel > div:first-child { grid-column: auto; }
   .finance-panel { max-height: 720px; overflow-y: auto; }
 }
 
