@@ -1,4 +1,4 @@
-const CACHE_NAME = 'daily-ledger-shell-v3';
+const CACHE_NAME = 'daily-ledger-shell-v4';
 const APP_SHELL = [
   './',
   './index.html',
@@ -20,7 +20,7 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
 });
 
-async function networkFirstConfig(request) {
+async function networkFirst(request) {
   try {
     const response = await fetch(request);
     const cache = await caches.open(CACHE_NAME);
@@ -36,8 +36,16 @@ async function networkFirstConfig(request) {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
-  if (event.request.url.endsWith('/config.js')) {
-    event.respondWith(networkFirstConfig(event.request));
+  const pathname = new URL(event.request.url).pathname;
+  if (pathname === '/' || [
+    '/index.html',
+    '/styles.css',
+    '/app.js',
+    '/ledger-module.js',
+    '/supabase-adapter.js',
+    '/config.js',
+  ].some((path) => pathname.endsWith(path))) {
+    event.respondWith(networkFirst(event.request));
     return;
   }
 
