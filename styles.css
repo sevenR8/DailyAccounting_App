@@ -43,6 +43,38 @@ button { font: inherit; cursor: pointer; }
   box-shadow: 0 10px 24px rgb(33 79 50 / 18%);
 }
 
+.email-sign-in { display: grid; gap: 10px; }
+
+.email-sign-in label { font-weight: 800; }
+
+.email-sign-in input {
+  width: 100%;
+  border: 1px solid #aeb9ae;
+  border-radius: 13px;
+  padding: 14px;
+  background: white;
+  color: inherit;
+  font: inherit;
+}
+
+.email-button {
+  border: 0;
+  border-radius: 16px;
+  padding: 16px 20px;
+  background: #214f32;
+  color: white;
+  font-weight: 800;
+}
+
+.email-button:disabled { cursor: wait; opacity: 0.7; }
+
+.form-status { min-height: 1.7em; margin: 0; font-size: 0.9rem; }
+
+.sign-in-divider { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: center; color: #758075; }
+.sign-in-divider::before, .sign-in-divider::after { content: ''; height: 1px; background: #d4dbd3; }
+
+.sign-in-hint { margin: -8px 0 0; font-size: 0.85rem; }
+
 .notice {
   padding: 14px;
   border-radius: 14px;
@@ -89,5 +121,7 @@ button { font: inherit; cursor: pointer; }
   .notice, .category-panel li { background: #202c22; color: #d3ded3; }
   .welcome-panel, .category-panel { background: #172119; box-shadow: none; }
   .text-button { color: #9ed7aa; }
+  .email-sign-in input { background: #172119; border-color: #526154; }
+  .sign-in-divider::before, .sign-in-divider::after { background: #3b493d; }
 }
 
