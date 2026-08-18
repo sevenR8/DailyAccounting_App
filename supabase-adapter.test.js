@@ -171,3 +171,31 @@ test('固定開銷規則會保存日期、分類與付款方式', async () => {
   });
 });
 
+test('刪除固定開銷會停用規則並保留既有支出紀錄', async () => {
+  const calls = [];
+  const connection = new SupabaseConnection({
+    supabaseUrl: 'https://example.supabase.co',
+    supabaseAnonKey: 'public-key',
+    accessToken: 'access-token',
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      return response(null);
+    },
+  });
+
+  await new SupabaseLedgerAdapter(connection).deleteFixedExpenseRule({
+    ledgerId: 'ledger-1',
+    ruleId: 'fixed-1',
+    retiredAt: '2026-08-19T04:30:00.000Z',
+  });
+
+  assert.equal(
+    calls[0].url,
+    'https://example.supabase.co/rest/v1/fixed_expense_rules?id=eq.fixed-1&ledger_id=eq.ledger-1',
+  );
+  assert.equal(calls[0].options.method, 'PATCH');
+  assert.deepEqual(JSON.parse(calls[0].options.body), {
+    retired_at: '2026-08-19T04:30:00.000Z',
+  });
+});
+

@@ -41,3 +41,11 @@ test('桌面版使用多欄一頁式總覽，手機版仍維持單欄', () => {
   assert.match(stylesSource, /grid-template-columns: repeat\(6, minmax\(0, 1fr\)\)/);
 });
 
+test('每筆固定開銷都能安全刪除且不移除既有歷史', () => {
+  assert.match(appSource, /class="fixed-rule-row"/);
+  assert.match(appSource, /data-action="delete-fixed-expense"/);
+  assert.match(appSource, /刪除固定開銷/);
+  assert.match(appSource, /已產生的歷史紀錄會保留/);
+  assert.match(appSource, /deleteFixedExpenseRule/);
+});
+

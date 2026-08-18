@@ -1,11 +1,11 @@
-import { LedgerModule } from './ledger-module.js?v=4';
-import { calculateFinancialSummary } from './financial-summary.js?v=4';
+import { LedgerModule } from './ledger-module.js?v=5';
+import { calculateFinancialSummary } from './financial-summary.js?v=5';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=4';
+} from './supabase-adapter.js?v=5';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -279,9 +279,19 @@ async function renderLedger(ledger, user, expenseAdapter) {
   const otherIncomeList = financialOverview?.otherIncomeEntries.map((income) => `
     <li><span>${escapeHtml(income.name)}</span><strong>+$${formatAmount(income.amount)}</strong></li>`).join('') || '';
   const fixedExpenseList = financialOverview?.fixedExpenseRules.map((rule) => `
-    <li>
+    <li class="fixed-rule-row">
       <span>${rule.scheduled_day} 日・${escapeHtml(rule.item_name)}・${rule.payment_method === 'cash' ? '現金' : '信用卡'}</span>
-      <strong>$${formatAmount(rule.amount)}</strong>
+      <span class="fixed-rule-actions">
+        <strong>$${formatAmount(rule.amount)}</strong>
+        <button
+          class="fixed-rule-delete"
+          type="button"
+          data-action="delete-fixed-expense"
+          data-rule-id="${escapeHtml(rule.id)}"
+          data-rule-name="${escapeHtml(rule.item_name)}"
+          aria-label="刪除固定開銷：${escapeHtml(rule.item_name)}"
+        >刪除</button>
+      </span>
     </li>`).join('') || '';
   const financialPanel = financialOverview ? `
     <section class="finance-panel">
@@ -550,6 +560,31 @@ async function renderLedger(ledger, user, expenseAdapter) {
         status.textContent = error.message;
         button.disabled = false;
       }
+    });
+
+    document.querySelectorAll('[data-action="delete-fixed-expense"]').forEach((button) => {
+      button.addEventListener('click', async () => {
+        const confirmed = window.confirm(
+          `確定刪除「${button.dataset.ruleName}」？\n已產生的歷史紀錄會保留，未來不會再自動新增。`,
+        );
+        if (!confirmed) return;
+
+        const originalLabel = button.textContent;
+        button.disabled = true;
+        button.textContent = '刪除中…';
+        try {
+          await expenseAdapter.deleteFixedExpenseRule({
+            ledgerId: ledger.id,
+            ruleId: button.dataset.ruleId,
+            retiredAt: new Date().toISOString(),
+          });
+          await renderLedger(ledger, user, expenseAdapter);
+        } catch (error) {
+          button.disabled = false;
+          button.textContent = originalLabel;
+          window.alert(error.message);
+        }
+      });
     });
   }
 

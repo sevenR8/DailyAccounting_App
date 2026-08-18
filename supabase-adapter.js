@@ -255,6 +255,18 @@ export class SupabaseLedgerAdapter {
     const [rule] = await response.json();
     return rule;
   }
+
+  async deleteFixedExpenseRule({ ledgerId, ruleId, retiredAt }) {
+    const parameters = new URLSearchParams({
+      id: `eq.${ruleId}`,
+      ledger_id: `eq.${ledgerId}`,
+    });
+    const response = await this.connection.request(`/rest/v1/fixed_expense_rules?${parameters}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ retired_at: retiredAt }),
+    });
+    if (!response.ok) throw new Error('無法刪除固定開銷，請稍後再試一次。');
+  }
 }
 
 export function startGoogleSignIn({ supabaseUrl, redirectTo }) {
