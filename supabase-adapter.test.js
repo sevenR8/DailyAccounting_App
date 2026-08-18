@@ -105,3 +105,37 @@ test('Email 登入連結會使用公開匿名金鑰並回到目前網站', async
   });
 });
 
+test('快速記帳會以目前帳本與分類新增一筆開銷', async () => {
+  const calls = [];
+  const connection = new SupabaseConnection({
+    supabaseUrl: 'https://example.supabase.co',
+    supabaseAnonKey: 'public-key',
+    accessToken: 'access-token',
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      return response([{ id: 'expense-1' }]);
+    },
+  });
+
+  const entry = await new SupabaseLedgerAdapter(connection).createExpenseEntry({
+    ledgerId: 'ledger-1',
+    categoryId: 'category-1',
+    itemName: '晚餐',
+    amount: 100,
+    paymentMethod: 'cash',
+    occurredAt: '2026-08-18T12:00:00.000Z',
+  });
+
+  assert.deepEqual(entry, { id: 'expense-1' });
+  assert.equal(calls[0].url, 'https://example.supabase.co/rest/v1/expense_entries');
+  assert.equal(calls[0].options.headers.Prefer, 'return=representation');
+  assert.deepEqual(JSON.parse(calls[0].options.body), {
+    ledger_id: 'ledger-1',
+    category_id: 'category-1',
+    item_name: '晚餐',
+    amount: 100,
+    payment_method: 'cash',
+    occurred_at: '2026-08-18T12:00:00.000Z',
+  });
+});
+
