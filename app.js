@@ -1,12 +1,12 @@
-import { LedgerModule } from './ledger-module.js?v=7';
-import { calculateFinancialSummary } from './financial-summary.js?v=7';
-import { groupExpenseEntriesByDay } from './daily-history.js?v=7';
+import { LedgerModule } from './ledger-module.js?v=8';
+import { calculateFinancialSummary } from './financial-summary.js?v=8';
+import { groupExpenseEntriesByDay } from './daily-history.js?v=8';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=7';
+} from './supabase-adapter.js?v=8';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -300,6 +300,12 @@ async function renderLedger(ledger, user, expenseAdapter) {
   }).format(periodStart);
   const salaryAmount = financialOverview?.period.salary_amount ?? 0;
   const otherIncomeTotal = calculatedSummary?.otherIncomeTotal ?? 0;
+  const previousCardBillAmount = financialOverview?.period.previous_card_bill_zero_confirmed
+    ? 0
+    : financialOverview?.period.previous_card_bill_amount;
+  const previousCardBillNote = previousCardBillReady
+    ? '上期實際帳單・已納入本期可存額'
+    : '待輸入上期實際帳單，點此更新';
   const otherIncomeList = financialOverview?.otherIncomeEntries.map((income) => `
     <li><span>${escapeHtml(income.name)}</span><strong>+$${formatAmount(income.amount)}</strong></li>`).join('') || '';
   const fixedExpenseList = financialOverview?.fixedExpenseRules.map((rule) => `
@@ -358,6 +364,20 @@ async function renderLedger(ledger, user, expenseAdapter) {
           </div>
         </div>
       </section>
+      <section class="card-bill-overview-section">
+        <button
+          class="credit-card-payment-card"
+          type="button"
+          data-action="open-income-dialog"
+          aria-label="更新本月信用卡繳納"
+        >
+          <span class="credit-card-payment-copy">
+            <strong>本月信用卡繳納</strong>
+            <small>${escapeHtml(previousCardBillNote)}</small>
+          </span>
+          <strong class="credit-card-payment-amount">${previousCardBillReady ? `NT$ ${formatAmount(previousCardBillAmount ?? 0)}` : '待輸入'}</strong>
+        </button>
+      </section>
       <section class="fixed-overview-section">
         <div class="finance-overview-heading">
           <div>
@@ -383,15 +403,9 @@ async function renderLedger(ledger, user, expenseAdapter) {
               <input id="previous-card-bill" name="previousCardBillAmount" type="number" min="0" step="1" inputmode="numeric" value="${financialOverview.period.previous_card_bill_amount ?? ''}" placeholder="尚未輸入" ${financialOverview.period.previous_card_bill_zero_confirmed ? 'disabled' : ''} />
             </label>
             <label class="inline-check"><input id="zero-card-bill" name="zeroCardBill" type="checkbox" ${financialOverview.period.previous_card_bill_zero_confirmed ? 'checked' : ''} /> 上期帳單確實為 0 元</label>
+            <p class="form-helper">儲存後，本期薪水會自動作為後續週期的預設薪水。</p>
             <button class="small-primary-button" type="submit">儲存本期資料</button>
             <p class="form-status" id="period-finance-status" aria-live="polite"></p>
-          </form>
-          <form class="compact-form default-salary-form" id="default-salary-form">
-            <label>每期預設薪水
-              <input name="defaultSalaryAmount" type="number" min="0" step="1" inputmode="numeric" value="${financialOverview.settings.default_salary_amount}" required />
-            </label>
-            <button class="secondary-button" type="submit">套用至未來週期</button>
-            <p class="form-status" id="default-salary-status" aria-live="polite"></p>
           </form>
           <div class="dialog-subsection">
             <h3>其他收入</h3>
@@ -549,8 +563,8 @@ async function renderLedger(ledger, user, expenseAdapter) {
       if (dialog && !dialog.open) dialog.showModal();
     };
 
-    document.querySelector('[data-action="open-income-dialog"]').addEventListener('click', () => {
-      openDialog('income-dialog');
+    document.querySelectorAll('[data-action="open-income-dialog"]').forEach((button) => {
+      button.addEventListener('click', () => openDialog('income-dialog'));
     });
     document.querySelector('[data-action="open-fixed-rule-dialog"]').addEventListener('click', () => {
       openDialog('fixed-rule-dialog');
@@ -582,37 +596,24 @@ async function renderLedger(ledger, user, expenseAdapter) {
       const status = document.querySelector('#period-finance-status');
       const zeroConfirmed = formData.get('zeroCardBill') === 'on';
       const billValue = formData.get('previousCardBillAmount');
+      const updatedSalaryAmount = Number(formData.get('salaryAmount'));
       button.disabled = true;
       status.textContent = '正在儲存…';
       try {
-        await expenseAdapter.updateAccountingPeriod({
-          ledgerId: ledger.id,
-          startsOn: financialOverview.period.starts_on,
-          salaryAmount: Number(formData.get('salaryAmount')),
-          previousCardBillAmount: zeroConfirmed || billValue === '' ? null : Number(billValue),
-          previousCardBillZeroConfirmed: zeroConfirmed,
-        });
-        await renderLedger(ledger, user, expenseAdapter);
-      } catch (error) {
-        status.textContent = error.message;
-        button.disabled = false;
-      }
-    });
-
-    document.querySelector('#default-salary-form').addEventListener('submit', async (event) => {
-      event.preventDefault();
-      const form = event.currentTarget;
-      const formData = new FormData(form);
-      const button = form.querySelector('button[type="submit"]');
-      const status = document.querySelector('#default-salary-status');
-      button.disabled = true;
-      status.textContent = '正在儲存…';
-      try {
-        await expenseAdapter.updateFinancialSettings({
-          ledgerId: ledger.id,
-          cycleStartDay: financialOverview.settings.cycle_start_day,
-          defaultSalaryAmount: Number(formData.get('defaultSalaryAmount')),
-        });
+        await Promise.all([
+          expenseAdapter.updateAccountingPeriod({
+            ledgerId: ledger.id,
+            startsOn: financialOverview.period.starts_on,
+            salaryAmount: updatedSalaryAmount,
+            previousCardBillAmount: zeroConfirmed || billValue === '' ? null : Number(billValue),
+            previousCardBillZeroConfirmed: zeroConfirmed,
+          }),
+          expenseAdapter.updateFinancialSettings({
+            ledgerId: ledger.id,
+            cycleStartDay: financialOverview.settings.cycle_start_day,
+            defaultSalaryAmount: updatedSalaryAmount,
+          }),
+        ]);
         await renderLedger(ledger, user, expenseAdapter);
       } catch (error) {
         status.textContent = error.message;

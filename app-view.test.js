@@ -62,6 +62,26 @@ test('收入與固定開銷平時只顯示摘要，點擊後才開啟輸入或�
   assert.match(stylesSource, /\.finance-dialog::backdrop/);
 });
 
+test('儲存本期薪水時直接沿用為未來週期預設，不再顯示第二組薪水設定', () => {
+  assert.doesNotMatch(appSource, /id="default-salary-form"/);
+  assert.doesNotMatch(appSource, /name="defaultSalaryAmount"/);
+  assert.match(appSource, /const updatedSalaryAmount = Number\(formData\.get\('salaryAmount'\)\)/);
+  assert.match(appSource, /updateFinancialSettings\(\{[\s\S]*defaultSalaryAmount: updatedSalaryAmount/);
+});
+
+test('本月信用卡繳納顯示在收入與固定開銷之間，並使用上期實際帳單', () => {
+  const incomeIndex = appSource.indexOf('class="income-overview-section"');
+  const cardBillIndex = appSource.indexOf('class="card-bill-overview-section"');
+  const fixedIndex = appSource.indexOf('class="fixed-overview-section"');
+
+  assert.ok(incomeIndex >= 0 && incomeIndex < cardBillIndex && cardBillIndex < fixedIndex);
+  assert.match(appSource, /本月信用卡繳納/);
+  assert.match(appSource, /previous_card_bill_amount/);
+  assert.match(appSource, /上期實際帳單/);
+  assert.match(appSource, /待輸入上期實際帳單/);
+  assert.match(stylesSource, /\.credit-card-payment-card/);
+});
+
 test('近期紀錄按日折疊，關閉時顯示當日現金與信用卡合計', () => {
   assert.match(appSource, /groupExpenseEntriesByDay/);
   assert.match(appSource, /class="day-expense-group"/);

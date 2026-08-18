@@ -161,6 +161,7 @@ button { font: inherit; cursor: pointer; }
 
 .finance-panel { display: grid; align-content: start; gap: 30px; }
 .income-overview-section,
+.card-bill-overview-section,
 .fixed-overview-section { display: grid; gap: 12px; }
 .finance-overview-heading { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
 .finance-overview-heading h2 { margin: 0; font-size: 1.2rem; }
@@ -186,6 +187,26 @@ button { font: inherit; cursor: pointer; }
 .income-marker { display: grid; place-items: center; width: 28px; aspect-ratio: 1; flex: 0 0 auto; border-radius: 9px; font-size: 1.25rem; }
 .salary-marker { background: #e5f567; color: #183626; }
 .other-marker { background: #ded8ff; color: #433990; }
+.credit-card-payment-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  border: 1px solid #dcd6ff;
+  border-radius: 17px;
+  padding: 14px 16px;
+  background: #f7f5ff;
+  color: #26214e;
+  text-align: left;
+}
+.credit-card-payment-card:hover,
+.credit-card-payment-card:focus-visible { background: #efecff; }
+.credit-card-payment-card:focus-visible { outline: 2px solid #6656c4; outline-offset: 2px; }
+.credit-card-payment-copy { display: grid; gap: 4px; min-width: 0; }
+.credit-card-payment-copy strong { font-size: 0.92rem; }
+.credit-card-payment-copy small { color: #777091; font-size: 0.72rem; }
+.credit-card-payment-amount { flex: 0 0 auto; color: #403276; white-space: nowrap; }
 .fixed-overview-list { overflow: hidden; padding: 0 14px; margin: 0; border: 1px solid #e1e5df; border-radius: 20px; background: #fff; list-style: none; }
 .fixed-rule-row + .fixed-rule-row { border-top: 1px solid #edf0eb; }
 .fixed-rule-open { display: grid; grid-template-columns: 14px 36px minmax(0, 1fr) auto; gap: 9px; align-items: center; width: 100%; border: 0; padding: 13px 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
@@ -229,6 +250,7 @@ button { font: inherit; cursor: pointer; }
 }
 .compact-form .inline-check { display: flex; grid-column: 1 / -1; align-items: center; gap: 7px; font-weight: 500; }
 .compact-form .inline-check input { width: auto; }
+.compact-form .form-helper { grid-column: 1 / -1; margin: 0; color: #68736a; font-size: 0.75rem; line-height: 1.5; }
 .compact-form .form-status { grid-column: 1 / -1; }
 .small-primary-button,
 .secondary-button { border: 0; border-radius: 10px; padding: 10px 12px; font-weight: 800; }
@@ -364,6 +386,10 @@ button { font: inherit; cursor: pointer; }
   .text-action { color: #9ed7ad; }
   .income-overview-card { border-color: #4a5937; background: linear-gradient(135deg, #26331d, #202c22 74%); }
   .income-total-row { border-color: #46513f; }
+  .credit-card-payment-card { border-color: #4f476e; background: #26233a; color: #eeeaff; }
+  .credit-card-payment-card:hover, .credit-card-payment-card:focus-visible { background: #302b49; }
+  .credit-card-payment-copy small, .compact-form .form-helper { color: #aaa4bf; }
+  .credit-card-payment-amount { color: #d6ceff; }
   .fixed-overview-list, .finance-dialog { border-color: #3b493d; background: #172119; color: #eff4ed; }
   .fixed-rule-row + .fixed-rule-row, .fixed-detail-list div, .dialog-subsection { border-color: #3b493d; }
   .fixed-rule-icon { background: #3a2e29; }
