@@ -141,11 +141,27 @@ function formatAmount(amount) {
 
 function formatEntryTime(value) {
   return new Intl.DateTimeFormat('zh-TW', {
-    month: 'numeric',
-    day: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(value));
+}
+
+function formatEntryDate(value) {
+  return new Intl.DateTimeFormat('zh-TW', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    weekday: 'short',
+  }).format(new Date(value));
+}
+
+function currentAccountingPeriod(now = new Date(), startDay = 5) {
+  let start = new Date(now.getFullYear(), now.getMonth(), startDay);
+  if (now < start) {
+    start = new Date(now.getFullYear(), now.getMonth() - 1, startDay);
+  }
+  const end = new Date(start.getFullYear(), start.getMonth() + 1, startDay);
+  return { start, end };
 }
 
 async function renderLedger(ledger, user, expenseAdapter) {
@@ -161,12 +177,45 @@ async function renderLedger(ledger, user, expenseAdapter) {
   }
 
   const categoryNames = new Map(ledger.categories.map((category) => [category.id, category.name]));
-  const cashTotal = entries
+  const { start: periodStart, end: periodEnd } = currentAccountingPeriod();
+  const periodEntries = entries.filter((entry) => {
+    const occurredAt = new Date(entry.occurred_at);
+    return occurredAt >= periodStart && occurredAt < periodEnd;
+  });
+  const cashTotal = periodEntries
     .filter((entry) => entry.payment_method === 'cash')
     .reduce((total, entry) => total + entry.amount, 0);
-  const creditCardTotal = entries
+  const creditCardTotal = periodEntries
     .filter((entry) => entry.payment_method === 'credit_card')
     .reduce((total, entry) => total + entry.amount, 0);
+  const expenseTotal = cashTotal + creditCardTotal;
+  const chartColors = ['#e07a45', '#3f9ee8', '#e94c64', '#79bf5a', '#a274d6', '#e6b83f'];
+  const categoryBreakdown = ledger.categories
+    .map((category, index) => ({
+      id: category.id,
+      name: category.name,
+      color: chartColors[index % chartColors.length],
+      amount: periodEntries
+        .filter((entry) => entry.category_id === category.id)
+        .reduce((total, entry) => total + entry.amount, 0),
+    }))
+    .filter((category) => category.amount > 0);
+  let chartCursor = 0;
+  const chartSegments = categoryBreakdown.map((category) => {
+    const startPercent = chartCursor;
+    chartCursor += (category.amount / expenseTotal) * 100;
+    return `${category.color} ${startPercent}% ${chartCursor}%`;
+  });
+  const pieBackground = chartSegments.length
+    ? `conic-gradient(${chartSegments.join(', ')})`
+    : 'conic-gradient(#dfe5dc 0 100%)';
+  const chartLegend = categoryBreakdown.map((category) => `
+    <li>
+      <span class="legend-color" style="background:${category.color}"></span>
+      <span>${escapeHtml(category.name)}</span>
+      <strong>${Math.round((category.amount / expenseTotal) * 100)}%</strong>
+      <small>$${formatAmount(category.amount)}</small>
+    </li>`).join('');
   const suggestions = entries.slice(0, 6);
   const categoryOptions = ledger.categories
     .filter((category) => !category.retiredAt)
@@ -174,8 +223,14 @@ async function renderLedger(ledger, user, expenseAdapter) {
     .join('');
   const suggestionButtons = suggestions.map((entry, index) => `
     <button class="suggestion-button" type="button" data-suggestion-index="${index}">
-      <strong>$${formatAmount(entry.amount)}・${escapeHtml(entry.item_name)}</strong>
-      <span>${escapeHtml(categoryNames.get(entry.category_id) || '未分類')}・${entry.payment_method === 'cash' ? '現金' : '信用卡'}</span>
+      <span class="entry-date">
+        <time datetime="${escapeHtml(entry.occurred_at)}">${escapeHtml(formatEntryDate(entry.occurred_at))}</time>
+        <small>${escapeHtml(formatEntryTime(entry.occurred_at))}</small>
+      </span>
+      <span class="entry-detail">
+        <strong>$${formatAmount(entry.amount)}・${escapeHtml(entry.item_name)}</strong>
+        <small>${escapeHtml(categoryNames.get(entry.category_id) || '未分類')}・${entry.payment_method === 'cash' ? '現金' : '信用卡'}</small>
+      </span>
     </button>`).join('');
 
   app.innerHTML = `
@@ -187,6 +242,21 @@ async function renderLedger(ledger, user, expenseAdapter) {
         </div>
         <button class="text-button" type="button" id="sign-out">登出</button>
       </header>
+      <section class="chart-panel" aria-label="本期開銷分類占比">
+        <div class="chart-heading">
+          <div>
+            <p class="eyebrow">本期總覽</p>
+            <h2>分類占比</h2>
+          </div>
+          <span>${escapeHtml(formatEntryDate(periodStart))}－${escapeHtml(formatEntryDate(new Date(periodEnd.getTime() - 1)))}</span>
+        </div>
+        <div class="chart-body">
+          <div class="expense-pie" role="img" aria-label="本期分類圓餅圖" style="background:${pieBackground}">
+            <div><span>本期開銷</span><strong>$${formatAmount(expenseTotal)}</strong></div>
+          </div>
+          <ul class="chart-legend">${chartLegend || '<li class="empty-chart">新增開銷後會顯示分類占比</li>'}</ul>
+        </div>
+      </section>
       <section class="welcome-panel">
         <span class="success-mark">✓</span>
         <div>
@@ -201,7 +271,7 @@ async function renderLedger(ledger, user, expenseAdapter) {
       <section class="summary-panel" aria-label="已記錄開銷摘要">
         <div><span>現金</span><strong>$${formatAmount(cashTotal)}</strong></div>
         <div><span>信用卡</span><strong>$${formatAmount(creditCardTotal)}</strong></div>
-        <div><span>已記錄總額</span><strong>$${formatAmount(cashTotal + creditCardTotal)}</strong></div>
+        <div><span>本期總額</span><strong>$${formatAmount(expenseTotal)}</strong></div>
       </section>
       <section class="quick-entry-panel">
         <div>
