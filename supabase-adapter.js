@@ -86,7 +86,7 @@ export class SupabaseLedgerAdapter {
 
   async listExpenseEntries(ledgerId) {
     const parameters = new URLSearchParams({
-      select: 'id,category_id,item_name,amount,payment_method,occurred_at,is_fixed,fixed_expense_rule_id,created_at',
+      select: 'id,category_id,item_name,amount,payment_method,occurred_at,is_fixed,created_at',
       ledger_id: `eq.${ledgerId}`,
       order: 'occurred_at.desc',
       limit: '1000',
