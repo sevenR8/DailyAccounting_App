@@ -174,8 +174,9 @@ button { font: inherit; cursor: pointer; }
 }
 
 .chart-panel { display: grid; gap: 18px; }
-.chart-heading { display: flex; justify-content: space-between; align-items: end; gap: 12px; }
-.chart-heading > span { color: #657066; font-size: 0.75rem; text-align: right; }
+.chart-heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 12px; }
+.chart-heading h2 { white-space: nowrap; }
+.chart-heading > span { flex: 0 0 auto; margin-left: auto; color: #657066; font-size: 0.75rem; text-align: right; white-space: nowrap; }
 .chart-body { display: grid; grid-template-columns: 140px 1fr; gap: 20px; align-items: center; }
 .expense-pie { display: grid; place-items: center; width: 140px; aspect-ratio: 1; border-radius: 50%; }
 .expense-pie::after { content: ''; grid-area: 1 / 1; width: 82px; aspect-ratio: 1; border-radius: 50%; background: white; }

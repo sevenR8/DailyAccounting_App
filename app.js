@@ -1,23 +1,23 @@
-import { LedgerModule } from './ledger-module.js?v=22';
-import { calculateFinancialSummary } from './financial-summary.js?v=22';
+import { LedgerModule } from './ledger-module.js?v=23';
+import { calculateFinancialSummary } from './financial-summary.js?v=23';
 import {
   buildExpenseTemplates,
   dailyExpenseTotalTone,
   findExpenseTemplates,
   groupExpenseEntriesByDay,
-} from './daily-history.js?v=22';
+} from './daily-history.js?v=23';
 import {
   accountingPeriodFromStart,
   compareExpenseTotals,
   scheduledDateInAccountingPeriod,
   shiftAccountingPeriodStart,
-} from './accounting-period.js?v=22';
+} from './accounting-period.js?v=23';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=22';
+} from './supabase-adapter.js?v=23';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -192,6 +192,17 @@ function formatEntryDate(value) {
     day: '2-digit',
     weekday: 'short',
   }).format(new Date(value));
+}
+
+function formatPeriodDate(value) {
+  const parts = new Intl.DateTimeFormat('zh-TW', {
+    timeZone: 'Asia/Taipei',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date(value));
+  const dateParts = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${dateParts.year}/${dateParts.month}/${dateParts.day}`;
 }
 
 function currentAccountingPeriod(now = new Date(), startDay = 5) {
@@ -455,7 +466,7 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
         </div>
       </dialog>`).join('');
 
-  const periodLabel = `${formatEntryDate(periodStart)}－${formatEntryDate(new Date(periodEnd.getTime() - 1))}`;
+  const periodLabel = `${formatPeriodDate(periodStart)}－${formatPeriodDate(new Date(periodEnd.getTime() - 1))}`;
   const periodMonthLabel = new Intl.DateTimeFormat('zh-TW', {
     year: 'numeric',
     month: 'long',

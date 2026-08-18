@@ -53,3 +53,14 @@ test('手機快速記帳的日期時間與金額欄位共用同一個受限單�
     /\.expense-form\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);[^}]*width:\s*100%;[^}]*min-width:\s*0;/s,
   );
 });
+
+test('手機分類總覽的標題與日期保持完整單行，帳務期間不顯示星期', () => {
+  assert.match(stylesSource, /\.chart-heading\s*\{[^}]*flex-wrap:\s*wrap;/s);
+  assert.match(stylesSource, /\.chart-heading h2\s*\{[^}]*white-space:\s*nowrap;/s);
+  assert.match(stylesSource, /\.chart-heading > span\s*\{[^}]*white-space:\s*nowrap;/s);
+  assert.match(appSource, /function formatPeriodDate\(value\)/);
+  assert.match(
+    appSource,
+    /const periodLabel = `\$\{formatPeriodDate\(periodStart\)\}－\$\{formatPeriodDate\(new Date\(periodEnd\.getTime\(\) - 1\)\)\}`;/,
+  );
+});
