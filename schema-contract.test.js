@@ -6,6 +6,10 @@ const migration = await readFile(
   new URL('./supabase-0001-personal-ledger.sql', import.meta.url),
   'utf8',
 );
+const financialMigration = await readFile(
+  new URL('./supabase-0002-financial-overview.sql', import.meta.url),
+  'utf8',
+);
 
 test('資料模型保留開銷的記錄者、可選付款者與同帳本外鍵', () => {
   assert.match(migration, /create table public\.expense_entries/i);
@@ -26,5 +30,21 @@ test('資料列權限隔離帳本資料，並限制成員只能編修自己的�
 test('個人帳本佈建以衝突安全方式處理同時登入', () => {
   assert.match(migration, /on conflict \(personal_owner_id\) do nothing/i);
   assert.match(migration, /if found then/i);
+});
+
+test('完整總覽保留本期收入、上期信用卡帳單與多筆其他收入', () => {
+  assert.match(financialMigration, /create table if not exists public\.accounting_periods/i);
+  assert.match(financialMigration, /salary_amount integer/i);
+  assert.match(financialMigration, /previous_card_bill_amount integer/i);
+  assert.match(financialMigration, /previous_card_bill_zero_confirmed boolean/i);
+  assert.match(financialMigration, /create table if not exists public\.other_income_entries/i);
+});
+
+test('固定開銷規則依指定日期補建本期開銷且不重複', () => {
+  assert.match(financialMigration, /create table if not exists public\.fixed_expense_rules/i);
+  assert.match(financialMigration, /scheduled_day smallint/i);
+  assert.match(financialMigration, /ensure_current_accounting_period/i);
+  assert.match(financialMigration, /expense_entries_one_fixed_rule_per_period/i);
+  assert.match(financialMigration, /on conflict \(fixed_expense_rule_id, accounting_period_start\)/i);
 });
 
