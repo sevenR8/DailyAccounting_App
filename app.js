@@ -1,12 +1,12 @@
-import { LedgerModule } from './ledger-module.js?v=9';
-import { calculateFinancialSummary } from './financial-summary.js?v=9';
-import { groupExpenseEntriesByDay } from './daily-history.js?v=9';
+import { LedgerModule } from './ledger-module.js?v=10';
+import { calculateFinancialSummary } from './financial-summary.js?v=10';
+import { groupExpenseEntriesByDay } from './daily-history.js?v=10';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=9';
+} from './supabase-adapter.js?v=10';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -491,9 +491,9 @@ async function renderLedger(ledger, user, expenseAdapter) {
       </section>
       <section class="summary-panel" aria-label="本期帳務摘要">
         <div><span>本期收入</span><strong>${totalIncome === null ? '—' : `$${formatAmount(totalIncome)}`}</strong></div>
-        <div><span>非固定現金</span><strong>$${formatAmount(cashTotal)}</strong></div>
-        <div><span>非固定信用卡</span><strong>$${formatAmount(creditCardTotal)}</strong></div>
-        <div><span>非固定總開銷</span><strong>$${formatAmount(nonFixedExpenseTotal)}</strong></div>
+        <div><span>現金</span><strong>$${formatAmount(cashTotal)}</strong></div>
+        <div><span>信用卡</span><strong>$${formatAmount(creditCardTotal)}</strong></div>
+        <div><span>總開銷</span><strong>$${formatAmount(nonFixedExpenseTotal)}</strong></div>
         <div><span>本期固定開銷</span><strong>${fixedExpenseTotal === null ? '—' : `$${formatAmount(fixedExpenseTotal)}`}</strong></div>
         <div class="savings-summary"><span>本期可存額</span><strong>${financialOverview && !previousCardBillReady ? '待輸入帳單' : savingsAmount === null ? '—' : `$${formatAmount(savingsAmount)}`}</strong></div>
       </section>

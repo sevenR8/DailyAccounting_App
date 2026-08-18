@@ -26,10 +26,12 @@ test('登入後頂部只保留使用者縮寫與可展開的帳號選單', () =>
   assert.doesNotMatch(appSource, /<section class="category-panel">/);
 });
 
-test('本期摘要顯示收入、非固定現金與信用卡、固定開銷及可存額', () => {
+test('本期摘要以乾淨文字顯示收入、現金、信用卡、總開銷、固定開銷及可存額', () => {
   assert.match(appSource, /本期收入/);
-  assert.match(appSource, /非固定現金/);
-  assert.match(appSource, /非固定信用卡/);
+  assert.match(appSource, /<span>現金<\/span>/);
+  assert.match(appSource, /<span>信用卡<\/span>/);
+  assert.match(appSource, /<span>總開銷<\/span>/);
+  assert.doesNotMatch(appSource, /非固定/);
   assert.match(appSource, /本期固定開銷/);
   assert.match(appSource, /本期可存額/);
   assert.match(appSource, /待輸入帳單/);
