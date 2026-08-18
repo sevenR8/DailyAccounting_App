@@ -8,6 +8,23 @@ const response = (body, ok = true) => ({
   json: async () => body,
 });
 
+test('帳本連線以 Window 作為瀏覽器 fetch 的呼叫端', async () => {
+  const browserFetch = function browserFetch() {
+    if (this !== globalThis) {
+      throw new TypeError("Failed to execute 'fetch' on 'Window': Illegal invocation");
+    }
+    return response({ id: 'user-1' });
+  };
+  const connection = new SupabaseConnection({
+    supabaseUrl: 'https://example.supabase.co',
+    supabaseAnonKey: 'public-key',
+    accessToken: 'access-token',
+    fetchImpl: browserFetch,
+  });
+
+  assert.deepEqual(await connection.getUser(), { id: 'user-1' });
+});
+
 test('個人帳本佈建保留原始顯示名稱給資料庫決定帳本名稱', async () => {
   const calls = [];
   const connection = new SupabaseConnection({
