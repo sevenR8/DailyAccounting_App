@@ -130,10 +130,53 @@ function renderSignIn() {
   });
 }
 
-function renderLedger(ledger, user) {
+function toDateTimeLocalValue(date = new Date()) {
+  const timezoneOffset = date.getTimezoneOffset() * 60_000;
+  return new Date(date.getTime() - timezoneOffset).toISOString().slice(0, 16);
+}
+
+function formatAmount(amount) {
+  return new Intl.NumberFormat('zh-TW').format(amount);
+}
+
+function formatEntryTime(value) {
+  return new Intl.DateTimeFormat('zh-TW', {
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(new Date(value));
+}
+
+async function renderLedger(ledger, user, expenseAdapter) {
   const categories = ledger.categories
     .map((category) => `<li>${escapeHtml(category.name)}</li>`)
     .join('');
+
+  let entries = [];
+  try {
+    entries = await expenseAdapter.listExpenseEntries(ledger.id);
+  } catch (error) {
+    entries = [];
+  }
+
+  const categoryNames = new Map(ledger.categories.map((category) => [category.id, category.name]));
+  const cashTotal = entries
+    .filter((entry) => entry.payment_method === 'cash')
+    .reduce((total, entry) => total + entry.amount, 0);
+  const creditCardTotal = entries
+    .filter((entry) => entry.payment_method === 'credit_card')
+    .reduce((total, entry) => total + entry.amount, 0);
+  const suggestions = entries.slice(0, 6);
+  const categoryOptions = ledger.categories
+    .filter((category) => !category.retiredAt)
+    .map((category) => `<option value="${escapeHtml(category.id)}">${escapeHtml(category.name)}</option>`)
+    .join('');
+  const suggestionButtons = suggestions.map((entry, index) => `
+    <button class="suggestion-button" type="button" data-suggestion-index="${index}">
+      <strong>$${formatAmount(entry.amount)}・${escapeHtml(entry.item_name)}</strong>
+      <span>${escapeHtml(categoryNames.get(entry.category_id) || '未分類')}・${entry.payment_method === 'cash' ? '現金' : '信用卡'}</span>
+    </button>`).join('');
 
   app.innerHTML = `
     <main class="ledger-home">
@@ -155,12 +198,94 @@ function renderLedger(ledger, user) {
         <h2>預設分類</h2>
         <ul>${categories}</ul>
       </section>
-      <p class="next-step">下一步將加入快速記帳與本期總覽。</p>
+      <section class="summary-panel" aria-label="已記錄開銷摘要">
+        <div><span>現金</span><strong>$${formatAmount(cashTotal)}</strong></div>
+        <div><span>信用卡</span><strong>$${formatAmount(creditCardTotal)}</strong></div>
+        <div><span>已記錄總額</span><strong>$${formatAmount(cashTotal + creditCardTotal)}</strong></div>
+      </section>
+      <section class="quick-entry-panel">
+        <div>
+          <p class="eyebrow">快速記帳</p>
+          <h2>新增一筆開銷</h2>
+        </div>
+        <form class="expense-form" id="expense-form">
+          <label>金額
+            <input id="expense-amount" name="amount" type="number" min="1" step="1" inputmode="numeric" placeholder="例如 100" required autofocus />
+          </label>
+          <label>項目名稱
+            <input id="expense-item-name" name="itemName" type="text" maxlength="100" placeholder="例如 晚餐" required />
+          </label>
+          <label>分類
+            <select id="expense-category" name="categoryId" required>${categoryOptions}</select>
+          </label>
+          <fieldset>
+            <legend>付款方式</legend>
+            <label><input type="radio" name="paymentMethod" value="cash" checked /> 現金</label>
+            <label><input type="radio" name="paymentMethod" value="credit_card" /> 信用卡</label>
+          </fieldset>
+          <label>日期與時間
+            <input id="expense-occurred-at" name="occurredAt" type="datetime-local" value="${toDateTimeLocalValue()}" required />
+          </label>
+          <button class="email-button" type="submit">儲存開銷</button>
+          <p class="form-status" id="expense-status" aria-live="polite"></p>
+        </form>
+      </section>
+      <section class="history-panel">
+        <div>
+          <p class="eyebrow">歷史建議</p>
+          <h2>近期紀錄</h2>
+        </div>
+        ${suggestionButtons || '<p class="next-step">第一筆開銷會出現在這裡，之後可點選快速帶入。</p>'}
+      </section>
     </main>`;
 
   document.querySelector('#sign-out').addEventListener('click', () => {
     window.localStorage.removeItem('daily-ledger-session');
     renderSignIn();
+  });
+
+  document.querySelector('#expense-form').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    const button = form.querySelector('button[type="submit"]');
+    const status = document.querySelector('#expense-status');
+    const itemName = formData.get('itemName').trim();
+    const amount = Number(formData.get('amount'));
+
+    if (!itemName || !Number.isInteger(amount) || amount <= 0) {
+      status.textContent = '請填寫正確的整數金額與項目名稱。';
+      return;
+    }
+
+    button.disabled = true;
+    status.textContent = '正在儲存…';
+    try {
+      await expenseAdapter.createExpenseEntry({
+        ledgerId: ledger.id,
+        categoryId: formData.get('categoryId'),
+        itemName,
+        amount,
+        paymentMethod: formData.get('paymentMethod'),
+        occurredAt: new Date(formData.get('occurredAt')).toISOString(),
+      });
+      await renderLedger(ledger, user, expenseAdapter);
+    } catch (error) {
+      status.textContent = error.message;
+      button.disabled = false;
+    }
+  });
+
+  document.querySelectorAll('[data-suggestion-index]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const entry = suggestions[Number(button.dataset.suggestionIndex)];
+      document.querySelector('#expense-amount').value = entry.amount;
+      document.querySelector('#expense-item-name').value = entry.item_name;
+      document.querySelector('#expense-category').value = entry.category_id;
+      document.querySelector(`input[name="paymentMethod"][value="${entry.payment_method}"]`).checked = true;
+      document.querySelector('#expense-occurred-at').value = toDateTimeLocalValue();
+      document.querySelector('#expense-amount').focus();
+    });
   });
 }
 
@@ -185,14 +310,13 @@ async function bootstrap() {
       accessToken,
     });
     const user = await connection.getUser();
-    const ledgerModule = new LedgerModule(
-      new SupabaseLedgerAdapter(connection),
-    );
+    const expenseAdapter = new SupabaseLedgerAdapter(connection);
+    const ledgerModule = new LedgerModule(expenseAdapter);
     const ledger = await ledgerModule.provisionPersonalLedger({
       userId: user.id,
       displayName: user.user_metadata?.full_name || user.email?.split('@')[0],
     });
-    renderLedger(ledger, user);
+    await renderLedger(ledger, user, expenseAdapter);
   } catch (error) {
     app.innerHTML = `
       <main class="auth-card">
