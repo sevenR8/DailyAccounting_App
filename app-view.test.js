@@ -17,3 +17,11 @@ test('近期紀錄清楚顯示每筆開銷的日期與時間', () => {
   assert.match(appSource, /formatEntryTime\(entry\.occurred_at\)/);
 });
 
+test('登入後頂部只保留使用者縮寫與可展開的帳號選單', () => {
+  assert.match(appSource, /class="user-avatar"/);
+  assert.match(appSource, /<details class="user-menu">/);
+  assert.match(appSource, /class="user-menu-popover"/);
+  assert.doesNotMatch(appSource, /<section class="welcome-panel">/);
+  assert.doesNotMatch(appSource, /<section class="category-panel">/);
+});
+
