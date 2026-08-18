@@ -14,8 +14,8 @@
 使用工作區提供的 Node.js 執行：
 
 ```text
-node --test ledger-module.test.js
+node --test *.test.js
 ```
 
-這個測試透過帳本模組的公開介面驗證首次登入佈建與重複登入的行為。
+這組測試驗證首次登入佈建、重複登入、資料庫連線契約，以及資料模型的權限契約。每次部署 Supabase 後，另依照 [個人帳本基礎驗收](docs/acceptance/foundation.md) 驗證 Google 登入與真實資料列權限。
 

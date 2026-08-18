@@ -1,7 +1,7 @@
 import { LedgerModule } from './ledger-module.js';
 import {
-  fetchSupabaseUser,
   startGoogleSignIn,
+  SupabaseConnection,
   SupabaseLedgerAdapter,
 } from './supabase-adapter.js';
 
@@ -84,7 +84,7 @@ function renderSignIn() {
   app.innerHTML = `
     <main class="auth-card">
       <p class="eyebrow">每日帳本</p>
-      <h1>把每一筆花費記得簡單。</h1>
+      <h1>把每一筆開銷記得簡單。</h1>
       <p>登入後會自動建立你的帳本與六個預設分類。</p>
       <button class="google-button" type="button" id="google-sign-in">使用 Google 繼續</button>
     </main>`;
@@ -146,17 +146,14 @@ async function bootstrap() {
   app.innerHTML = '<main class="auth-card"><p>正在準備你的帳本…</p></main>';
 
   try {
-    const user = await fetchSupabaseUser({
+    const connection = new SupabaseConnection({
       supabaseUrl: config.supabaseUrl,
       supabaseAnonKey: config.supabaseAnonKey,
       accessToken,
     });
+    const user = await connection.getUser();
     const ledgerModule = new LedgerModule(
-      new SupabaseLedgerAdapter({
-        supabaseUrl: config.supabaseUrl,
-        supabaseAnonKey: config.supabaseAnonKey,
-        accessToken,
-      }),
+      new SupabaseLedgerAdapter(connection),
     );
     const ledger = await ledgerModule.provisionPersonalLedger({
       userId: user.id,
