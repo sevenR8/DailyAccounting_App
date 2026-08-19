@@ -1,26 +1,27 @@
-import { LedgerModule } from './ledger-module.js?v=24';
-import { calculateFinancialSummary } from './financial-summary.js?v=24';
+import { LedgerModule } from './ledger-module.js?v=25';
+import { calculateFinancialSummary } from './financial-summary.js?v=25';
 import {
   buildExpenseTemplates,
   dailyExpenseTotalTone,
   findExpenseTemplates,
   groupExpenseEntriesByDay,
-} from './daily-history.js?v=24';
+} from './daily-history.js?v=25';
 import {
   accountingPeriodFromStart,
   compareExpenseTotals,
   scheduledDateInAccountingPeriod,
   shiftAccountingPeriodStart,
-} from './accounting-period.js?v=24';
+} from './accounting-period.js?v=25';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=24';
+} from './supabase-adapter.js?v=25';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
+const EXPENSE_TIME_REFRESH_INTERVAL = 5 * 60 * 1000;
 let mobileNavigationCleanup = () => {};
 
 const preventZoomGesture = (event) => {
@@ -779,6 +780,15 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
   const smartSuggestionsTitle = document.querySelector('#smart-suggestions-title');
   const smartSuggestionList = document.querySelector('#smart-suggestion-list');
   const expenseAmountInput = document.querySelector('#expense-amount');
+  const expenseOccurredAtInput = document.querySelector('#expense-occurred-at');
+  let expenseOccurredAtManuallyEdited = false;
+  const syncExpenseOccurredAt = () => {
+    if (expenseOccurredAtManuallyEdited) return;
+    expenseOccurredAtInput.value = toDateTimeLocalValue();
+  };
+  expenseOccurredAtInput.addEventListener('input', () => {
+    expenseOccurredAtManuallyEdited = true;
+  });
   const renderSmartSuggestions = () => {
     const matchingTemplates = findExpenseTemplates(
       quickEntryTemplates,
@@ -812,7 +822,8 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
     document.querySelector('#expense-item-name').value = template.itemName;
     document.querySelector('#expense-category').value = template.categoryId;
     document.querySelector(`input[name="paymentMethod"][value="${template.paymentMethod}"]`).checked = true;
-    document.querySelector('#expense-occurred-at').value = toDateTimeLocalValue();
+    expenseOccurredAtManuallyEdited = false;
+    syncExpenseOccurredAt();
     document.querySelector('#expense-status').textContent = `已帶入「${template.itemName}」，可直接儲存或修改。`;
     document.activeElement?.blur();
     renderSmartSuggestions();
@@ -820,6 +831,14 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
   renderSmartSuggestions();
 
   mobileNavigationCleanup();
+  const expenseTimeRefreshTimer = window.setInterval(
+    syncExpenseOccurredAt,
+    EXPENSE_TIME_REFRESH_INTERVAL,
+  );
+  const syncExpenseTimeWhenVisible = () => {
+    if (document.visibilityState === 'visible') syncExpenseOccurredAt();
+  };
+  document.addEventListener('visibilitychange', syncExpenseTimeWhenVisible);
   const mobileNavigationButtons = [...document.querySelectorAll('[data-mobile-nav]')];
   const setActiveMobileNavigation = (sectionName) => {
     mobileNavigationButtons.forEach((button) => {
@@ -936,6 +955,8 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
     document.removeEventListener('touchmove', movePullRefresh);
     document.removeEventListener('touchend', finishPullRefresh);
     document.removeEventListener('touchcancel', cancelPullRefresh);
+    document.removeEventListener('visibilitychange', syncExpenseTimeWhenVisible);
+    window.clearInterval(expenseTimeRefreshTimer);
     if (mobileNavigationFrame !== null) window.cancelAnimationFrame(mobileNavigationFrame);
     mobileNavigationFrame = null;
   };
@@ -1237,7 +1258,8 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
       document.querySelector('#expense-item-name').value = entry.item_name;
       document.querySelector('#expense-category').value = entry.category_id;
       document.querySelector(`input[name="paymentMethod"][value="${entry.payment_method}"]`).checked = true;
-      document.querySelector('#expense-occurred-at').value = toDateTimeLocalValue();
+      expenseOccurredAtManuallyEdited = false;
+      syncExpenseOccurredAt();
       if (button.dataset.action === 'duplicate-expense') {
         const dialog = button.closest('dialog');
         if (dialog?.open) dialog.close();

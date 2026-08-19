@@ -79,6 +79,17 @@ test('快速記帳會依金額顯示常用歷史範本並一鍵帶入所有欄�
   assert.match(stylesSource, /\.smart-suggestions/);
 });
 
+test('快速記帳時間每五分鐘更新，手動修改後不會被覆蓋', () => {
+  assert.match(appSource, /const EXPENSE_TIME_REFRESH_INTERVAL = 5 \* 60 \* 1000;/);
+  assert.match(appSource, /expenseOccurredAtInput\.addEventListener\('input',[\s\S]*expenseOccurredAtManuallyEdited = true;/);
+  assert.match(
+    appSource,
+    /window\.setInterval\(\s*syncExpenseOccurredAt,\s*EXPENSE_TIME_REFRESH_INTERVAL,?\s*\)/,
+  );
+  assert.match(appSource, /if \(expenseOccurredAtManuallyEdited\) return;/);
+  assert.match(appSource, /window\.clearInterval\(expenseTimeRefreshTimer\)/);
+});
+
 test('上方可切換帳務月份並顯示與前一個月的開銷比較', () => {
   assert.match(appSource, /class="period-navigation"/);
   assert.match(appSource, /data-period-direction="previous"/);
