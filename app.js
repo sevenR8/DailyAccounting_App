@@ -1,23 +1,23 @@
-import { LedgerModule } from './ledger-module.js?v=26';
-import { calculateFinancialSummary } from './financial-summary.js?v=26';
+import { LedgerModule } from './ledger-module.js?v=27';
+import { calculateFinancialSummary } from './financial-summary.js?v=27';
 import {
   buildExpenseTemplates,
   dailyExpenseTotalTone,
   findExpenseTemplates,
   groupExpenseEntriesByDay,
-} from './daily-history.js?v=26';
+} from './daily-history.js?v=27';
 import {
   accountingPeriodFromStart,
   compareExpenseTotals,
   scheduledDateInAccountingPeriod,
   shiftAccountingPeriodStart,
-} from './accounting-period.js?v=26';
+} from './accounting-period.js?v=27';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=26';
+} from './supabase-adapter.js?v=27';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -922,7 +922,7 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
       ? '放開更新'
       : '下拉更新';
   };
-  const finishPullRefresh = () => {
+  const finishPullRefresh = async () => {
     if (pullRefreshStartY === null || pullRefreshStarted) return;
     if (pullRefreshDistance < pullRefreshThreshold) {
       resetPullRefresh();
@@ -936,10 +936,15 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
     const updatePromise = navigator.serviceWorker?.getRegistration
       ? navigator.serviceWorker.getRegistration().then((registration) => registration?.update())
       : Promise.resolve();
-    Promise.race([
-      updatePromise.catch(() => null),
-      new Promise((resolve) => window.setTimeout(resolve, 1200)),
-    ]).finally(() => window.location.reload());
+    updatePromise.catch(() => null);
+    try {
+      await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
+    } catch (error) {
+      pullRefreshStarted = false;
+      pullRefreshIndicator.classList.remove('is-refreshing');
+      resetPullRefresh();
+      window.alert(`更新失敗：${error.message}`);
+    }
   };
   const cancelPullRefresh = () => {
     if (!pullRefreshStarted) resetPullRefresh();

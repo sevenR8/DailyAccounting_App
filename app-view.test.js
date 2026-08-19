@@ -66,7 +66,12 @@ test('手機版在頁面頂端下拉可重新取得最新頁面與帳務資料',
   assert.match(appSource, /touchstart/);
   assert.match(appSource, /touchmove/);
   assert.match(appSource, /touchend/);
-  assert.match(appSource, /window\.location\.reload\(\)/);
+  assert.match(appSource, /const finishPullRefresh = async \(\) => \{/);
+  assert.match(
+    appSource,
+    /await renderLedger\(ledger, user, expenseAdapter, activeStartsOn\);/,
+  );
+  assert.doesNotMatch(appSource, /window\.location\.reload\(\)/);
   assert.match(stylesSource, /\.mobile-pull-refresh/);
 });
 
