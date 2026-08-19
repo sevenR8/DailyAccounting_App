@@ -88,3 +88,14 @@ test('手機帳務摘要依左欄再右欄的順序排列六項金額', () => {
   );
 });
 
+test('手機版先顯示帳務摘要卡，再顯示分類圓餅圖卡', () => {
+  assert.match(
+    stylesSource,
+    /@media \(max-width: 899px\)[\s\S]*\.summary-panel\s*\{[^}]*order:\s*1;/,
+  );
+  assert.match(
+    stylesSource,
+    /@media \(max-width: 899px\)[\s\S]*\.chart-panel\s*\{[^}]*order:\s*2;/,
+  );
+});
+
