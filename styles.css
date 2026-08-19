@@ -175,7 +175,6 @@ button { font: inherit; cursor: pointer; }
 
 .chart-panel { display: grid; gap: 18px; }
 .chart-heading { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 12px; }
-.chart-heading h2 { white-space: nowrap; }
 .chart-heading > span { flex: 0 0 auto; margin-left: auto; color: #657066; font-size: 0.75rem; text-align: right; white-space: nowrap; }
 .chart-body { display: grid; grid-template-columns: 140px 1fr; gap: 20px; align-items: center; }
 .expense-pie { display: grid; place-items: center; width: 140px; aspect-ratio: 1; border-radius: 50%; }
@@ -629,7 +628,31 @@ input[type="datetime-local"] {
   .quick-entry-panel { order: -20; }
   .history-panel { order: -10; }
   .period-navigation { order: 0; }
-  .chart-panel { order: 1; }
+  .chart-panel {
+    order: 1;
+    gap: 12px;
+    padding: 16px;
+  }
+  .chart-heading { align-items: center; }
+  .chart-body {
+    grid-template-columns: minmax(170px, 1.15fr) minmax(118px, 0.85fr);
+    gap: 6px;
+  }
+  .expense-pie {
+    justify-self: start;
+    width: min(100%, 190px);
+  }
+  .expense-pie::after { width: 56%; }
+  .expense-pie span { font-size: 0.72rem; }
+  .expense-pie strong { font-size: 1.15rem; }
+  .chart-legend {
+    justify-self: end;
+    width: 100%;
+  }
+  .chart-legend li {
+    grid-template-columns: 10px minmax(0, 1fr) auto;
+    column-gap: 6px;
+  }
   .summary-panel {
     order: 2;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -744,6 +767,7 @@ input[type="datetime-local"] {
 @media (max-width: 380px) {
   .chart-body { grid-template-columns: 1fr; justify-items: center; }
   .chart-legend { width: 100%; }
+  .expense-pie { justify-self: center; width: min(76vw, 220px); }
   .day-expense-summary {
     grid-template-columns: minmax(84px, 1.2fr) repeat(3, minmax(36px, 0.65fr)) 12px;
     gap: 3px;
@@ -803,3 +827,4 @@ input[type="datetime-local"] {
   .history-panel { grid-template-columns: 1fr; max-height: 360px; overflow-y: auto; }
   .finance-panel { max-height: 720px; overflow-y: auto; }
 }
+

@@ -1,23 +1,23 @@
-import { LedgerModule } from './ledger-module.js?v=28';
-import { calculateFinancialSummary } from './financial-summary.js?v=28';
+import { LedgerModule } from './ledger-module.js?v=29';
+import { calculateFinancialSummary } from './financial-summary.js?v=29';
 import {
   buildExpenseTemplates,
   dailyExpenseTotalTone,
   findExpenseTemplates,
   groupExpenseEntriesByDay,
-} from './daily-history.js?v=28';
+} from './daily-history.js?v=29';
 import {
   accountingPeriodFromStart,
   compareExpenseTotals,
   scheduledDateInAccountingPeriod,
   shiftAccountingPeriodStart,
-} from './accounting-period.js?v=28';
+} from './accounting-period.js?v=29';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=28';
+} from './supabase-adapter.js?v=29';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -691,10 +691,7 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
         </section>` : ''}
       <section class="chart-panel" id="period-overview-section" data-mobile-section="overview" aria-label="本期開銷分類占比">
         <div class="chart-heading">
-          <div>
-            <p class="eyebrow">本期總覽</p>
-            <h2>分類占比</h2>
-          </div>
+          <p class="eyebrow">本期總覽</p>
           <span>${escapeHtml(periodLabel)}</span>
         </div>
         <div class="chart-body">
@@ -1343,3 +1340,4 @@ async function bootstrap() {
 }
 
 bootstrap();
+

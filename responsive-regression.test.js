@@ -54,10 +54,22 @@ test('手機快速記帳的日期時間與金額欄位共用同一個受限單�
   );
 });
 
-test('手機分類總覽的標題與日期保持完整單行，帳務期間不顯示星期', () => {
+test('手機分類總覽移除大型標題、放大圓餅圖並把分類資訊靠右排列', () => {
   assert.match(stylesSource, /\.chart-heading\s*\{[^}]*flex-wrap:\s*wrap;/s);
-  assert.match(stylesSource, /\.chart-heading h2\s*\{[^}]*white-space:\s*nowrap;/s);
   assert.match(stylesSource, /\.chart-heading > span\s*\{[^}]*white-space:\s*nowrap;/s);
+  assert.doesNotMatch(appSource, /<h2>分類占比<\/h2>/);
+  assert.match(
+    stylesSource,
+    /@media \(max-width: 899px\)[\s\S]*\.chart-body\s*\{[^}]*grid-template-columns:\s*minmax\(170px,\s*1\.15fr\)\s+minmax\(118px,\s*0\.85fr\);/,
+  );
+  assert.match(
+    stylesSource,
+    /@media \(max-width: 899px\)[\s\S]*\.expense-pie\s*\{[^}]*width:\s*min\(100%,\s*190px\);/,
+  );
+  assert.match(
+    stylesSource,
+    /@media \(max-width: 899px\)[\s\S]*\.chart-legend\s*\{[^}]*justify-self:\s*end;[^}]*width:\s*100%;/,
+  );
   assert.match(appSource, /function formatPeriodDate\(value\)/);
   assert.match(
     appSource,
@@ -75,3 +87,4 @@ test('手機帳務摘要依左欄再右欄的順序排列六項金額', () => {
     /<section class="summary-panel"[\s\S]*本期收入[\s\S]*現金[\s\S]*信用卡[\s\S]*總開銷[\s\S]*本期固定開銷[\s\S]*本期可存額[\s\S]*<\/section>/,
   );
 });
+
