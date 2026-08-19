@@ -1,23 +1,23 @@
-import { LedgerModule } from './ledger-module.js?v=27';
-import { calculateFinancialSummary } from './financial-summary.js?v=27';
+import { LedgerModule } from './ledger-module.js?v=28';
+import { calculateFinancialSummary } from './financial-summary.js?v=28';
 import {
   buildExpenseTemplates,
   dailyExpenseTotalTone,
   findExpenseTemplates,
   groupExpenseEntriesByDay,
-} from './daily-history.js?v=27';
+} from './daily-history.js?v=28';
 import {
   accountingPeriodFromStart,
   compareExpenseTotals,
   scheduledDateInAccountingPeriod,
   shiftAccountingPeriodStart,
-} from './accounting-period.js?v=27';
+} from './accounting-period.js?v=28';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=27';
+} from './supabase-adapter.js?v=28';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -1301,13 +1301,17 @@ async function bootstrap() {
     return;
   }
 
+  if (!app.firstElementChild) renderSignIn();
   const accessToken = await getAccessToken();
   if (!accessToken) {
-    renderSignIn();
     return;
   }
 
-  app.innerHTML = '<main class="auth-card"><p>正在準備你的帳本…</p></main>';
+  const retainedAuthView = app.querySelector('.auth-card');
+  if (retainedAuthView) {
+    retainedAuthView.setAttribute('aria-busy', 'true');
+    retainedAuthView.inert = true;
+  }
 
   try {
     const connection = new SupabaseConnection({

@@ -26,6 +26,15 @@ test('登入後頂部只保留使用者縮寫與可展開的帳號選單', () =>
   assert.doesNotMatch(appSource, /<section class="category-panel">/);
 });
 
+test('登入後背景準備帳本時保留原本登入畫面', () => {
+  assert.match(
+    appSource,
+    /async function bootstrap\(\)[\s\S]*if \(!app\.firstElementChild\) renderSignIn\(\);[\s\S]*const accessToken = await getAccessToken\(\);/,
+  );
+  assert.match(appSource, /setAttribute\('aria-busy', 'true'\)/);
+  assert.doesNotMatch(appSource, /正在準備你的帳本/);
+});
+
 test('本期摘要以乾淨文字顯示收入、現金、信用卡、總開銷、固定開銷及可存額', () => {
   assert.match(appSource, /本期收入/);
   assert.match(appSource, /<span>現金<\/span>/);
