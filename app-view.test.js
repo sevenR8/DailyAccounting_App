@@ -11,11 +11,26 @@ test('本期總覽包含分類圓餅圖與各分類占比', () => {
   assert.match(appSource, /category\.amount \/ generatedExpenseTotal/);
 });
 
-test('近期紀錄清楚顯示每筆開銷的日期與時間', () => {
+test('開銷紀錄清楚顯示每筆開銷的日期與時間', () => {
   assert.match(appSource, /class="entry-date"/);
   assert.match(appSource, /<time datetime=/);
   assert.match(appSource, /day\.key\.replaceAll\('-', '\/'\)/);
   assert.match(appSource, /formatEntryTime\(entry\.occurred_at\)/);
+});
+
+test('開銷紀錄移除大型標題，並可記住顯示最近 5、10、15 天或全部', () => {
+  assert.match(appSource, /<p class="eyebrow">開銷紀錄<\/p>/);
+  assert.doesNotMatch(appSource, /<h2>近期紀錄<\/h2>/);
+  assert.match(appSource, /HISTORY_DISPLAY_LIMIT_OPTIONS = \['5', '10', '15', 'all'\]/);
+  assert.match(appSource, /daily-ledger-history-display-limit/);
+  assert.match(appSource, /id="history-display-limit"/);
+  assert.match(appSource, /最近 5 天/);
+  assert.match(appSource, /最近 10 天/);
+  assert.match(appSource, /最近 15 天/);
+  assert.match(appSource, />全部</);
+  assert.match(appSource, /row\.hidden = limit !== 'all' && index >= Number\(limit\)/);
+  assert.match(stylesSource, /\.history-heading/);
+  assert.match(stylesSource, /\.history-list/);
 });
 
 test('登入後頂部只保留使用者縮寫與可展開的帳號選單', () => {
@@ -212,3 +227,4 @@ test('展開每日紀錄後，每筆開銷右側提供垃圾桶刪除按鈕', ()
   assert.match(appSource, /deleteExpenseEntry/);
   assert.match(stylesSource, /\.expense-entry-delete/);
 });
+

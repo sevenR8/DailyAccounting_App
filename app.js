@@ -1,27 +1,29 @@
-import { LedgerModule } from './ledger-module.js?v=29';
-import { calculateFinancialSummary } from './financial-summary.js?v=29';
+import { LedgerModule } from './ledger-module.js?v=30';
+import { calculateFinancialSummary } from './financial-summary.js?v=30';
 import {
   buildExpenseTemplates,
   dailyExpenseTotalTone,
   findExpenseTemplates,
   groupExpenseEntriesByDay,
-} from './daily-history.js?v=29';
+} from './daily-history.js?v=30';
 import {
   accountingPeriodFromStart,
   compareExpenseTotals,
   scheduledDateInAccountingPeriod,
   shiftAccountingPeriodStart,
-} from './accounting-period.js?v=29';
+} from './accounting-period.js?v=30';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=29';
+} from './supabase-adapter.js?v=30';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
 const EXPENSE_TIME_REFRESH_INTERVAL = 5 * 60 * 1000;
+const HISTORY_DISPLAY_LIMIT_STORAGE_KEY = 'daily-ledger-history-display-limit';
+const HISTORY_DISPLAY_LIMIT_OPTIONS = ['5', '10', '15', 'all'];
 let cleanupLedgerView = () => {};
 
 const preventZoomGesture = (event) => {
@@ -66,6 +68,11 @@ function readSession() {
 
   const storedSession = window.localStorage.getItem('daily-ledger-session');
   return storedSession ? JSON.parse(storedSession) : null;
+}
+
+function readHistoryDisplayLimit() {
+  const storedLimit = window.localStorage.getItem(HISTORY_DISPLAY_LIMIT_STORAGE_KEY);
+  return HISTORY_DISPLAY_LIMIT_OPTIONS.includes(storedLimit) ? storedLimit : '5';
 }
 
 async function getAccessToken() {
@@ -374,8 +381,9 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
     entries.filter((entry) => activeCategoryIds.has(entry.category_id)),
   );
   const dailyHistory = groupExpenseEntriesByDay(suggestions);
-  const suggestionButtons = dailyHistory.map((day) => `
-    <details class="day-expense-group">
+  const historyDisplayLimit = readHistoryDisplayLimit();
+  const historyRows = dailyHistory.map((day, index) => `
+    <details class="day-expense-group" data-history-index="${index}" ${historyDisplayLimit !== 'all' && index >= Number(historyDisplayLimit) ? 'hidden' : ''}>
       <summary class="day-expense-summary">
         <span class="day-summary-date">
           <time datetime="${escapeHtml(day.key)}">${escapeHtml(day.key.replaceAll('-', '/'))}</time>
@@ -746,11 +754,20 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
         </form>
       </section>
       <section class="history-panel" data-mobile-section="record">
-        <div>
-          <p class="eyebrow">歷史建議</p>
-          <h2>近期紀錄</h2>
+        <div class="history-heading">
+          <p class="eyebrow">開銷紀錄</p>
+          <label class="history-limit-control">顯示
+            <select id="history-display-limit" aria-label="顯示最近幾天的開銷紀錄">
+              <option value="5" ${historyDisplayLimit === '5' ? 'selected' : ''}>最近 5 天</option>
+              <option value="10" ${historyDisplayLimit === '10' ? 'selected' : ''}>最近 10 天</option>
+              <option value="15" ${historyDisplayLimit === '15' ? 'selected' : ''}>最近 15 天</option>
+              <option value="all" ${historyDisplayLimit === 'all' ? 'selected' : ''}>全部</option>
+            </select>
+          </label>
         </div>
-        ${suggestionButtons || '<p class="next-step">第一筆開銷會出現在這裡，之後可點選快速帶入。</p>'}
+        <div class="history-list">
+          ${historyRows || '<p class="next-step">第一筆開銷會出現在這裡，之後可點選快速帶入。</p>'}
+        </div>
       </section>
       ${expenseEditDialogs}
       <div class="mobile-pull-refresh" role="status" aria-live="polite">
@@ -826,6 +843,21 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
     renderSmartSuggestions();
   });
   renderSmartSuggestions();
+
+  const historyDisplayLimitSelect = document.querySelector('#history-display-limit');
+  const renderedHistoryRows = [...document.querySelectorAll('.day-expense-group')];
+  const applyHistoryDisplayLimit = (limit) => {
+    renderedHistoryRows.forEach((row, index) => {
+      row.hidden = limit !== 'all' && index >= Number(limit);
+    });
+  };
+  historyDisplayLimitSelect.addEventListener('change', () => {
+    const limit = HISTORY_DISPLAY_LIMIT_OPTIONS.includes(historyDisplayLimitSelect.value)
+      ? historyDisplayLimitSelect.value
+      : '5';
+    window.localStorage.setItem(HISTORY_DISPLAY_LIMIT_STORAGE_KEY, limit);
+    applyHistoryDisplayLimit(limit);
+  });
 
   cleanupLedgerView();
   const expenseTimeRefreshTimer = window.setInterval(
