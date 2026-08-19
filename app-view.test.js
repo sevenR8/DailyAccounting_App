@@ -90,6 +90,12 @@ test('快速記帳時間每五分鐘更新，手動修改後不會被覆蓋', ()
   assert.match(appSource, /window\.clearInterval\(expenseTimeRefreshTimer\)/);
 });
 
+test('帳本畫面清理函式名稱涵蓋導覽與時間更新責任', () => {
+  assert.match(appSource, /let cleanupLedgerView = \(\) => \{\};/);
+  assert.match(appSource, /cleanupLedgerView = \(\) => \{/);
+  assert.doesNotMatch(appSource, /mobileNavigationCleanup/);
+});
+
 test('上方可切換帳務月份並顯示與前一個月的開銷比較', () => {
   assert.match(appSource, /class="period-navigation"/);
   assert.match(appSource, /data-period-direction="previous"/);

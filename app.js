@@ -1,28 +1,28 @@
-import { LedgerModule } from './ledger-module.js?v=25';
-import { calculateFinancialSummary } from './financial-summary.js?v=25';
+import { LedgerModule } from './ledger-module.js?v=26';
+import { calculateFinancialSummary } from './financial-summary.js?v=26';
 import {
   buildExpenseTemplates,
   dailyExpenseTotalTone,
   findExpenseTemplates,
   groupExpenseEntriesByDay,
-} from './daily-history.js?v=25';
+} from './daily-history.js?v=26';
 import {
   accountingPeriodFromStart,
   compareExpenseTotals,
   scheduledDateInAccountingPeriod,
   shiftAccountingPeriodStart,
-} from './accounting-period.js?v=25';
+} from './accounting-period.js?v=26';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=25';
+} from './supabase-adapter.js?v=26';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
 const EXPENSE_TIME_REFRESH_INTERVAL = 5 * 60 * 1000;
-let mobileNavigationCleanup = () => {};
+let cleanupLedgerView = () => {};
 
 const preventZoomGesture = (event) => {
   if (event.cancelable) event.preventDefault();
@@ -97,7 +97,7 @@ async function getAccessToken() {
 }
 
 function renderSetup() {
-  mobileNavigationCleanup();
+  cleanupLedgerView();
   app.innerHTML = `
     <main class="auth-card">
       <p class="eyebrow">每日帳本</p>
@@ -108,7 +108,7 @@ function renderSetup() {
 }
 
 function renderSignIn() {
-  mobileNavigationCleanup();
+  cleanupLedgerView();
   app.innerHTML = `
     <main class="auth-card">
       <p class="eyebrow">每日帳本</p>
@@ -830,7 +830,7 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
   });
   renderSmartSuggestions();
 
-  mobileNavigationCleanup();
+  cleanupLedgerView();
   const expenseTimeRefreshTimer = window.setInterval(
     syncExpenseOccurredAt,
     EXPENSE_TIME_REFRESH_INTERVAL,
@@ -948,7 +948,7 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
   document.addEventListener('touchmove', movePullRefresh, { passive: false });
   document.addEventListener('touchend', finishPullRefresh, { passive: true });
   document.addEventListener('touchcancel', cancelPullRefresh, { passive: true });
-  mobileNavigationCleanup = () => {
+  cleanupLedgerView = () => {
     window.removeEventListener('scroll', syncMobileNavigation);
     window.removeEventListener('resize', syncMobileNavigation);
     document.removeEventListener('touchstart', startPullRefresh);
