@@ -64,3 +64,14 @@ test('手機分類總覽的標題與日期保持完整單行，帳務期間不�
     /const periodLabel = `\$\{formatPeriodDate\(periodStart\)\}－\$\{formatPeriodDate\(new Date\(periodEnd\.getTime\(\) - 1\)\)\}`;/,
   );
 });
+
+test('手機帳務摘要依左欄再右欄的順序排列六項金額', () => {
+  assert.match(
+    stylesSource,
+    /@media \(max-width: 899px\)[\s\S]*\.summary-panel\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);[^}]*grid-template-rows:\s*repeat\(3,\s*minmax\(0,\s*auto\)\);[^}]*grid-auto-flow:\s*column;/,
+  );
+  assert.match(
+    appSource,
+    /<section class="summary-panel"[\s\S]*本期收入[\s\S]*現金[\s\S]*信用卡[\s\S]*總開銷[\s\S]*本期固定開銷[\s\S]*本期可存額[\s\S]*<\/section>/,
+  );
+});
