@@ -1,23 +1,23 @@
-import { LedgerModule } from './ledger-module.js?v=32';
-import { calculateFinancialSummary } from './financial-summary.js?v=32';
+import { LedgerModule } from './ledger-module.js?v=33';
+import { calculateFinancialSummary } from './financial-summary.js?v=33';
 import {
   buildExpenseTemplates,
   dailyExpenseTotalTone,
   findExpenseTemplates,
   groupExpenseEntriesByDay,
-} from './daily-history.js?v=32';
+} from './daily-history.js?v=33';
 import {
   accountingPeriodFromStart,
   compareExpenseTotals,
   scheduledDateInAccountingPeriod,
   shiftAccountingPeriodStart,
-} from './accounting-period.js?v=32';
+} from './accounting-period.js?v=33';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=32';
+} from './supabase-adapter.js?v=33';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -238,6 +238,9 @@ function localDateFromISO(value) {
 }
 
 async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = null) {
+  const preferredMobileView = app.querySelector('.ledger-home')?.dataset.mobileView === 'finance'
+    ? 'finance'
+    : 'main';
   let financialOverview = null;
   try {
     const currentPeriod = await expenseAdapter.ensureCurrentAccountingPeriod(ledger.id);
@@ -580,8 +583,17 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
         </form>
       </div>
     </dialog>`).join('') || '';
+  const mobileFinanceHeading = `
+    <header class="mobile-finance-heading">
+      <button class="mobile-finance-back" type="button" data-action="close-mobile-finance" aria-label="返回本期總覽">‹</button>
+      <div>
+        <p class="eyebrow">帳務管理</p>
+        <h2>收入、帳單與固定開銷</h2>
+      </div>
+    </header>`;
   const financialPanel = financialOverview ? `
     <section class="finance-panel" id="financial-management-section" data-mobile-section="finance">
+      ${mobileFinanceHeading}
       <section class="income-overview-section">
         <div class="finance-overview-heading">
           <div>
@@ -681,13 +693,14 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
       ${fixedExpenseDialogs}
     </section>` : `
     <section class="finance-panel migration-notice" id="financial-management-section" data-mobile-section="finance">
+      ${mobileFinanceHeading}
       <p class="eyebrow">需要資料庫升級</p>
       <h2>啟用完整本期總覽</h2>
       <p>請在 Supabase SQL Editor 執行 <code>supabase-0002-financial-overview.sql</code>，即可同步本期薪水、其他收入、上期信用卡帳單、固定開銷與可存額。</p>
     </section>`;
 
   app.innerHTML = `
-    <main class="ledger-home">
+    <main class="ledger-home" data-mobile-view="${preferredMobileView}">
       <header class="top-bar">
         <span class="user-avatar" title="${escapeHtml(userEmail)}" aria-label="目前使用者：${escapeHtml(userEmail)}">${escapeHtml(userInitial)}</span>
         <details class="user-menu">
@@ -720,6 +733,7 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
         </div>
       </section>
       <section class="summary-panel" data-mobile-section="overview" aria-label="本期帳務摘要">
+        <button class="summary-mobile-open" type="button" data-action="open-mobile-finance" aria-label="開啟帳務管理，查看與編輯收入、信用卡繳納及固定開銷"></button>
         <div><span>本期收入</span><strong>${totalIncome === null ? '—' : `$${formatAmount(totalIncome)}`}</strong></div>
         <div><span>現金</span><strong>$${formatAmount(cashTotal)}</strong></div>
         <div><span>信用卡</span><strong>$${formatAmount(creditCardTotal)}</strong></div>
@@ -878,6 +892,7 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
     if (document.visibilityState === 'visible') syncExpenseOccurredAt();
   };
   document.addEventListener('visibilitychange', syncExpenseTimeWhenVisible);
+  const ledgerHome = document.querySelector('.ledger-home');
   const mobileNavigationButtons = [...document.querySelectorAll('[data-mobile-nav]')];
   const setActiveMobileNavigation = (sectionName) => {
     mobileNavigationButtons.forEach((button) => {
@@ -888,23 +903,47 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
       }
     });
   };
+  const showMobileMainSection = (sectionName, targetId) => {
+    ledgerHome.dataset.mobileView = 'main';
+    setActiveMobileNavigation(sectionName);
+    window.requestAnimationFrame(() => {
+      document.getElementById(targetId)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+  const showMobileFinance = () => {
+    if (window.innerWidth >= 900) return;
+    ledgerHome.dataset.mobileView = 'finance';
+    setActiveMobileNavigation('finance');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  document.querySelector('[data-action="open-mobile-finance"]')?.addEventListener('click', showMobileFinance);
+  document.querySelector('[data-action="close-mobile-finance"]')?.addEventListener('click', () => {
+    showMobileMainSection('overview', 'period-overview-section');
+  });
   mobileNavigationButtons.forEach((button) => {
     button.addEventListener('click', () => {
-      const target = document.getElementById(button.dataset.scrollTarget);
-      if (!target) return;
-      setActiveMobileNavigation(button.dataset.mobileNav);
-      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (button.dataset.mobileNav === 'finance') {
+        showMobileFinance();
+        return;
+      }
+      showMobileMainSection(button.dataset.mobileNav, button.dataset.scrollTarget);
     });
   });
+  if (ledgerHome.dataset.mobileView === 'finance') setActiveMobileNavigation('finance');
 
   let mobileNavigationFrame = null;
   const syncMobileNavigation = () => {
     if (window.innerWidth >= 900) return;
+    if (ledgerHome.dataset.mobileView === 'finance') {
+      setActiveMobileNavigation('finance');
+      return;
+    }
     if (mobileNavigationFrame !== null) return;
     mobileNavigationFrame = window.requestAnimationFrame(() => {
       mobileNavigationFrame = null;
       const referenceY = Math.min(window.innerHeight * 0.38, 300);
-      const sections = [...document.querySelectorAll('[data-mobile-section]')];
+      const sections = [...document.querySelectorAll('[data-mobile-section]')]
+        .filter((section) => section.offsetParent !== null);
       const nearestSection = sections.reduce((nearest, section) => {
         const bounds = section.getBoundingClientRect();
         const distance = referenceY < bounds.top

@@ -86,6 +86,25 @@ test('手機版底部提供記帳、總覽與帳務三個快速跳轉入口', ()
   assert.match(stylesSource, /env\(safe-area-inset-bottom\)/);
 });
 
+test('手機摘要卡可開啟獨立帳務管理頁並保留桌面完整資訊', () => {
+  assert.match(appSource, /data-action="open-mobile-finance"/);
+  assert.match(appSource, /class="mobile-finance-heading"/);
+  assert.match(appSource, /data-action="close-mobile-finance"/);
+  assert.match(appSource, /data-mobile-view="\$\{preferredMobileView\}"/);
+  assert.match(appSource, /const preferredMobileView = app\.querySelector\('\.ledger-home'\)\?\.dataset\.mobileView === 'finance'/);
+  assert.match(appSource, /ledgerHome\.dataset\.mobileView = 'finance'/);
+  assert.match(appSource, /ledgerHome\.dataset\.mobileView = 'main'/);
+  assert.match(
+    stylesSource,
+    /@media \(max-width: 899px\)[\s\S]*\.finance-panel\s*\{[^}]*display:\s*none;/,
+  );
+  assert.match(
+    stylesSource,
+    /\.ledger-home\[data-mobile-view="finance"\] > \.finance-panel\s*\{[^}]*display:\s*grid;/,
+  );
+  assert.match(stylesSource, /@media \(min-width: 900px\)[\s\S]*\.finance-panel \{ grid-area: finance; \}/);
+});
+
 test('手機版在頁面頂端下拉可重新取得最新頁面與帳務資料', () => {
   assert.match(appSource, /class="mobile-pull-refresh"/);
   assert.match(appSource, /下拉更新/);
