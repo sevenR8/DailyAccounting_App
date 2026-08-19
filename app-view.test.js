@@ -41,13 +41,15 @@ test('登入後頂部只保留使用者縮寫與可展開的帳號選單', () =>
   assert.doesNotMatch(appSource, /<section class="category-panel">/);
 });
 
-test('登入後背景準備帳本時保留原本登入畫面', () => {
+test('已保存登入狀態時直接顯示帳本啟動畫面，不會先閃過登入頁', () => {
+  assert.match(appSource, /async function getAccessToken\(session = readSession\(\)\)/);
   assert.match(
     appSource,
-    /async function bootstrap\(\)[\s\S]*if \(!app\.firstElementChild\) renderSignIn\(\);[\s\S]*const accessToken = await getAccessToken\(\);/,
+    /async function bootstrap\(\)[\s\S]*const storedSession = readSession\(\);[\s\S]*if \(!storedSession\) \{[\s\S]*renderSignIn\(\);[\s\S]*return;[\s\S]*\}[\s\S]*renderLedgerResume\(\);[\s\S]*const accessToken = await getAccessToken\(storedSession\);/,
   );
-  assert.match(appSource, /setAttribute\('aria-busy', 'true'\)/);
-  assert.doesNotMatch(appSource, /正在準備你的帳本/);
+  assert.doesNotMatch(appSource, /if \(!app\.firstElementChild\) renderSignIn\(\);/);
+  assert.match(appSource, /class="ledger-resume"/);
+  assert.doesNotMatch(appSource, />正在準備你的帳本</);
 });
 
 test('本期摘要以乾淨文字顯示收入、現金、信用卡、總開銷、固定開銷及可存額', () => {

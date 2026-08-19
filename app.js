@@ -1,23 +1,23 @@
-import { LedgerModule } from './ledger-module.js?v=31';
-import { calculateFinancialSummary } from './financial-summary.js?v=31';
+import { LedgerModule } from './ledger-module.js?v=32';
+import { calculateFinancialSummary } from './financial-summary.js?v=32';
 import {
   buildExpenseTemplates,
   dailyExpenseTotalTone,
   findExpenseTemplates,
   groupExpenseEntriesByDay,
-} from './daily-history.js?v=31';
+} from './daily-history.js?v=32';
 import {
   accountingPeriodFromStart,
   compareExpenseTotals,
   scheduledDateInAccountingPeriod,
   shiftAccountingPeriodStart,
-} from './accounting-period.js?v=31';
+} from './accounting-period.js?v=32';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=31';
+} from './supabase-adapter.js?v=32';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -75,8 +75,7 @@ function readHistoryDisplayLimit() {
   return HISTORY_DISPLAY_LIMIT_OPTIONS.includes(storedLimit) ? storedLimit : '5';
 }
 
-async function getAccessToken() {
-  const session = readSession();
+async function getAccessToken(session = readSession()) {
   if (!session) return null;
 
   if (!session.refreshToken || session.expiresAt > Math.floor(Date.now() / 1000) + 60) {
@@ -111,6 +110,17 @@ function renderSetup() {
       <h1>先連結你的帳本</h1>
       <p>填入 Supabase 專案網址與公開匿名金鑰後，即可使用登入連結或 Google 登入，安全建立個人帳本。</p>
       <p class="notice">這兩項設定需在部署前填入 <code>config.js</code>；不要把服務角色金鑰放入前端。</p>
+    </main>`;
+}
+
+function renderLedgerResume() {
+  cleanupLedgerView();
+  app.innerHTML = `
+    <main class="ledger-resume" aria-busy="true" aria-label="正在載入帳本">
+      <div class="ledger-resume-top"><span class="ledger-resume-avatar" aria-hidden="true"></span></div>
+      <section class="ledger-resume-card ledger-resume-summary" aria-hidden="true"></section>
+      <section class="ledger-resume-card ledger-resume-primary" aria-hidden="true"></section>
+      <section class="ledger-resume-card ledger-resume-secondary" aria-hidden="true"></section>
     </main>`;
 }
 
@@ -1330,16 +1340,18 @@ async function bootstrap() {
     return;
   }
 
-  if (!app.firstElementChild) renderSignIn();
-  const accessToken = await getAccessToken();
-  if (!accessToken) {
+  const storedSession = readSession();
+  if (!storedSession) {
+    renderSignIn();
     return;
   }
 
-  const retainedAuthView = app.querySelector('.auth-card');
-  if (retainedAuthView) {
-    retainedAuthView.setAttribute('aria-busy', 'true');
-    retainedAuthView.inert = true;
+  renderLedgerResume();
+  const accessToken = await getAccessToken(storedSession);
+  if (!accessToken) {
+    window.localStorage.removeItem('daily-ledger-session');
+    renderSignIn();
+    return;
   }
 
   try {
