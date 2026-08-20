@@ -1334,11 +1334,11 @@ input[type="datetime-local"] {
 .comparison-table thead { color: #788178; font-size: 0.7rem; }
 .comparison-table th:first-child { text-align: left; }
 .comparison-table td { font-variant-numeric: tabular-nums; }
-.comparison-up,
-.comparison-new { color: #bd594c; font-weight: 900; }
-.comparison-down,
-.comparison-none { color: #3f7e58; font-weight: 900; }
-.comparison-same { color: #7b837b; }
+.comparison-table .comparison-up,
+.comparison-table .comparison-new { color: #bd594c; font-weight: 900; }
+.comparison-table .comparison-down,
+.comparison-table .comparison-none { color: #3f7e58; font-weight: 900; }
+.comparison-table .comparison-same { color: #7b837b; }
 
 @media (min-width: 1000px) {
   .ledger-home[data-mobile-view="analysis"] > .analysis-page { grid-template-columns: repeat(2, minmax(0, 1fr)); }

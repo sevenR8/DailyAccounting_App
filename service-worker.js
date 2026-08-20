@@ -1,8 +1,8 @@
-const CACHE_NAME = 'daily-ledger-shell-v52';
+const CACHE_NAME = 'daily-ledger-shell-v53';
 const APP_SHELL = [
   './',
   './index.html',
-  './styles.css?v=52',
+  './styles.css?v=53',
   './app.js',
   './amount-expression.js',
   './expense-analysis.js',
@@ -23,16 +23,21 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    Promise.all([
-      caches.keys().then((cacheNames) => Promise.all(
-        cacheNames
-          .filter((cacheName) => cacheName.startsWith('daily-ledger-shell-') && cacheName !== CACHE_NAME)
-          .map((cacheName) => caches.delete(cacheName)),
-      )),
-      self.clients.claim(),
-    ]),
-  );
+  event.waitUntil((async () => {
+    const cacheNames = await caches.keys();
+    const hadPreviousShell = cacheNames.some(
+      (cacheName) => cacheName.startsWith('daily-ledger-shell-') && cacheName !== CACHE_NAME,
+    );
+    await Promise.all(
+      cacheNames
+        .filter((cacheName) => cacheName.startsWith('daily-ledger-shell-') && cacheName !== CACHE_NAME)
+        .map((cacheName) => caches.delete(cacheName)),
+    );
+    await self.clients.claim();
+    if (!hadPreviousShell) return;
+    const openClients = await self.clients.matchAll({ type: 'window' });
+    await Promise.all(openClients.map((client) => client.navigate(client.url).catch(() => null)));
+  })());
 });
 
 async function networkFirst(request) {
