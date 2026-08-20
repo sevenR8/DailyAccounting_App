@@ -56,6 +56,13 @@ test('登入後頂部只保留使用者縮寫與可展開的帳號選單', () =>
   assert.doesNotMatch(appSource, /<section class="category-panel">/);
 });
 
+test('登入頁不顯示已過時的 Google Cloud 等待提示', () => {
+  assert.match(appSource, /id="google-sign-in">使用 Google 繼續<\/button>/);
+  assert.doesNotMatch(appSource, /Google 登入正在等待 Google Cloud 設定完成/);
+  assert.doesNotMatch(appSource, /class="sign-in-hint"/);
+  assert.doesNotMatch(stylesSource, /\.sign-in-hint/);
+});
+
 test('右上角選單可開啟帳本設定並管理自訂分類與週期起始日', () => {
   assert.match(appSource, /data-action="open-ledger-settings"/);
   assert.match(appSource, /id="ledger-settings-dialog"/);

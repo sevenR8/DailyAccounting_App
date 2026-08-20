@@ -332,7 +332,6 @@ function renderSignIn() {
       </form>
       <div class="sign-in-divider" aria-hidden="true"><span>或</span></div>
       <button class="google-button" type="button" id="google-sign-in">使用 Google 繼續</button>
-      <p class="sign-in-hint">Google 登入正在等待 Google Cloud 設定完成；現在可先使用 Email 登入連結。</p>
     </main>`;
 
   document.querySelector('#email-sign-in').addEventListener('submit', async (event) => {
