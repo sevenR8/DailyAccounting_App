@@ -234,6 +234,8 @@ button { font: inherit; cursor: pointer; }
 .summary-panel div { display: grid; gap: 6px; }
 .summary-panel span { color: #657066; font-size: 0.8rem; }
 .summary-panel strong { font-size: 1rem; }
+.summary-panel small { color: #748078; font-size: 0.66rem; line-height: 1.35; }
+.net-cash-summary strong { color: #2e7047; }
 .savings-summary { padding: 10px; border-radius: 14px; background: #e9f4df; }
 
 .quick-entry-panel { display: grid; gap: 16px; }
@@ -805,7 +807,8 @@ input[type="datetime-local"] {
   .smart-suggestion-list em { background: #304634; color: #b9e3c2; }
   .history-limit-control { color: #aeb9af; }
   .history-limit-control select { border-color: #425146; background: #202c22; color: #dce5dd; }
-  .summary-panel span, .chart-heading > span, .expense-pie span, .chart-legend li small, .chart-legend .empty-chart, .entry-date small, .entry-detail small { color: #aeb9af; }
+  .summary-panel span, .summary-panel small, .chart-heading > span, .expense-pie span, .chart-legend li small, .chart-legend .empty-chart, .entry-date small, .entry-detail small { color: #aeb9af; }
+  .net-cash-summary strong { color: #9ed7ad; }
   .savings-summary { background: #263b29; }
   .compact-form, .money-list li { background: #202c22; }
   .finance-overview-heading p, .income-total-row span, .income-breakdown small, .fixed-rule-name small, .fixed-empty-state, .dialog-note, .fixed-detail-list dt { color: #aeb9af; }
