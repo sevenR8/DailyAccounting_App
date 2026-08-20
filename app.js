@@ -1949,11 +1949,24 @@ async function renderLedger(
     if (dialog && !dialog.open) dialog.showModal();
   };
 
+  const switchDialog = (parentDialog, dialogId) => {
+    if (!parentDialog?.open) {
+      openDialog(dialogId);
+      return;
+    }
+
+    parentDialog.addEventListener('close', () => {
+      window.requestAnimationFrame(() => openDialog(dialogId));
+    }, { once: true });
+    parentDialog.close();
+  };
+
   document.querySelectorAll('[data-action="open-advance-dialog"]').forEach((button) => {
-    button.addEventListener('click', () => {
+    button.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
       const parentDialog = button.closest('dialog');
-      if (parentDialog?.open) parentDialog.close();
-      openDialog(button.dataset.dialogId);
+      switchDialog(parentDialog, button.dataset.dialogId);
     });
   });
 

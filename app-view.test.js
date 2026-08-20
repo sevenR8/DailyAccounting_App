@@ -480,3 +480,16 @@ test('既有代墊可修改對象、金額與預計收回日期', () => {
   assert.match(appSource, /data-minimum-amount/);
   assert.match(stylesSource, /\.advance-edit-form/);
 });
+
+test('從共同消費切換到代墊明細時等待母彈窗完整關閉，避免殘留遮罩鎖住介面', () => {
+  const advanceDialogHandler = appSource.slice(
+    appSource.indexOf("document.querySelectorAll('[data-action=\"open-advance-dialog\"]')"),
+    appSource.indexOf("document.querySelectorAll('.advance-create-form')"),
+  );
+
+  assert.match(advanceDialogHandler, /switchDialog\(parentDialog, button\.dataset\.dialogId\)/);
+  assert.doesNotMatch(
+    advanceDialogHandler,
+    /parentDialog\.close\(\);\s*openDialog\(button\.dataset\.dialogId\)/,
+  );
+});
