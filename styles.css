@@ -363,7 +363,7 @@ button { font: inherit; cursor: pointer; }
 }
 .advance-create-form label,
 .advance-edit-form label,
-.advance-repayment-form label { display: grid; gap: 6px; font-size: 0.82rem; font-weight: 800; }
+.advance-repayment-form label { display: grid; gap: 6px; min-width: 0; font-size: 0.82rem; font-weight: 800; }
 .advance-create-form input,
 .advance-edit-form input,
 .advance-repayment-form input,
@@ -374,6 +374,28 @@ button { font: inherit; cursor: pointer; }
   border-radius: 12px;
   padding: 11px;
   background: white;
+  color: inherit;
+  font: inherit;
+}
+.advance-date-control {
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #cbd4c9;
+  border-radius: 12px;
+  padding: 11px;
+  background: white;
+}
+.advance-date-control input[type="date"] {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
   color: inherit;
   font: inherit;
 }
@@ -823,6 +845,8 @@ input[type="datetime-local"] {
   .advance-row-copy small, .advance-row-amount small, .advance-empty-state, .advance-existing-list small { color: #aeb9af; }
   .advance-migration-note { border-color: #8d6f41; background: #292316; color: #d5c8a9; }
   .advance-create-form input, .advance-edit-form input, .advance-repayment-form input, .advance-repayment-form select { border-color: #526154; background: #172119; }
+  .advance-date-control { border-color: #526154; background: #172119; }
+  .advance-date-control input[type="date"] { border: 0; background: transparent; }
   .advance-settled-note { background: #263b29; color: #b9e3c2; }
   .settings-section, .category-settings-row { border-color: #3b493d; }
   .settings-section > div > p, .settings-unavailable, .cycle-settings-form .form-status,

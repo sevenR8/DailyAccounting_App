@@ -29,6 +29,21 @@ test('iOS 日期時間欄位由受限外框提供寬度，原生控制不再以�
   );
 });
 
+test('iOS 代墊預計收回日期使用受限外框，寬度與同列代墊欄位對齊', () => {
+  assert.match(
+    appSource,
+    /<span class="advance-date-control">\s*<input name="expectedOn" type="date"/,
+  );
+  assert.match(
+    stylesSource,
+    /\.advance-date-control\s*\{[^}]*width:\s*100%;[^}]*max-width:\s*100%;[^}]*min-width:\s*0;[^}]*overflow:\s*hidden;/s,
+  );
+  assert.match(
+    stylesSource,
+    /\.advance-date-control input\[type="date"\]\s*\{[^}]*width:\s*100%;[^}]*max-width:\s*100%;[^}]*border:\s*0;[^}]*padding:\s*0;/s,
+  );
+});
+
 test('手機版停用雙指縮放', () => {
   assert.match(indexSource, /maximum-scale=1/);
   assert.match(indexSource, /user-scalable=no/);
@@ -98,4 +113,3 @@ test('手機版先顯示帳務摘要卡，再顯示分類圓餅圖卡', () => {
     /@media \(max-width: 899px\)[\s\S]*\.chart-panel\s*\{[^}]*order:\s*2;/,
   );
 });
-
