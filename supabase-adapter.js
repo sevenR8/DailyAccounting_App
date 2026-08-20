@@ -98,7 +98,7 @@ export class SupabaseLedgerAdapter {
 
   async findPersonalLedger(userId) {
     const parameters = new URLSearchParams({
-      select: 'id,name,personal_owner_id,ledger_members(user_id,role),categories(id,name,retired_at,created_at)',
+      select: 'id,name,personal_owner_id,ledger_members(user_id,role),categories(id,name,is_default,retired_at,created_at)',
       personal_owner_id: `eq.${userId}`,
       limit: '1',
     });
@@ -124,13 +124,61 @@ export class SupabaseLedgerAdapter {
         .map((category) => ({
           id: category.id,
           name: category.name,
+          isDefault: category.is_default === true,
           retiredAt: category.retired_at,
         })),
     };
   }
 
   async createPersonalLedger({ displayName }) {
-    return this.connection.provisionPersonalLedger(displayName);
+    const ledger = await this.connection.provisionPersonalLedger(displayName);
+    return {
+      ...ledger,
+      categories: (ledger.categories ?? []).map((category) => ({
+        ...category,
+        isDefault: category.isDefault ?? true,
+      })),
+    };
+  }
+
+  async createCategory({ ledgerId, name }) {
+    const response = await this.connection.request('/rest/v1/categories', {
+      method: 'POST',
+      headers: { Prefer: 'return=representation' },
+      body: JSON.stringify({
+        ledger_id: ledgerId,
+        name,
+        is_default: false,
+      }),
+    });
+    if (!response.ok) throw new Error('無法新增分類，請確認名稱沒有重複。');
+    const [category] = await response.json();
+    return {
+      id: category.id,
+      name: category.name,
+      isDefault: category.is_default === true,
+      retiredAt: category.retired_at,
+    };
+  }
+
+  async updateCategory({ ledgerId, categoryId, name, retiredAt }) {
+    const parameters = new URLSearchParams({
+      id: `eq.${categoryId}`,
+      ledger_id: `eq.${ledgerId}`,
+    });
+    const response = await this.connection.request(`/rest/v1/categories?${parameters}`, {
+      method: 'PATCH',
+      headers: { Prefer: 'return=representation' },
+      body: JSON.stringify({ name, retired_at: retiredAt }),
+    });
+    if (!response.ok) throw new Error('無法更新分類，請確認名稱沒有重複。');
+    const [category] = await response.json();
+    return {
+      id: category.id,
+      name: category.name,
+      isDefault: category.is_default === true,
+      retiredAt: category.retired_at,
+    };
   }
 
   async listExpenseEntries(ledgerId) {

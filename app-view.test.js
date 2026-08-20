@@ -41,6 +41,19 @@ test('登入後頂部只保留使用者縮寫與可展開的帳號選單', () =>
   assert.doesNotMatch(appSource, /<section class="category-panel">/);
 });
 
+test('右上角選單可開啟帳本設定並管理自訂分類與週期起始日', () => {
+  assert.match(appSource, /data-action="open-ledger-settings"/);
+  assert.match(appSource, /id="ledger-settings-dialog"/);
+  assert.match(appSource, /id="category-create-form"/);
+  assert.match(appSource, /class="category-settings-form"/);
+  assert.match(appSource, /createCategory/);
+  assert.match(appSource, /updateCategory/);
+  assert.match(appSource, /name="cycleStartDay"[^>]*min="1"[^>]*max="28"/);
+  assert.match(appSource, /id="cycle-settings-form"/);
+  assert.match(stylesSource, /\.settings-dialog/);
+  assert.match(stylesSource, /\.category-settings-list/);
+});
+
 test('已保存登入狀態時直接顯示帳本啟動畫面，不會先閃過登入頁', () => {
   assert.match(appSource, /async function getAccessToken\(session = readSession\(\), \{ forceRefresh = false \} = \{\}\)/);
   assert.match(
@@ -156,6 +169,24 @@ test('手機摘要卡可開啟獨立帳務管理頁並保留桌面完整資訊',
   assert.match(stylesSource, /@media \(min-width: 900px\)[\s\S]*\.finance-panel \{ grid-area: finance; \}/);
 });
 
+test('手機所有內頁可向右滑動關閉或返回上一頁', () => {
+  assert.match(appSource, /const installSwipeBackGesture = \(\{/);
+  assert.match(appSource, /gestureTarget\.addEventListener\('touchstart'/);
+  assert.match(appSource, /gestureTarget\.addEventListener\('touchmove'/);
+  assert.match(appSource, /animatedSurface\.classList\.add\('is-swipe-closing'\)/);
+  assert.match(appSource, /onBack\(\)/);
+  assert.match(
+    appSource,
+    /installSwipeBackGesture\(\{[\s\S]*animatedSurface: financePanel[\s\S]*showMobileMainSection/,
+  );
+  assert.match(
+    appSource,
+    /document\.querySelectorAll\('\.finance-dialog'\)[\s\S]*installSwipeBackGesture/,
+  );
+  assert.match(stylesSource, /\.finance-dialog\.is-swipe-backing/);
+  assert.match(stylesSource, /\.finance-panel\.is-swipe-closing/);
+});
+
 test('手機版在頁面頂端下拉可重新取得最新頁面與帳務資料', () => {
   assert.match(appSource, /class="mobile-pull-refresh"/);
   assert.match(appSource, /下拉更新/);
@@ -236,6 +267,28 @@ test('固定開銷可拖曳排序並選擇每月或每年指定月份產生', ()
   assert.match(appSource, /每年 \$\{rule\.scheduled_month\} 月/);
   assert.match(stylesSource, /\.fixed-rule-row\.is-dragging/);
   assert.match(stylesSource, /touch-action:\s*none/);
+});
+
+test('固定開銷拖曳會封鎖文字選取與 iOS 長按選單', () => {
+  assert.match(
+    appSource,
+    /fixedRuleList\.addEventListener\('selectstart',[\s\S]*preventDefault\(\)/,
+  );
+  assert.match(
+    appSource,
+    /fixedRuleList\.addEventListener\('contextmenu',[\s\S]*preventDefault\(\)/,
+  );
+  assert.match(appSource, /document\.documentElement\.classList\.add\('is-reordering-fixed-expense'\)/);
+  assert.match(appSource, /document\.getSelection\(\)\?\.removeAllRanges\(\)/);
+  assert.match(
+    stylesSource,
+    /\.fixed-rule-sortable\s*\{[^}]*-webkit-user-select:\s*none;[^}]*user-select:\s*none;/,
+  );
+  assert.match(
+    stylesSource,
+    /\.fixed-rule-grip\s*\{[^}]*min-width:\s*40px;[^}]*touch-action:\s*none;/,
+  );
+  assert.match(stylesSource, /html\.is-reordering-fixed-expense[\s\S]*user-select:\s*none/);
 });
 
 test('每日一般開銷可開啟編輯視窗修改、刪除或複製', () => {

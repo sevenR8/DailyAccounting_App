@@ -117,8 +117,8 @@ test('帳本查詢只使用目前使用者的個人帳本，並轉成帳本模�
         personal_owner_id: 'user-1',
         ledger_members: [{ user_id: 'user-1', role: 'owner' }],
         categories: [
-          { id: 'category-2', name: '娛樂', retired_at: null, created_at: '2026-08-18T00:01:00Z' },
-          { id: 'category-1', name: '飲食', retired_at: null, created_at: '2026-08-18T00:00:00Z' },
+          { id: 'category-2', name: '娛樂', is_default: true, retired_at: null, created_at: '2026-08-18T00:01:00Z' },
+          { id: 'category-1', name: '貸款', is_default: false, retired_at: null, created_at: '2026-08-18T00:00:00Z' },
         ],
       }]);
     },
@@ -133,9 +133,55 @@ test('帳本查詢只使用目前使用者的個人帳本，並轉成帳本模�
     name: '小明的帳本',
     members: [{ userId: 'user-1', role: 'owner' }],
     categories: [
-      { id: 'category-1', name: '飲食', retiredAt: null },
-      { id: 'category-2', name: '娛樂', retiredAt: null },
+      { id: 'category-1', name: '貸款', isDefault: false, retiredAt: null },
+      { id: 'category-2', name: '娛樂', isDefault: true, retiredAt: null },
     ],
+  });
+});
+
+test('帳本擁有者可新增、重新命名、停用及重新啟用自訂分類', async () => {
+  const calls = [];
+  const connection = new SupabaseConnection({
+    supabaseUrl: 'https://example.supabase.co',
+    supabaseAnonKey: 'public-key',
+    accessToken: 'access-token',
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      const body = JSON.parse(options.body);
+      return response([{
+        id: 'category-7',
+        name: body.name ?? '貸款',
+        is_default: false,
+        retired_at: body.retired_at ?? null,
+      }]);
+    },
+  });
+  const adapter = new SupabaseLedgerAdapter(connection);
+
+  const created = await adapter.createCategory({ ledgerId: 'ledger-1', name: '貸款' });
+  const updated = await adapter.updateCategory({
+    ledgerId: 'ledger-1',
+    categoryId: 'category-7',
+    name: '房貸',
+    retiredAt: '2026-08-20T00:00:00.000Z',
+  });
+
+  assert.equal(calls[0].url, 'https://example.supabase.co/rest/v1/categories');
+  assert.equal(calls[0].options.method, 'POST');
+  assert.deepEqual(JSON.parse(calls[0].options.body), {
+    ledger_id: 'ledger-1', name: '貸款', is_default: false,
+  });
+  assert.match(calls[1].url, /categories\?id=eq\.category-7&ledger_id=eq\.ledger-1/);
+  assert.equal(calls[1].options.method, 'PATCH');
+  assert.deepEqual(JSON.parse(calls[1].options.body), {
+    name: '房貸', retired_at: '2026-08-20T00:00:00.000Z',
+  });
+  assert.deepEqual(created, {
+    id: 'category-7', name: '貸款', isDefault: false, retiredAt: null,
+  });
+  assert.deepEqual(updated, {
+    id: 'category-7', name: '房貸', isDefault: false,
+    retiredAt: '2026-08-20T00:00:00.000Z',
   });
 });
 
