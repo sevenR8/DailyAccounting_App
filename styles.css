@@ -203,6 +203,7 @@ button { font: inherit; cursor: pointer; }
 }
 .period-comparison.comparison-down { background: #e7f2e6; color: #287145; }
 .period-comparison.comparison-same { background: #e7ece7; color: #5e6b61; }
+.period-comparison.comparison-new { background: #537832; color: #efff78; }
 
 .chart-panel,
 .summary-panel,

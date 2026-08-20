@@ -319,6 +319,13 @@ test('上方可切換帳務月份並顯示與前一個月的開銷比較', () =>
   assert.match(stylesSource, /\.period-comparison/);
 });
 
+test('上月無開銷維持原本黃綠色而不受分析新增狀態的紅色影響', () => {
+  assert.match(
+    stylesSource,
+    /\.period-comparison\.comparison-new\s*\{[^}]*background:\s*#537832;[^}]*color:\s*#efff78;/,
+  );
+});
+
 test('每筆固定開銷都能安全刪除且不移除既有歷史', () => {
   assert.match(appSource, /class="fixed-rule-row"/);
   assert.match(appSource, /data-action="delete-fixed-expense"/);
