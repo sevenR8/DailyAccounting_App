@@ -414,6 +414,7 @@ test('本月信用卡繳納顯示在收入與固定開銷之間，並使用上�
 
 test('近期紀錄按日折疊，關閉時顯示當日現金與信用卡合計', () => {
   assert.match(appSource, /groupExpenseEntriesByDay/);
+  assert.match(appSource, /groupExpenseEntriesByDay\(suggestions, personalAmountsByEntryId\)/);
   assert.match(appSource, /class="day-expense-group"/);
   assert.match(appSource, /class="day-expense-summary"/);
   assert.match(appSource, /day\.cashTotal/);

@@ -969,7 +969,10 @@ async function renderLedger(
   const quickEntryTemplates = buildExpenseTemplates(
     entries.filter((entry) => activeCategoryIds.has(entry.category_id)),
   );
-  const dailyHistory = groupExpenseEntriesByDay(suggestions);
+  const personalAmountsByEntryId = new Map(
+    personalPeriodEntries.map((entry) => [entry.id, entry.amount]),
+  );
+  const dailyHistory = groupExpenseEntriesByDay(suggestions, personalAmountsByEntryId);
   const advancesByExpense = expenseAdvances.reduce((groups, advance) => {
     const existing = groups.get(advance.expenseEntryId) ?? [];
     existing.push(advance);
