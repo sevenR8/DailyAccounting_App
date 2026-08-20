@@ -9,6 +9,21 @@ test('本期總覽包含分類圓餅圖與各分類占比', () => {
   assert.match(appSource, /class="expense-pie"/);
   assert.match(appSource, /本期開銷分類占比/);
   assert.match(appSource, /category\.amount \/ generatedExpenseTotal/);
+  assert.match(
+    appSource,
+    /\.filter\(\(category\) => category\.amount > 0\)\s*\.sort\(\(left, right\) => right\.amount - left\.amount\)/,
+  );
+});
+
+test('新增自訂分類後前十六個分類仍使用不重複的圓餅圖顏色', () => {
+  const paletteSource = appSource.match(/const chartColors = \[([^\]]+)\]/)?.[1] ?? '';
+  const chartColors = Array.from(
+    paletteSource.matchAll(/'([^']+)'/g),
+    (match) => match[1],
+  );
+
+  assert.ok(chartColors.length >= 16, '圓餅圖至少需要十六個分類色');
+  assert.equal(new Set(chartColors.slice(0, 16)).size, 16, '前十六個分類色不可重複');
 });
 
 test('開銷紀錄清楚顯示每筆開銷的日期與時間', () => {

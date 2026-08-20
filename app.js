@@ -1,23 +1,23 @@
-import { LedgerModule } from './ledger-module.js?v=39';
-import { calculateFinancialSummary } from './financial-summary.js?v=39';
+import { LedgerModule } from './ledger-module.js?v=41';
+import { calculateFinancialSummary } from './financial-summary.js?v=41';
 import {
   buildExpenseTemplates,
   dailyExpenseTotalTone,
   findExpenseTemplates,
   groupExpenseEntriesByDay,
-} from './daily-history.js?v=39';
+} from './daily-history.js?v=41';
 import {
   accountingPeriodFromStart,
   compareExpenseTotals,
   scheduledDateInAccountingPeriod,
   shiftAccountingPeriodStart,
-} from './accounting-period.js?v=39';
+} from './accounting-period.js?v=41';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=39';
+} from './supabase-adapter.js?v=41';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -569,7 +569,12 @@ async function renderLedger(
       : periodComparison.direction === 'up'
         ? `↗ ${comparisonPercent}% 較上月`
         : `↘ ${comparisonPercent}% 較上月少`;
-  const chartColors = ['#e07a45', '#3f9ee8', '#e94c64', '#79bf5a', '#a274d6', '#e6b83f'];
+  const chartColors = [
+    '#e07a45', '#3f9ee8', '#e94c64', '#79bf5a',
+    '#a274d6', '#e6b83f', '#2db7a3', '#6c72e8',
+    '#d86baa', '#9a7152', '#46b8d8', '#a7bf45',
+    '#f08a72', '#497f73', '#c75b87', '#7f8fdf',
+  ];
   const categoryBreakdown = ledger.categories
     .map((category, index) => ({
       id: category.id,
@@ -579,7 +584,8 @@ async function renderLedger(
         .filter((entry) => entry.category_id === category.id)
         .reduce((total, entry) => total + entry.amount, 0),
     }))
-    .filter((category) => category.amount > 0);
+    .filter((category) => category.amount > 0)
+    .sort((left, right) => right.amount - left.amount);
   let chartCursor = 0;
   const chartSegments = categoryBreakdown.map((category) => {
     const startPercent = chartCursor;
