@@ -386,25 +386,15 @@ function formatAmount(amount) {
   return new Intl.NumberFormat('zh-TW').format(amount);
 }
 
-function showExpenseSavedToast({ entryId, itemName, amount }) {
+function showExpenseSavedToast({ itemName, amount }) {
   document.querySelector('.expense-saved-toast')?.remove();
   const toast = document.createElement('aside');
   toast.className = 'expense-saved-toast';
   const message = document.createElement('span');
   message.textContent = `已記錄 $${formatAmount(amount)}・${itemName}`;
-  const advanceButton = document.createElement('button');
-  advanceButton.type = 'button';
-  advanceButton.textContent = '設為代墊';
-  const advanceDialog = document.getElementById(`advance-expense-${entryId}`);
-  advanceButton.hidden = !advanceDialog;
-  advanceButton.addEventListener('click', () => {
-    window.clearTimeout(toast.dismissTimer);
-    toast.remove();
-    advanceDialog?.showModal();
-  });
-  toast.append(message, advanceButton);
+  toast.append(message);
   document.body.append(toast);
-  toast.dismissTimer = window.setTimeout(() => toast.remove(), 6500);
+  toast.dismissTimer = window.setTimeout(() => toast.remove(), 3200);
 }
 
 function formatEntryTime(value) {
@@ -1329,7 +1319,7 @@ async function renderLedger(
             : '<span class="period-read-only">需要資料庫升級</span>'}
         </div>
         ${financialOverview.expenseAdvancesSupported ? `
-          <ul class="advance-overview-list">${advanceOverviewRows || '<li class="advance-empty-state">尚無代墊紀錄。新增開銷後，可從儲存提示或開銷編輯頁設為代墊。</li>'}</ul>`
+          <ul class="advance-overview-list">${advanceOverviewRows || '<li class="advance-empty-state">尚無代墊紀錄。需要時可從開銷紀錄打開該筆帳目並設為代墊。</li>'}</ul>`
           : '<p class="advance-migration-note">請在 Supabase SQL Editor 執行 <code>supabase-0005-expense-advances.sql</code>。</p>'}
       </section>
       <section class="income-overview-section">
@@ -1918,7 +1908,7 @@ async function renderLedger(
         occurredAt: new Date(formData.get('occurredAt')).toISOString(),
       });
       await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
-      showExpenseSavedToast({ entryId: createdEntry.id, itemName, amount });
+      showExpenseSavedToast({ itemName, amount });
     } catch (error) {
       status.textContent = error.message;
       button.disabled = false;

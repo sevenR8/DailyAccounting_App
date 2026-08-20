@@ -381,7 +381,6 @@ button { font: inherit; cursor: pointer; }
   box-shadow: 0 14px 36px rgb(15 29 19 / 28%);
 }
 .expense-saved-toast span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.expense-saved-toast button { flex: 0 0 auto; border: 0; border-radius: 9px; padding: 8px 10px; background: #c9ef7b; color: #193522; font-weight: 900; }
 .credit-card-payment-card {
   display: flex;
   justify-content: space-between;

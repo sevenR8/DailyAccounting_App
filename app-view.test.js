@@ -428,10 +428,12 @@ test('展開每日紀錄後，每筆開銷右側提供垃圾桶刪除按鈕', ()
   assert.match(stylesSource, /\.expense-entry-delete/);
 });
 
-test('代墊只從儲存提示或開銷內頁設定，不干擾快速記帳欄位', () => {
+test('代墊只從開銷內頁設定，不在每次快速記帳後提示', () => {
   assert.match(appSource, /showExpenseSavedToast/);
   assert.match(appSource, /設為代墊/);
   assert.match(appSource, /class="advance-create-form"/);
+  assert.doesNotMatch(appSource, /advanceButton\.textContent = '設為代墊'/);
+  assert.match(appSource, /需要時可從開銷紀錄打開該筆帳目並設為代墊/);
   assert.doesNotMatch(appSource, /id="expense-form"[\s\S]{0,1600}name="debtorName"/);
 });
 
