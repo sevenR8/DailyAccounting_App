@@ -223,6 +223,10 @@ test('分析內頁可切換帳務週期並使用文青風響應式卡片', () =>
   assert.match(stylesSource, /@media \(max-width: 899px\)[\s\S]*\.analysis-total-grid,[\s\S]*grid-template-columns:\s*1fr/);
 });
 
+test('七項消費分析入口位於圓餅圖卡片左下方並避開右側百分比', () => {
+  assert.match(stylesSource, /\.chart-enter-hint\s*\{[^}]*justify-self:\s*start;[^}]*justify-content:\s*flex-start;/);
+});
+
 test('帳本建立者可設定分類分析性質與店家別名', () => {
   assert.match(appSource, /class="category-analysis-form"/);
   assert.match(appSource, /name="analysisNature"/);

@@ -1169,7 +1169,7 @@ input[type="datetime-local"] {
 .chart-panel-action { position: relative; cursor: pointer; }
 .chart-panel-action:hover { box-shadow: 0 14px 36px rgb(23 56 39 / 12%); transform: translateY(-1px); }
 .chart-panel-action:focus-visible { outline: 3px solid #739d79; outline-offset: 3px; }
-.chart-enter-hint { display: flex; justify-content: flex-end; gap: 6px; color: #47765a; font-size: 0.78rem; font-weight: 900; }
+.chart-enter-hint { display: flex; justify-self: start; justify-content: flex-start; gap: 6px; color: #47765a; font-size: 0.78rem; font-weight: 900; }
 .chart-enter-hint span { font-size: 1.1rem; line-height: 0.8; }
 
 .category-analysis-list,
