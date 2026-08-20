@@ -132,9 +132,9 @@ const installSwipeBackGesture = ({ gestureTarget, animatedSurface, onBack }) => 
     animatedSurface.classList.add('is-swipe-closing');
     animatedSurface.style.setProperty('--swipe-back-distance', '105vw');
     animationTimer = window.setTimeout(() => {
-      onBack();
       clearSurfaceState();
       resetTracking();
+      window.requestAnimationFrame(onBack);
     }, 180);
   };
 

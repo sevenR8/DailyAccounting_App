@@ -252,7 +252,7 @@ test('手機所有內頁可向右滑動關閉或返回上一頁', () => {
   assert.match(appSource, /gestureTarget\.addEventListener\('touchstart'/);
   assert.match(appSource, /gestureTarget\.addEventListener\('touchmove'/);
   assert.match(appSource, /animatedSurface\.classList\.add\('is-swipe-closing'\)/);
-  assert.match(appSource, /onBack\(\)/);
+  assert.match(appSource, /requestAnimationFrame\(onBack\)/);
   assert.match(
     appSource,
     /installSwipeBackGesture\(\{[\s\S]*animatedSurface: financePanel[\s\S]*showMobileMainSection/,
@@ -263,6 +263,24 @@ test('手機所有內頁可向右滑動關閉或返回上一頁', () => {
   );
   assert.match(stylesSource, /\.finance-dialog\.is-swipe-backing/);
   assert.match(stylesSource, /\.finance-panel\.is-swipe-closing/);
+});
+
+test('右滑返回會先清除位移狀態，再顯示底部快捷列所在的上一頁', () => {
+  assert.match(
+    appSource,
+    /animationTimer = window\.setTimeout\(\(\) => \{\s*clearSurfaceState\(\);\s*resetTracking\(\);\s*window\.requestAnimationFrame\(onBack\);\s*\}, 180\);/,
+  );
+});
+
+test('分析頁隱藏底部快捷列時保留固定定位圖層，避免 iOS 返回後浮在內容中央', () => {
+  assert.match(
+    stylesSource,
+    /\.ledger-home\[data-mobile-view="analysis"\] > \.mobile-bottom-nav\s*\{[^}]*visibility:\s*hidden;[^}]*opacity:\s*0;[^}]*pointer-events:\s*none;/s,
+  );
+  assert.doesNotMatch(
+    stylesSource,
+    /> \.top-bar,\s*\.ledger-home\[data-mobile-view="analysis"\] > \.mobile-bottom-nav\s*\{\s*display:\s*none !important;/,
+  );
 });
 
 test('手機版在頁面頂端下拉可重新取得最新頁面與帳務資料', () => {

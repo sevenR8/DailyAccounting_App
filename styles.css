@@ -1236,7 +1236,7 @@ input[type="datetime-local"] {
 
 .analysis-page { display: none; }
 .ledger-home[data-mobile-view="analysis"] { grid-template-columns: minmax(0, 1fr); grid-template-areas: "header" "analysis"; }
-.ledger-home[data-mobile-view="analysis"] > :not(.top-bar):not(.analysis-page) { display: none !important; }
+.ledger-home[data-mobile-view="analysis"] > :not(.top-bar):not(.analysis-page):not(.mobile-bottom-nav) { display: none !important; }
 .ledger-home[data-mobile-view="analysis"] > .analysis-page {
   grid-area: analysis;
   display: grid;
@@ -1374,8 +1374,12 @@ input[type="datetime-local"] {
 @media (max-width: 899px) {
   .chart-enter-hint { padding-top: 3px; }
   .ledger-home[data-mobile-view="analysis"] { padding-inline: 8px; padding-bottom: calc(28px + env(safe-area-inset-bottom)); }
-  .ledger-home[data-mobile-view="analysis"] > .top-bar,
-  .ledger-home[data-mobile-view="analysis"] > .mobile-bottom-nav { display: none !important; }
+  .ledger-home[data-mobile-view="analysis"] > .top-bar { display: none !important; }
+  .ledger-home[data-mobile-view="analysis"] > .mobile-bottom-nav {
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+  }
   .ledger-home[data-mobile-view="analysis"] > .analysis-page {
     border: 0;
     border-radius: 22px;
