@@ -27,6 +27,23 @@ test('每日紀錄以台灣日期合併並分別加總現金與信用卡', () =>
   ]);
 });
 
+test('每日總開銷使用排除代墊後的個人負擔，付款方式仍保留實付金額', () => {
+  const personalAmountsByEntryId = new Map([
+    ['advance', 0],
+    ['meal', 97],
+    ['store', 60],
+  ]);
+  const [day] = groupExpenseEntriesByDay([
+    { id: 'advance', amount: 798, payment_method: 'cash', occurred_at: '2026-08-20T15:25:00.000Z' },
+    { id: 'meal', amount: 97, payment_method: 'credit_card', occurred_at: '2026-08-20T10:33:00.000Z' },
+    { id: 'store', amount: 60, payment_method: 'credit_card', occurred_at: '2026-08-20T04:43:00.000Z' },
+  ], personalAmountsByEntryId);
+
+  assert.equal(day.total, 157);
+  assert.equal(day.cashTotal, 798);
+  assert.equal(day.creditCardTotal, 157);
+});
+
 test('每日總開銷依金額門檻顯示白、綠、藍、紅色', () => {
   assert.equal(dailyExpenseTotalTone(150), 'white');
   assert.equal(dailyExpenseTotalTone(151), 'green');

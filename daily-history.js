@@ -9,7 +9,7 @@ function taipeiDateKey(value) {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
-export function groupExpenseEntriesByDay(entries) {
+export function groupExpenseEntriesByDay(entries, personalAmountsByEntryId = new Map()) {
   const days = new Map();
   const sortedEntries = [...entries].sort(
     (left, right) => new Date(right.occurred_at) - new Date(left.occurred_at),
@@ -30,7 +30,7 @@ export function groupExpenseEntriesByDay(entries) {
 
     const day = days.get(key);
     day.entries.push(entry);
-    day.total += entry.amount;
+    day.total += personalAmountsByEntryId.get(entry.id) ?? entry.amount;
     if (entry.payment_method === 'cash') {
       day.cashTotal += entry.amount;
     } else if (entry.payment_method === 'credit_card') {
