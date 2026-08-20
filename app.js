@@ -1,31 +1,34 @@
-import { LedgerModule } from './ledger-module.js?v=34';
-import { calculateFinancialSummary } from './financial-summary.js?v=34';
+import { LedgerModule } from './ledger-module.js?v=35';
+import { calculateFinancialSummary } from './financial-summary.js?v=35';
 import {
   buildExpenseTemplates,
   dailyExpenseTotalTone,
   findExpenseTemplates,
   groupExpenseEntriesByDay,
-} from './daily-history.js?v=34';
+} from './daily-history.js?v=35';
 import {
   accountingPeriodFromStart,
   compareExpenseTotals,
   scheduledDateInAccountingPeriod,
   shiftAccountingPeriodStart,
-} from './accounting-period.js?v=34';
+} from './accounting-period.js?v=35';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=34';
+} from './supabase-adapter.js?v=35';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
 const EXPENSE_TIME_REFRESH_INTERVAL = 5 * 60 * 1000;
 const HISTORY_DISPLAY_LIMIT_STORAGE_KEY = 'daily-ledger-history-display-limit';
 const HISTORY_DISPLAY_LIMIT_OPTIONS = ['5', '10', '15', 'all'];
+const LEDGER_VIEW_CACHE_STORAGE_KEY = 'daily-ledger-view-cache-v1';
 let cleanupLedgerView = () => {};
 let accessTokenRefreshPromise = null;
+let ledgerViewInteractionVersion = 0;
+let ledgerViewSyncBaseline = 0;
 
 const preventZoomGesture = (event) => {
   if (event.cancelable) event.preventDefault();
@@ -69,6 +72,65 @@ function readSession() {
 
   const storedSession = window.localStorage.getItem('daily-ledger-session');
   return storedSession ? JSON.parse(storedSession) : null;
+}
+
+function sessionUserId(session) {
+  try {
+    const payload = session?.accessToken?.split('.')[1];
+    if (!payload) return null;
+    const normalizedPayload = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const paddedPayload = normalizedPayload.padEnd(
+      normalizedPayload.length + ((4 - (normalizedPayload.length % 4)) % 4),
+      '=',
+    );
+    return JSON.parse(window.atob(paddedPayload)).sub ?? null;
+  } catch (error) {
+    return null;
+  }
+}
+
+function readCachedLedgerView(session) {
+  try {
+    const cachedValue = window.localStorage.getItem(LEDGER_VIEW_CACHE_STORAGE_KEY);
+    if (!cachedValue) return null;
+    const cachedLedgerView = JSON.parse(cachedValue);
+    const userId = sessionUserId(session);
+    if (!userId || cachedLedgerView.userId !== userId) return null;
+    if (!cachedLedgerView.ledger || !cachedLedgerView.user || !cachedLedgerView.viewData) return null;
+    return cachedLedgerView;
+  } catch (error) {
+    return null;
+  }
+}
+
+function saveCachedLedgerView({ ledger, user, selectedStartsOn, viewData }) {
+  if (!ledger?.id || !user?.id || !viewData?.cacheable) return;
+  if (viewData.financialOverview && !viewData.financialOverview.isCurrentPeriod) return;
+  try {
+    window.localStorage.setItem(LEDGER_VIEW_CACHE_STORAGE_KEY, JSON.stringify({
+      userId: user.id,
+      cachedAt: Date.now(),
+      ledger,
+      user,
+      selectedStartsOn,
+      viewData,
+    }));
+  } catch (error) {
+    // 快取空間不足不應影響正常記帳與同步。
+  }
+}
+
+function clearCachedLedgerView() {
+  window.localStorage.removeItem(LEDGER_VIEW_CACHE_STORAGE_KEY);
+}
+
+function ledgerViewHasActiveDraft() {
+  const form = document.querySelector('#expense-form');
+  if (!form) return false;
+  return ledgerViewInteractionVersion !== ledgerViewSyncBaseline
+    || Boolean(form.querySelector('[name="amount"]')?.value)
+    || Boolean(form.querySelector('[name="itemName"]')?.value)
+    || Boolean(form.querySelector('button[type="submit"]')?.disabled);
 }
 
 function readHistoryDisplayLimit() {
@@ -250,14 +312,23 @@ function localDateFromISO(value) {
   return new Date(year, month - 1, day);
 }
 
-async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = null) {
-  const preferredMobileView = app.querySelector('.ledger-home')?.dataset.mobileView === 'finance'
-    ? 'finance'
-    : 'main';
+async function loadLedgerViewData(ledger, expenseAdapter, selectedStartsOn = null) {
+  let entriesLoaded = false;
+  const entriesPromise = expenseAdapter.listExpenseEntries(ledger.id)
+    .then((entries) => {
+      entriesLoaded = true;
+      return entries;
+    })
+    .catch(() => []);
+
   let financialOverview = null;
+  let financialOverviewLoaded = false;
   try {
-    const currentPeriod = await expenseAdapter.ensureCurrentAccountingPeriod(ledger.id);
-    const settings = await expenseAdapter.getFinancialSettings(ledger.id);
+    const [currentPeriod, settings, fixedExpenseRules] = await Promise.all([
+      expenseAdapter.ensureCurrentAccountingPeriod(ledger.id),
+      expenseAdapter.getFinancialSettings(ledger.id),
+      expenseAdapter.listFixedExpenseRules(ledger.id),
+    ]);
     const targetStartsOn = selectedStartsOn ?? currentPeriod.starts_on;
     const isCurrentPeriod = targetStartsOn === currentPeriod.starts_on;
     const storedPeriod = isCurrentPeriod
@@ -272,14 +343,11 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
       previous_card_bill_amount: null,
       previous_card_bill_zero_confirmed: false,
     };
-    const [otherIncomeEntries, fixedExpenseRules] = await Promise.all([
-      expenseAdapter.listOtherIncomeEntries({
-        ledgerId: ledger.id,
-        startsOn: period.starts_on,
-        endsOn: period.ends_on,
-      }),
-      expenseAdapter.listFixedExpenseRules(ledger.id),
-    ]);
+    const otherIncomeEntries = await expenseAdapter.listOtherIncomeEntries({
+      ledgerId: ledger.id,
+      startsOn: period.starts_on,
+      endsOn: period.ends_on,
+    });
     financialOverview = {
       period,
       settings,
@@ -289,15 +357,39 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
       isCurrentPeriod,
       hasStoredPeriod: Boolean(storedPeriod),
     };
+    financialOverviewLoaded = true;
   } catch (error) {
     financialOverview = null;
   }
 
-  let entries = [];
-  try {
-    entries = await expenseAdapter.listExpenseEntries(ledger.id);
-  } catch (error) {
-    entries = [];
+  const entries = await entriesPromise;
+  return {
+    financialOverview,
+    entries,
+    cacheable: financialOverviewLoaded || entriesLoaded,
+  };
+}
+
+async function renderLedger(
+  ledger,
+  user,
+  expenseAdapter,
+  selectedStartsOn = null,
+  { viewData = null, persistViewData = true } = {},
+) {
+  const preferredMobileView = app.querySelector('.ledger-home')?.dataset.mobileView === 'finance'
+    ? 'finance'
+    : 'main';
+  const resolvedViewData = viewData
+    ?? await loadLedgerViewData(ledger, expenseAdapter, selectedStartsOn);
+  const { financialOverview, entries } = resolvedViewData;
+  if (persistViewData) {
+    saveCachedLedgerView({
+      ledger,
+      user,
+      selectedStartsOn: financialOverview?.period?.starts_on ?? selectedStartsOn,
+      viewData: resolvedViewData,
+    });
   }
 
   const categoryNames = new Map(ledger.categories.map((category) => [category.id, category.name]));
@@ -906,6 +998,11 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
   };
   document.addEventListener('visibilitychange', syncExpenseTimeWhenVisible);
   const ledgerHome = document.querySelector('.ledger-home');
+  const noteLedgerInteraction = () => {
+    ledgerViewInteractionVersion += 1;
+  };
+  ledgerHome.addEventListener('pointerdown', noteLedgerInteraction, { once: true });
+  ledgerHome.addEventListener('keydown', noteLedgerInteraction, { once: true });
   const mobileNavigationButtons = [...document.querySelectorAll('[data-mobile-nav]')];
   const setActiveMobileNavigation = (sectionName) => {
     mobileNavigationButtons.forEach((button) => {
@@ -1060,6 +1157,7 @@ async function renderLedger(ledger, user, expenseAdapter, selectedStartsOn = nul
 
   document.querySelector('#sign-out').addEventListener('click', () => {
     window.localStorage.removeItem('daily-ledger-session');
+    clearCachedLedgerView();
     renderSignIn();
   });
 
@@ -1398,33 +1496,67 @@ async function bootstrap() {
     return;
   }
 
-  renderLedgerResume();
-  const accessToken = await getAccessToken(storedSession);
-  if (!accessToken) {
-    window.localStorage.removeItem('daily-ledger-session');
-    renderSignIn();
-    return;
+  const cachedLedgerView = readCachedLedgerView(storedSession);
+  const connection = new SupabaseConnection({
+    supabaseUrl: config.supabaseUrl,
+    supabaseAnonKey: config.supabaseAnonKey,
+    accessToken: storedSession.accessToken,
+    accessTokenProvider: ({ forceRefresh = false } = {}) => getAccessToken(
+      readSession(),
+      { forceRefresh },
+    ),
+  });
+  const expenseAdapter = new SupabaseLedgerAdapter(connection);
+
+  if (cachedLedgerView) {
+    await renderLedger(
+      cachedLedgerView.ledger,
+      cachedLedgerView.user,
+      expenseAdapter,
+      cachedLedgerView.selectedStartsOn,
+      { viewData: cachedLedgerView.viewData, persistViewData: false },
+    );
+    ledgerViewSyncBaseline = ledgerViewInteractionVersion;
+  } else {
+    renderLedgerResume();
   }
 
   try {
-    const connection = new SupabaseConnection({
-      supabaseUrl: config.supabaseUrl,
-      supabaseAnonKey: config.supabaseAnonKey,
-      accessToken,
-      accessTokenProvider: ({ forceRefresh = false } = {}) => getAccessToken(
-        readSession(),
-        { forceRefresh },
-      ),
-    });
+    const accessToken = await getAccessToken(storedSession);
+    if (!accessToken) {
+      window.localStorage.removeItem('daily-ledger-session');
+      clearCachedLedgerView();
+      renderSignIn();
+      return;
+    }
+    connection.accessToken = accessToken;
+
     const user = await connection.getUser();
-    const expenseAdapter = new SupabaseLedgerAdapter(connection);
     const ledgerModule = new LedgerModule(expenseAdapter);
     const ledger = await ledgerModule.provisionPersonalLedger({
       userId: user.id,
       displayName: user.user_metadata?.full_name || user.email?.split('@')[0],
     });
-    await renderLedger(ledger, user, expenseAdapter);
+    const freshViewData = await loadLedgerViewData(ledger, expenseAdapter);
+
+    if (!cachedLedgerView) {
+      await renderLedger(ledger, user, expenseAdapter, null, { viewData: freshViewData });
+    } else if (!ledgerViewHasActiveDraft()) {
+      await renderLedger(ledger, user, expenseAdapter, null, { viewData: freshViewData });
+    } else {
+      saveCachedLedgerView({
+        ledger,
+        user,
+        selectedStartsOn: freshViewData.financialOverview?.period?.starts_on ?? null,
+        viewData: freshViewData,
+      });
+    }
   } catch (error) {
+    if (cachedLedgerView) {
+      const status = document.querySelector('#expense-status');
+      if (status) status.textContent = '目前顯示上次同步資料，恢復連線後即可繼續記帳。';
+      return;
+    }
     app.innerHTML = `
       <main class="auth-card">
         <p class="eyebrow">每日帳本</p>
@@ -1434,6 +1566,7 @@ async function bootstrap() {
       </main>`;
     document.querySelector('#retry-sign-in').addEventListener('click', () => {
       window.localStorage.removeItem('daily-ledger-session');
+      clearCachedLedgerView();
       renderSignIn();
     });
   }

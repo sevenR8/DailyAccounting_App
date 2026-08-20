@@ -52,6 +52,50 @@ test('已保存登入狀態時直接顯示帳本啟動畫面，不會先閃過�
   assert.doesNotMatch(appSource, />正在準備你的帳本</);
 });
 
+test('已登入重新開啟時先顯示可操作快取，再於背景同步雲端資料', () => {
+  const bootstrapSource = appSource.slice(
+    appSource.indexOf('async function bootstrap()'),
+    appSource.indexOf('\nbootstrap();'),
+  );
+  const cachedViewReadIndex = bootstrapSource.indexOf(
+    'const cachedLedgerView = readCachedLedgerView(storedSession);',
+  );
+  const tokenRefreshIndex = bootstrapSource.indexOf('await getAccessToken(storedSession)');
+
+  assert.ok(cachedViewReadIndex >= 0, '應讀取前一次成功同步的帳本畫面');
+  assert.ok(tokenRefreshIndex >= 0, '應保留登入憑證更新流程');
+  assert.ok(
+    cachedViewReadIndex < tokenRefreshIndex,
+    '本機帳本畫面必須在等待網路前顯示',
+  );
+  assert.match(
+    bootstrapSource,
+    /if \(cachedLedgerView\)[\s\S]*viewData: cachedLedgerView\.viewData/,
+  );
+  assert.match(appSource, /function ledgerViewHasActiveDraft\(\)/);
+  assert.match(
+    bootstrapSource,
+    /ledgerViewSyncBaseline = ledgerViewInteractionVersion/,
+  );
+  assert.match(
+    bootstrapSource,
+    /if \(!ledgerViewHasActiveDraft\(\)\)[\s\S]*viewData: freshViewData/,
+  );
+});
+
+test('首次啟動時帳務週期、設定、固定開銷與歷史資料會並行讀取', () => {
+  const loaderSource = appSource.slice(
+    appSource.indexOf('async function loadLedgerViewData'),
+    appSource.indexOf('async function renderLedger'),
+  );
+
+  assert.match(loaderSource, /const entriesPromise = expenseAdapter\.listExpenseEntries/);
+  assert.match(
+    loaderSource,
+    /await Promise\.all\(\[[\s\S]*ensureCurrentAccountingPeriod[\s\S]*getFinancialSettings[\s\S]*listFixedExpenseRules/,
+  );
+});
+
 test('所有帳務請求都能取得最新登入憑證且共用同一個刷新作業', () => {
   assert.match(appSource, /let accessTokenRefreshPromise = null;/);
   assert.match(appSource, /if \(!accessTokenRefreshPromise\)/);
