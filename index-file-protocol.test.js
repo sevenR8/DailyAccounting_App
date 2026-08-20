@@ -23,7 +23,7 @@ test('直接以檔案方式開啟時會顯示啟動說明，而不是留下空�
 });
 
 test('啟動時使用版本化資源，讓舊離線快取能取得新版登入畫面', () => {
-  assert.match(indexHtml, /href="\.\/styles\.css\?v=41"/);
-  assert.match(indexHtml, /src="\.\/app\.js\?v=41"/);
-  assert.match(indexHtml, /register\('\.\/service-worker\.js\?v=41'\)/);
+  assert.match(indexHtml, /href="\.\/styles\.css\?v=42"/);
+  assert.match(indexHtml, /src="\.\/app\.js\?v=42"/);
+  assert.match(indexHtml, /register\('\.\/service-worker\.js\?v=42'\)/);
 });

@@ -226,6 +226,15 @@ test('快速記帳會依金額顯示常用歷史範本並一鍵帶入所有欄�
   assert.match(stylesSource, /\.smart-suggestions/);
 });
 
+test('快速記帳金額可用加號連續加總並儲存計算結果', () => {
+  assert.match(appSource, /class="expense-amount-control"/);
+  assert.match(appSource, /data-action="append-amount-plus"/);
+  assert.match(appSource, /id="expense-amount-result"/);
+  assert.match(appSource, /parseAmountExpression\(expenseAmountInput\.value\)/);
+  assert.match(appSource, /const amount = parseAmountExpression\(formData\.get\('amount'\)\)/);
+  assert.match(stylesSource, /\.expense-amount-control/);
+});
+
 test('快速記帳時間每五分鐘更新，手動修改後不會被覆蓋', () => {
   assert.match(appSource, /const EXPENSE_TIME_REFRESH_INTERVAL = 5 \* 60 \* 1000;/);
   assert.match(appSource, /expenseOccurredAtInput\.addEventListener\('input',[\s\S]*expenseOccurredAtManuallyEdited = true;/);
