@@ -5,6 +5,7 @@ export function calculateFinancialSummary({
   fixedExpenseRules,
   salaryAmount,
   otherIncomeEntries,
+  advanceRepaymentEntries = [],
   previousCardBillAmount,
   previousCardBillZeroConfirmed,
 }) {
@@ -18,10 +19,12 @@ export function calculateFinancialSummary({
     fixedExpenseRules.filter((rule) => rule.payment_method === 'cash'),
   );
   const otherIncomeTotal = sumAmounts(otherIncomeEntries);
+  const advanceRepaymentTotal = sumAmounts(advanceRepaymentEntries);
   const totalIncome = salaryAmount + otherIncomeTotal;
   const previousCardBillReady = previousCardBillAmount !== null || previousCardBillZeroConfirmed;
   const savingsAmount = previousCardBillReady
-    ? totalIncome - (previousCardBillAmount ?? 0) - cashTotal - cashFixedExpenseTotal
+    ? totalIncome + advanceRepaymentTotal
+      - (previousCardBillAmount ?? 0) - cashTotal - cashFixedExpenseTotal
     : null;
 
   return {
@@ -32,9 +35,9 @@ export function calculateFinancialSummary({
     fixedExpenseTotal,
     cashFixedExpenseTotal,
     otherIncomeTotal,
+    advanceRepaymentTotal,
     totalIncome,
     previousCardBillReady,
     savingsAmount,
   };
 }
-

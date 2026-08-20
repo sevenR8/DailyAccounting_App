@@ -1,11 +1,12 @@
-const CACHE_NAME = 'daily-ledger-shell-v43';
+const CACHE_NAME = 'daily-ledger-shell-v44';
 const APP_SHELL = [
   './',
   './index.html',
-  './styles.css?v=43',
+  './styles.css?v=44',
   './app.js',
   './amount-expression.js',
   './expense-analysis.js',
+  './expense-advance.js',
   './ledger-module.js',
   './financial-summary.js',
   './daily-history.js',
@@ -56,6 +57,7 @@ self.addEventListener('fetch', (event) => {
     '/styles.css',
     '/app.js',
     '/expense-analysis.js',
+    '/expense-advance.js',
     '/ledger-module.js',
     '/financial-summary.js',
     '/daily-history.js',

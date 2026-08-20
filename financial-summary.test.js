@@ -17,6 +17,7 @@ test('可存額扣除上期帳單、非固定現金與現金固定開銷，不�
     ],
     salaryAmount: 50000,
     otherIncomeEntries: [{ amount: 3000 }],
+    advanceRepaymentEntries: [{ amount: 2000 }],
     previousCardBillAmount: 10000,
     previousCardBillZeroConfirmed: false,
   });
@@ -25,7 +26,8 @@ test('可存額扣除上期帳單、非固定現金與現金固定開銷，不�
   assert.equal(summary.cashTotal, 4000);
   assert.equal(summary.creditCardTotal, 7000);
   assert.equal(summary.fixedExpenseTotal, 7000);
-  assert.equal(summary.savingsAmount, 34000);
+  assert.equal(summary.advanceRepaymentTotal, 2000);
+  assert.equal(summary.savingsAmount, 36000);
 });
 
 test('上期信用卡帳單尚未輸入時不顯示可存額', () => {
@@ -41,4 +43,3 @@ test('上期信用卡帳單尚未輸入時不顯示可存額', () => {
   assert.equal(summary.previousCardBillReady, false);
   assert.equal(summary.savingsAmount, null);
 });
-
