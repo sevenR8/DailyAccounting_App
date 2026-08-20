@@ -146,6 +146,14 @@ test('本期摘要以乾淨文字顯示收入、現金、信用卡、總開銷�
   assert.match(summarySource, /待輸入帳單/);
 });
 
+test('本期摘要顯示扣除代墊收回後的淨現金與個人總開銷', () => {
+  assert.match(appSource, /netCashOutflowTotal/);
+  assert.match(appSource, /代墊收回 \+\$/);
+  assert.match(appSource, /已加回代墊收回/);
+  assert.match(appSource, /personalNonFixedExpenseTotal/);
+  assert.match(appSource, /個人負擔・已排除代墊/);
+});
+
 test('桌面版使用多欄一頁式總覽，手機版仍維持單欄', () => {
   assert.match(stylesSource, /@media \(min-width: 900px\)[\s\S]*grid-template-areas/);
   assert.match(stylesSource, /@media \(min-width: 1240px\)[\s\S]*"chart quick finance"/);

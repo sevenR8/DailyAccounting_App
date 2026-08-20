@@ -20,11 +20,12 @@ export function calculateFinancialSummary({
   );
   const otherIncomeTotal = sumAmounts(otherIncomeEntries);
   const advanceRepaymentTotal = sumAmounts(advanceRepaymentEntries);
+  const netCashOutflowTotal = cashTotal - advanceRepaymentTotal;
   const totalIncome = salaryAmount + otherIncomeTotal;
   const previousCardBillReady = previousCardBillAmount !== null || previousCardBillZeroConfirmed;
   const savingsAmount = previousCardBillReady
-    ? totalIncome + advanceRepaymentTotal
-      - (previousCardBillAmount ?? 0) - cashTotal - cashFixedExpenseTotal
+    ? totalIncome - (previousCardBillAmount ?? 0)
+      - netCashOutflowTotal - cashFixedExpenseTotal
     : null;
 
   return {
@@ -36,6 +37,7 @@ export function calculateFinancialSummary({
     cashFixedExpenseTotal,
     otherIncomeTotal,
     advanceRepaymentTotal,
+    netCashOutflowTotal,
     totalIncome,
     previousCardBillReady,
     savingsAmount,
