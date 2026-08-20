@@ -48,3 +48,8 @@ export function advanceRepaymentsInPeriod(advances = [], startsOn, endsOn) {
       return dateKey >= startsOn && dateKey <= endsOn;
     }));
 }
+
+export function advancesVisibleInPeriod(advances = [], startsOn, endsOn) {
+  return advances.filter((advance) => advance.status !== 'settled'
+    || advanceRepaymentsInPeriod([advance], startsOn, endsOn).length > 0);
+}
