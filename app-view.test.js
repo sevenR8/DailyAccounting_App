@@ -324,6 +324,8 @@ test('上月無開銷維持原本黃綠色而不受分析新增狀態的紅色�
     stylesSource,
     /\.period-comparison\.comparison-new\s*\{[^}]*background:\s*#537832;[^}]*color:\s*#efff78;/,
   );
+  assert.match(stylesSource, /\.comparison-table \.comparison-up,\s*\.comparison-table \.comparison-new/);
+  assert.doesNotMatch(stylesSource, /(?:^|\n)\.comparison-up,\s*\n\.comparison-new/);
 });
 
 test('每筆固定開銷都能安全刪除且不移除既有歷史', () => {
