@@ -446,3 +446,11 @@ test('待收代墊顯示在本期收入上方，並可記錄部分收回', () =>
   assert.match(appSource, /createAdvanceRepayment/);
   assert.match(stylesSource, /\.advance-overview-list/);
 });
+
+test('既有代墊可修改對象、金額與預計收回日期', () => {
+  assert.match(appSource, /class="advance-edit-form"/);
+  assert.match(appSource, /updateExpenseAdvance/);
+  assert.match(appSource, /儲存代墊變更/);
+  assert.match(appSource, /data-minimum-amount/);
+  assert.match(stylesSource, /\.advance-edit-form/);
+});

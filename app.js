@@ -1080,8 +1080,10 @@ async function renderLedger(
       const availableAmount = Math.max(0, entry.amount - advancedAmount);
       const existingRows = entryAdvances.map((advance) => `
         <li>
-          <span><strong>${escapeHtml(advance.debtorName)}</strong><small>${advance.status === 'settled' ? '已全額收回' : `待收 $${formatAmount(advance.outstandingAmount)}`}</small></span>
-          <strong>$${formatAmount(advance.amount)}</strong>
+          <button type="button" class="advance-existing-open" data-action="open-advance-dialog" data-dialog-id="advance-detail-${escapeHtml(advance.id)}">
+            <span><strong>${escapeHtml(advance.debtorName)}</strong><small>${advance.status === 'settled' ? '已全額收回' : `待收 $${formatAmount(advance.outstandingAmount)}`}</small></span>
+            <strong>$${formatAmount(advance.amount)}</strong>
+          </button>
         </li>`).join('');
       return `
         <dialog class="finance-dialog advance-expense-dialog" id="advance-expense-${escapeHtml(entry.id)}">
@@ -1184,6 +1186,11 @@ async function renderLedger(
     }).join('');
   const advanceDetailDialogs = expenseAdvances.map((advance) => {
     const expense = expenseForAdvance(advance);
+    const otherAdvanceAmount = (advancesByExpense.get(advance.expenseEntryId) ?? [])
+      .filter((candidate) => candidate.id !== advance.id)
+      .reduce((total, candidate) => total + candidate.amount, 0);
+    const maximumEditableAmount = Math.max(advance.amount, expense.amount - otherAdvanceAmount);
+    const minimumEditableAmount = Math.max(1, advance.receivedAmount);
     const repaymentRows = advance.repayments.map((repayment) => `
       <li><span>${escapeHtml(formatEntryDate(repayment.receivedAt))}・${repayment.receiptMethod === 'cash' ? '現金' : '轉帳'}</span><strong>+$${formatAmount(repayment.amount)}</strong></li>`).join('');
     return `
@@ -1199,6 +1206,16 @@ async function renderLedger(
             <div><dt>已收回</dt><dd>$${formatAmount(advance.receivedAmount)}</dd></div>
             <div><dt>尚待收回</dt><dd>$${formatAmount(advance.outstandingAmount)}</dd></div>
           </dl>
+          <div class="dialog-subsection">
+            <h3>編輯代墊</h3>
+            <form class="advance-edit-form" data-advance-id="${escapeHtml(advance.id)}" data-minimum-amount="${minimumEditableAmount}" data-maximum-amount="${maximumEditableAmount}">
+              <label>代墊對象<input name="debtorName" type="text" maxlength="80" value="${escapeHtml(advance.debtorName)}" required /></label>
+              <label>代墊金額<input name="amount" type="number" min="${minimumEditableAmount}" max="${maximumEditableAmount}" step="1" inputmode="numeric" value="${advance.amount}" required /></label>
+              <label class="edit-form-wide">預計收回日期（選填）<input name="expectedOn" type="date" value="${escapeHtml(advance.expectedOn ?? '')}" /></label>
+              <p class="form-status edit-form-wide" aria-live="polite"></p>
+              <button class="small-primary-button edit-form-wide" type="submit">儲存代墊變更</button>
+            </form>
+          </div>
           <div class="dialog-subsection">
             <h3>收回紀錄</h3>
             <ul class="money-list">${repaymentRows || '<li class="empty-money-list">尚未收到代墊款</li>'}</ul>
@@ -1947,6 +1964,38 @@ async function renderLedger(
         await expenseAdapter.createExpenseAdvance({
           ledgerId: ledger.id,
           expenseEntryId: form.dataset.entryId,
+          debtorName,
+          amount,
+          expectedOn: formData.get('expectedOn') || null,
+        });
+        await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
+      } catch (error) {
+        status.textContent = error.message;
+        button.disabled = false;
+      }
+    });
+  });
+
+  document.querySelectorAll('.advance-edit-form').forEach((form) => {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const formData = new FormData(form);
+      const amount = Number(formData.get('amount'));
+      const debtorName = formData.get('debtorName').trim();
+      const minimumAmount = Number(form.dataset.minimumAmount);
+      const maximumAmount = Number(form.dataset.maximumAmount);
+      const button = form.querySelector('button[type="submit"]');
+      const status = form.querySelector('.form-status');
+      if (!debtorName || !Number.isInteger(amount) || amount < minimumAmount || amount > maximumAmount) {
+        status.textContent = `請輸入 ${formatAmount(minimumAmount)} 至 ${formatAmount(maximumAmount)} 元的代墊金額。`;
+        return;
+      }
+      button.disabled = true;
+      status.textContent = '正在儲存變更…';
+      try {
+        await expenseAdapter.updateExpenseAdvance({
+          ledgerId: ledger.id,
+          advanceId: form.dataset.advanceId,
           debtorName,
           amount,
           expectedOn: formData.get('expectedOn') || null,

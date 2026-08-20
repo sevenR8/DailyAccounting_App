@@ -55,3 +55,27 @@ test('設定代墊與收回使用受驗證的雲端程序', async () => {
   assert.match(calls[1].url, /rpc\/record_advance_repayment$/);
   assert.equal(calls[1].body.p_amount, 2000);
 });
+
+test('可修改既有代墊的對象、金額與預計收回日期', async () => {
+  const calls = [];
+  const connection = new SupabaseConnection({
+    supabaseUrl: 'https://example.supabase.co',
+    supabaseAnonKey: 'public-key',
+    accessToken: 'token',
+    fetchImpl: async (url, options) => {
+      calls.push({ url, body: JSON.parse(options.body) });
+      return response({ id: 'advance-1', amount: 4300 });
+    },
+  });
+  const adapter = new SupabaseLedgerAdapter(connection);
+
+  await adapter.updateExpenseAdvance({
+    ledgerId: 'ledger-1', advanceId: 'advance-1', debtorName: '寶貝',
+    amount: 4300, expectedOn: '2026-10-05',
+  });
+
+  assert.match(calls[0].url, /rpc\/update_expense_advance$/);
+  assert.equal(calls[0].body.p_advance_id, 'advance-1');
+  assert.equal(calls[0].body.p_amount, 4300);
+  assert.equal(calls[0].body.p_expected_on, '2026-10-05');
+});

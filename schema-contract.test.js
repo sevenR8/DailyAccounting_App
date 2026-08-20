@@ -22,6 +22,10 @@ const expenseAdvancesMigration = await readFile(
   new URL('./supabase-0005-expense-advances.sql', import.meta.url),
   'utf8',
 );
+const editExpenseAdvancesMigration = await readFile(
+  new URL('./supabase-0006-edit-expense-advances.sql', import.meta.url),
+  'utf8',
+);
 
 test('資料模型保留開銷的記錄者、可選付款者與同帳本外鍵', () => {
   assert.match(migration, /create table public\.expense_entries/i);
@@ -92,4 +96,11 @@ test('代墊獨立保存待收金額與分次收回紀錄', () => {
   assert.match(expenseAdvancesMigration, /record_advance_repayment/i);
   assert.match(expenseAdvancesMigration, /repayment_exceeds_outstanding/i);
   assert.match(expenseAdvancesMigration, /ledger members read advances/i);
+});
+
+test('修改代墊時不得低於已收回金額或超過原開銷', () => {
+  assert.match(editExpenseAdvancesMigration, /update_expense_advance/i);
+  assert.match(editExpenseAdvancesMigration, /advance_below_repaid/i);
+  assert.match(editExpenseAdvancesMigration, /advance_exceeds_expense/i);
+  assert.match(editExpenseAdvancesMigration, /grant execute on function public\.update_expense_advance/i);
 });

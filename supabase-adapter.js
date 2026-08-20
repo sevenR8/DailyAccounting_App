@@ -363,6 +363,23 @@ export class SupabaseLedgerAdapter {
     return response.json();
   }
 
+  async updateExpenseAdvance({ ledgerId, advanceId, debtorName, amount, expectedOn }) {
+    const response = await this.connection.request('/rest/v1/rpc/update_expense_advance', {
+      method: 'POST',
+      body: JSON.stringify({
+        p_ledger_id: ledgerId,
+        p_advance_id: advanceId,
+        p_debtor_name: debtorName,
+        p_amount: amount,
+        p_expected_on: expectedOn || null,
+      }),
+    });
+    if (!response.ok) {
+      throw new Error('無法修改這筆代墊；金額不可低於已收回金額，也不可超過原開銷。');
+    }
+    return response.json();
+  }
+
   async createAdvanceRepayment({
     ledgerId,
     advanceId,
