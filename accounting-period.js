@@ -18,11 +18,32 @@ export function accountingPeriodFromStart(startsOn) {
   };
 }
 
-export function scheduledDateInAccountingPeriod(startsOn, endsOn, scheduledDay) {
+export function scheduledDateInAccountingPeriod(
+  startsOn,
+  endsOn,
+  scheduledDay,
+  scheduledMonth = null,
+) {
   const [year, month] = dateParts(startsOn);
   const day = Number(scheduledDay);
   if (!Number.isInteger(day) || day < 1 || day > 28) {
     throw new RangeError('固定開銷日期必須介於 1 到 28 日。');
+  }
+
+  if (scheduledMonth !== null && scheduledMonth !== undefined) {
+    const annualMonth = Number(scheduledMonth);
+    if (!Number.isInteger(annualMonth) || annualMonth < 1 || annualMonth > 12) {
+      throw new RangeError('年度固定開銷月份必須介於 1 到 12 月。');
+    }
+
+    const [endYear] = dateParts(endsOn);
+    for (const candidateYear of new Set([year, endYear])) {
+      const scheduledOn = new Date(Date.UTC(candidateYear, annualMonth - 1, day))
+        .toISOString()
+        .slice(0, 10);
+      if (scheduledOn >= startsOn && scheduledOn <= endsOn) return scheduledOn;
+    }
+    return null;
   }
 
   let scheduledDate = new Date(Date.UTC(year, month - 1, day));
@@ -52,4 +73,3 @@ export function compareExpenseTotals(currentTotal, previousTotal) {
     hasBaseline: true,
   };
 }
-

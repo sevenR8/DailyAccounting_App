@@ -22,6 +22,21 @@ test('固定開銷日期會落在跨月帳務週期內的正確月份', () => {
   assert.equal(scheduledDateInAccountingPeriod('2026-08-05', '2026-09-04', 1), '2026-09-01');
 });
 
+test('年度固定開銷只會落在指定月份所在的帳務週期', () => {
+  assert.equal(
+    scheduledDateInAccountingPeriod('2026-08-05', '2026-09-04', 25, 8),
+    '2026-08-25',
+  );
+  assert.equal(
+    scheduledDateInAccountingPeriod('2026-08-05', '2026-09-04', 25, 12),
+    null,
+  );
+  assert.equal(
+    scheduledDateInAccountingPeriod('2026-12-05', '2027-01-04', 1, 1),
+    '2027-01-01',
+  );
+});
+
 test('與上月比較可分辨增加、減少、持平與無比較基準', () => {
   assert.deepEqual(compareExpenseTotals(1160, 1000), {
     direction: 'up', percent: 16, hasBaseline: true,
@@ -36,4 +51,3 @@ test('與上月比較可分辨增加、減少、持平與無比較基準', () =>
     direction: 'up', percent: null, hasBaseline: false,
   });
 });
-

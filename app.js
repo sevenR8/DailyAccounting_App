@@ -1,23 +1,23 @@
-import { LedgerModule } from './ledger-module.js?v=35';
-import { calculateFinancialSummary } from './financial-summary.js?v=35';
+import { LedgerModule } from './ledger-module.js?v=36';
+import { calculateFinancialSummary } from './financial-summary.js?v=36';
 import {
   buildExpenseTemplates,
   dailyExpenseTotalTone,
   findExpenseTemplates,
   groupExpenseEntriesByDay,
-} from './daily-history.js?v=35';
+} from './daily-history.js?v=36';
 import {
   accountingPeriodFromStart,
   compareExpenseTotals,
   scheduledDateInAccountingPeriod,
   shiftAccountingPeriodStart,
-} from './accounting-period.js?v=35';
+} from './accounting-period.js?v=36';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=35';
+} from './supabase-adapter.js?v=36';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -353,6 +353,7 @@ async function loadLedgerViewData(ledger, expenseAdapter, selectedStartsOn = nul
       settings,
       otherIncomeEntries,
       fixedExpenseRules,
+      fixedExpenseSchedulingSupported: expenseAdapter.fixedExpenseSchedulingSupported === true,
       currentStartsOn: currentPeriod.starts_on,
       isCurrentPeriod,
       hasStoredPeriod: Boolean(storedPeriod),
@@ -409,7 +410,12 @@ async function renderLedger(
   });
   const isCurrentPeriod = financialOverview?.isCurrentPeriod ?? true;
   const fixedExpensesForSummary = isCurrentPeriod
-    ? (financialOverview?.fixedExpenseRules ?? [])
+    ? (financialOverview?.fixedExpenseRules ?? []).filter((rule) => scheduledDateInAccountingPeriod(
+      financialOverview.period.starts_on,
+      financialOverview.period.ends_on,
+      rule.scheduled_day,
+      rule.recurrence_type === 'yearly' ? rule.scheduled_month : null,
+    ))
     : periodEntries.filter((entry) => entry.is_fixed);
   const calculatedSummary = financialOverview ? calculateFinancialSummary({
     periodEntries,
@@ -492,6 +498,13 @@ async function renderLedger(
     .map((category) => `<option value="${escapeHtml(category.id)}" ${category.id === selectedId ? 'selected' : ''}>${escapeHtml(category.name)}</option>`)
     .join('');
   const categoryOptions = categoryOptionsFor();
+  const scheduledMonthOptionsFor = (selectedMonth = 1) => Array.from(
+    { length: 12 },
+    (_, index) => index + 1,
+  ).map((month) => `<option value="${month}" ${month === Number(selectedMonth) ? 'selected' : ''}>${month} 月</option>`).join('');
+  const fixedRuleScheduleLabel = (rule) => rule.recurrence_type === 'yearly'
+    ? `每年 ${rule.scheduled_month} 月 ${rule.scheduled_day} 日`
+    : `每月 ${rule.scheduled_day} 日`;
   const activeCategoryIds = new Set(
     ledger.categories.filter((category) => !category.retiredAt).map((category) => category.id),
   );
@@ -618,10 +631,18 @@ async function renderLedger(
     : isCurrentPeriod
       ? '待輸入上期實際帳單，點此更新'
       : '該期未記錄上期實際帳單';
+  const supportsFixedExpenseScheduling = financialOverview?.fixedExpenseSchedulingSupported === true;
   const otherIncomeList = financialOverview?.otherIncomeEntries.map((income) => `
     <li><span>${escapeHtml(income.name)}</span><strong>+$${formatAmount(income.amount)}</strong></li>`).join('') || '';
   const fixedExpenseList = financialOverview?.fixedExpenseRules.map((rule) => `
-    <li class="fixed-rule-row">
+    <li class="fixed-rule-row fixed-rule-sortable" data-rule-id="${escapeHtml(rule.id)}">
+      <button
+        class="fixed-rule-grip"
+        type="button"
+        data-action="drag-fixed-expense"
+        aria-label="拖曳調整${escapeHtml(rule.item_name)}的位置"
+        ${supportsFixedExpenseScheduling ? '' : 'disabled'}
+      ><span aria-hidden="true">⠿</span></button>
       <button
         class="fixed-rule-open"
         type="button"
@@ -629,9 +650,8 @@ async function renderLedger(
         data-dialog-id="fixed-rule-detail-${escapeHtml(rule.id)}"
         aria-label="查看固定開銷：${escapeHtml(rule.item_name)}"
       >
-        <span class="fixed-rule-grip" aria-hidden="true">⠿</span>
         <span class="fixed-rule-icon" aria-hidden="true">${escapeHtml((categoryNames.get(rule.category_id) || '固').slice(0, 1))}</span>
-        <span class="fixed-rule-name"><strong>${escapeHtml(rule.item_name)}</strong><small>每月 ${rule.scheduled_day} 日・${rule.payment_method === 'cash' ? '現金' : '信用卡'}</small></span>
+        <span class="fixed-rule-name"><strong>${escapeHtml(rule.item_name)}</strong><small>${escapeHtml(fixedRuleScheduleLabel(rule))}・${rule.payment_method === 'cash' ? '現金' : '信用卡'}</small></span>
         <strong class="fixed-rule-amount">$${formatAmount(rule.amount)}</strong>
       </button>
     </li>`).join('') || '';
@@ -657,8 +677,17 @@ async function renderLedger(
           <label class="edit-form-wide">項目名稱
             <input name="itemName" type="text" maxlength="100" value="${escapeHtml(rule.item_name)}" required />
           </label>
-          <label>每月金額（TWD）
+          <label>固定金額（TWD）
             <input name="amount" type="number" min="1" step="1" inputmode="numeric" value="${rule.amount}" required />
+          </label>
+          <label>產生頻率
+            <select name="recurrenceType" required>
+              <option value="monthly" ${rule.recurrence_type !== 'yearly' ? 'selected' : ''}>每月</option>
+              <option value="yearly" ${rule.recurrence_type === 'yearly' ? 'selected' : ''} ${supportsFixedExpenseScheduling ? '' : 'disabled'}>每年</option>
+            </select>
+          </label>
+          <label data-annual-month ${rule.recurrence_type === 'yearly' ? '' : 'hidden'}>扣款月份
+            <select name="scheduledMonth" ${rule.recurrence_type === 'yearly' ? '' : 'disabled'}>${scheduledMonthOptionsFor(rule.scheduled_month ?? 1)}</select>
           </label>
           <label>扣款日
             <input name="scheduledDay" type="number" min="1" max="28" step="1" inputmode="numeric" value="${rule.scheduled_day}" required />
@@ -741,7 +770,10 @@ async function renderLedger(
             ? '<button class="text-action" type="button" data-action="open-fixed-rule-dialog">＋ 新增</button>'
             : '<span class="period-read-only">實際產生</span>'}
         </div>
-        <ul class="fixed-overview-list">${displayedFixedExpenseList || `<li class="fixed-empty-state">${isCurrentPeriod ? '尚未設定固定開銷，點「＋新增」開始設定。' : '這個週期沒有已產生的固定開銷。'}</li>`}</ul>
+        <ul class="fixed-overview-list" data-reorderable="${isCurrentPeriod && supportsFixedExpenseScheduling ? 'true' : 'false'}">${displayedFixedExpenseList || `<li class="fixed-empty-state">${isCurrentPeriod ? '尚未設定固定開銷，點「＋新增」開始設定。' : '這個週期沒有已產生的固定開銷。'}</li>`}</ul>
+        ${isCurrentPeriod && !supportsFixedExpenseScheduling
+          ? '<p class="fixed-scheduling-note">執行資料庫升級後，即可拖曳排序並新增每年固定開銷。</p>'
+          : '<p class="form-status fixed-order-status" id="fixed-order-status" aria-live="polite"></p>'}
       </section>
 
       <dialog class="finance-dialog" id="income-dialog">
@@ -789,7 +821,16 @@ async function renderLedger(
               <option value="cash">現金</option>
               <option value="credit_card">信用卡</option>
             </select>
-            <label>每月<input name="scheduledDay" type="number" min="1" max="28" step="1" inputmode="numeric" value="5" aria-label="固定開銷產生日" required />日</label>
+            <label>頻率
+              <select name="recurrenceType" aria-label="固定開銷產生頻率" required>
+                <option value="monthly">每月</option>
+                <option value="yearly" ${supportsFixedExpenseScheduling ? '' : 'disabled'}>每年</option>
+              </select>
+            </label>
+            <label data-annual-month hidden>月份
+              <select name="scheduledMonth" aria-label="年度固定開銷月份" disabled>${scheduledMonthOptionsFor(1)}</select>
+            </label>
+            <label>日期<input name="scheduledDay" type="number" min="1" max="28" step="1" inputmode="numeric" value="5" aria-label="固定開銷產生日" required />日</label>
             <button class="secondary-button" type="submit">新增固定開銷</button>
             <p class="form-status" id="fixed-rule-status" aria-live="polite"></p>
           </form>
@@ -1268,6 +1309,96 @@ async function renderLedger(
       button.addEventListener('click', () => openDialog(button.dataset.dialogId));
     });
 
+    const syncFixedRecurrenceFields = (form) => {
+      const recurrenceType = form.elements.recurrenceType?.value ?? 'monthly';
+      const annualMonthField = form.querySelector('[data-annual-month]');
+      const scheduledMonth = form.elements.scheduledMonth;
+      const isYearly = recurrenceType === 'yearly';
+      if (annualMonthField) annualMonthField.hidden = !isYearly;
+      if (scheduledMonth) scheduledMonth.disabled = !isYearly;
+    };
+    document.querySelectorAll('#fixed-rule-form, .fixed-edit-form').forEach((form) => {
+      syncFixedRecurrenceFields(form);
+      form.elements.recurrenceType?.addEventListener('change', () => {
+        syncFixedRecurrenceFields(form);
+      });
+    });
+
+    const fixedRuleList = document.querySelector('.fixed-overview-list[data-reorderable="true"]');
+    if (fixedRuleList) {
+      const fixedOrderStatus = document.querySelector('#fixed-order-status');
+      const orderedRuleIds = () => Array.from(
+        fixedRuleList.querySelectorAll('.fixed-rule-sortable[data-rule-id]'),
+        (row) => row.dataset.ruleId,
+      );
+      document.querySelectorAll('[data-action="drag-fixed-expense"]').forEach((grip) => {
+        grip.addEventListener('pointerdown', (event) => {
+          if (event.button !== 0 || grip.disabled) return;
+          const draggedRow = grip.closest('.fixed-rule-sortable');
+          const originalOrder = orderedRuleIds();
+          let moved = false;
+          draggedRow.classList.add('is-dragging');
+          grip.setPointerCapture(event.pointerId);
+          event.preventDefault();
+
+          const moveRow = (moveEvent) => {
+            moved = true;
+            const siblings = Array.from(
+              fixedRuleList.querySelectorAll('.fixed-rule-sortable'),
+            ).filter((row) => row !== draggedRow);
+            const nextRow = siblings.find((row) => {
+              const bounds = row.getBoundingClientRect();
+              return moveEvent.clientY < bounds.top + (bounds.height / 2);
+            });
+            fixedRuleList.insertBefore(draggedRow, nextRow ?? null);
+            moveEvent.preventDefault();
+          };
+
+          const finishReorder = async (finishEvent) => {
+            grip.removeEventListener('pointermove', moveRow);
+            grip.removeEventListener('pointerup', finishReorder);
+            grip.removeEventListener('pointercancel', cancelReorder);
+            if (grip.hasPointerCapture(finishEvent.pointerId)) {
+              grip.releasePointerCapture(finishEvent.pointerId);
+            }
+            draggedRow.classList.remove('is-dragging');
+            const updatedOrder = orderedRuleIds();
+            if (!moved || updatedOrder.every((id, index) => id === originalOrder[index])) return;
+
+            fixedOrderStatus.textContent = '正在儲存排列…';
+            try {
+              await expenseAdapter.reorderFixedExpenseRules({
+                ledgerId: ledger.id,
+                ruleIds: updatedOrder,
+              });
+              await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
+            } catch (error) {
+              fixedOrderStatus.textContent = error.message;
+              await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
+            }
+          };
+
+          const cancelReorder = (cancelEvent) => {
+            grip.removeEventListener('pointermove', moveRow);
+            grip.removeEventListener('pointerup', finishReorder);
+            grip.removeEventListener('pointercancel', cancelReorder);
+            if (grip.hasPointerCapture(cancelEvent.pointerId)) {
+              grip.releasePointerCapture(cancelEvent.pointerId);
+            }
+            draggedRow.classList.remove('is-dragging');
+            originalOrder.forEach((ruleId) => {
+              const row = fixedRuleList.querySelector(`[data-rule-id="${CSS.escape(ruleId)}"]`);
+              if (row) fixedRuleList.append(row);
+            });
+          };
+
+          grip.addEventListener('pointermove', moveRow);
+          grip.addEventListener('pointerup', finishReorder);
+          grip.addEventListener('pointercancel', cancelReorder);
+        });
+      });
+    }
+
     const zeroCardBill = document.querySelector('#zero-card-bill');
     const previousCardBill = document.querySelector('#previous-card-bill');
     zeroCardBill.addEventListener('change', () => {
@@ -1336,16 +1467,47 @@ async function renderLedger(
       const formData = new FormData(form);
       const button = form.querySelector('button[type="submit"]');
       const status = document.querySelector('#fixed-rule-status');
+      const itemName = formData.get('itemName').trim();
+      const amount = Number(formData.get('amount'));
+      const scheduledDay = Number(formData.get('scheduledDay'));
+      const recurrenceType = supportsFixedExpenseScheduling
+        ? formData.get('recurrenceType')
+        : 'monthly';
+      const scheduledMonth = recurrenceType === 'yearly'
+        ? Number(formData.get('scheduledMonth'))
+        : null;
+      if (
+        !itemName
+        || !Number.isInteger(amount)
+        || amount <= 0
+        || !Number.isInteger(scheduledDay)
+        || scheduledDay < 1
+        || scheduledDay > 28
+        || (recurrenceType === 'yearly' && (
+          !Number.isInteger(scheduledMonth) || scheduledMonth < 1 || scheduledMonth > 12
+        ))
+      ) {
+        status.textContent = '請填寫正確的項目、整數金額與扣款月份／日期。';
+        return;
+      }
       button.disabled = true;
       status.textContent = '正在新增…';
       try {
         await expenseAdapter.createFixedExpenseRule({
           ledgerId: ledger.id,
           categoryId: formData.get('categoryId'),
-          itemName: formData.get('itemName').trim(),
-          amount: Number(formData.get('amount')),
+          itemName,
+          amount,
           paymentMethod: formData.get('paymentMethod'),
-          scheduledDay: Number(formData.get('scheduledDay')),
+          scheduledDay,
+          ...(supportsFixedExpenseScheduling ? {
+            recurrenceType,
+            scheduledMonth,
+            sortOrder: Math.max(
+              -1,
+              ...financialOverview.fixedExpenseRules.map((rule) => Number(rule.sort_order) || 0),
+            ) + 1,
+          } : {}),
         });
         await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
       } catch (error) {
@@ -1363,6 +1525,12 @@ async function renderLedger(
         const itemName = formData.get('itemName').trim();
         const amount = Number(formData.get('amount'));
         const scheduledDay = Number(formData.get('scheduledDay'));
+        const recurrenceType = supportsFixedExpenseScheduling
+          ? formData.get('recurrenceType')
+          : 'monthly';
+        const scheduledMonth = recurrenceType === 'yearly'
+          ? Number(formData.get('scheduledMonth'))
+          : null;
         if (
           !itemName
           || !Number.isInteger(amount)
@@ -1370,8 +1538,11 @@ async function renderLedger(
           || !Number.isInteger(scheduledDay)
           || scheduledDay < 1
           || scheduledDay > 28
+          || (recurrenceType === 'yearly' && (
+            !Number.isInteger(scheduledMonth) || scheduledMonth < 1 || scheduledMonth > 12
+          ))
         ) {
-          status.textContent = '請填寫正確的項目、整數金額與 1～28 日扣款日。';
+          status.textContent = '請填寫正確的項目、整數金額與扣款月份／日期。';
           return;
         }
 
@@ -1381,6 +1552,7 @@ async function renderLedger(
           financialOverview.period.starts_on,
           financialOverview.period.ends_on,
           scheduledDay,
+          recurrenceType === 'yearly' ? scheduledMonth : null,
         );
         button.disabled = true;
         status.textContent = '正在儲存…';
@@ -1393,6 +1565,10 @@ async function renderLedger(
             amount,
             paymentMethod,
             scheduledDay,
+            ...(supportsFixedExpenseScheduling ? {
+              recurrenceType,
+              scheduledMonth,
+            } : {}),
           });
           await expenseAdapter.syncFixedExpenseEntry({
             ledgerId: ledger.id,
@@ -1402,8 +1578,8 @@ async function renderLedger(
             itemName,
             amount,
             paymentMethod,
-            occurredAt: `${scheduledOn}T00:00:00+08:00`,
-            shouldExist: scheduledOn <= taiwanDateISO(),
+            occurredAt: `${scheduledOn ?? financialOverview.period.starts_on}T00:00:00+08:00`,
+            shouldExist: Boolean(scheduledOn && scheduledOn <= taiwanDateISO()),
           });
           await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
         } catch (error) {

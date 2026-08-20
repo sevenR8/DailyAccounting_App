@@ -314,6 +314,45 @@ test('固定開銷規則會保存日期、分類與付款方式', async () => {
   });
 });
 
+test('年度固定開銷會保存指定月份，並可一次同步拖曳後的順序', async () => {
+  const calls = [];
+  const connection = new SupabaseConnection({
+    supabaseUrl: 'https://example.supabase.co',
+    supabaseAnonKey: 'public-key',
+    accessToken: 'access-token',
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      return response([{ id: 'fixed-1' }]);
+    },
+  });
+  const adapter = new SupabaseLedgerAdapter(connection);
+  adapter.fixedExpenseSchedulingSupported = true;
+
+  await adapter.createFixedExpenseRule({
+    ledgerId: 'ledger-1', categoryId: 'category-1', itemName: '年度保費',
+    amount: 12000, paymentMethod: 'credit_card', scheduledDay: 20,
+    recurrenceType: 'yearly', scheduledMonth: 12, sortOrder: 3,
+  });
+  await adapter.reorderFixedExpenseRules({
+    ledgerId: 'ledger-1',
+    ruleIds: ['fixed-3', 'fixed-1', 'fixed-2'],
+  });
+
+  assert.deepEqual(JSON.parse(calls[0].options.body), {
+    ledger_id: 'ledger-1', category_id: 'category-1', item_name: '年度保費',
+    amount: 12000, payment_method: 'credit_card', scheduled_day: 20,
+    recurrence_type: 'yearly', scheduled_month: 12, sort_order: 3,
+  });
+  assert.equal(
+    calls[1].url,
+    'https://example.supabase.co/rest/v1/rpc/reorder_fixed_expense_rules',
+  );
+  assert.deepEqual(JSON.parse(calls[1].options.body), {
+    p_ledger_id: 'ledger-1',
+    p_rule_ids: ['fixed-3', 'fixed-1', 'fixed-2'],
+  });
+});
+
 test('可修改固定開銷規則並同步本期已產生的固定開銷', async () => {
   const calls = [];
   const connection = new SupabaseConnection({

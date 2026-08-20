@@ -309,9 +309,13 @@ button { font: inherit; cursor: pointer; }
 .credit-card-payment-amount { flex: 0 0 auto; color: #403276; white-space: nowrap; }
 .fixed-overview-list { overflow: hidden; padding: 0 14px; margin: 0; border: 1px solid #e1e5df; border-radius: 20px; background: #fff; list-style: none; }
 .fixed-rule-row + .fixed-rule-row { border-top: 1px solid #edf0eb; }
-.fixed-rule-open { display: grid; grid-template-columns: 14px 36px minmax(0, 1fr) auto; gap: 9px; align-items: center; width: 100%; border: 0; padding: 13px 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
+.fixed-rule-sortable { display: grid; grid-template-columns: 24px minmax(0, 1fr); align-items: center; transition: opacity 120ms ease, background 120ms ease, box-shadow 120ms ease; }
+.fixed-rule-open { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 9px; align-items: center; width: 100%; border: 0; padding: 13px 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
 .fixed-rule-open:hover .fixed-rule-name strong { color: #29603d; }
-.fixed-rule-grip { color: #9ab5ae; font-weight: 900; }
+.fixed-rule-grip { display: grid; place-items: center; width: 24px; height: 44px; border: 0; padding: 0; background: transparent; color: #7d9f96; font: inherit; font-weight: 900; cursor: grab; touch-action: none; user-select: none; }
+.fixed-rule-grip:disabled { color: #bdc9c4; cursor: not-allowed; }
+.fixed-rule-row.is-dragging { z-index: 1; border-radius: 12px; background: #edf7ef; opacity: 0.72; box-shadow: 0 10px 24px rgb(31 70 44 / 18%); }
+.fixed-rule-row.is-dragging .fixed-rule-grip { cursor: grabbing; }
 .fixed-rule-icon { display: grid; place-items: center; width: 36px; aspect-ratio: 1; border-radius: 12px; background: #fff0e9; font-weight: 900; }
 .fixed-rule-name { display: flex; flex-wrap: wrap; gap: 3px; min-width: 0; align-items: baseline; }
 .fixed-rule-name strong { overflow: hidden; font-size: 0.88rem; text-overflow: ellipsis; white-space: nowrap; }
@@ -382,6 +386,8 @@ button { font: inherit; cursor: pointer; }
 .fixed-rule-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
 .fixed-rule-form label { display: flex; align-items: center; gap: 5px; font-size: 0.82rem; }
 .fixed-rule-form label input { width: 64px; }
+[data-annual-month][hidden] { display: none; }
+.fixed-scheduling-note, .fixed-order-status { min-height: 1.1em; margin: 8px 3px 0; color: #667268; font-size: 0.72rem; }
 .fixed-edit-form,
 .expense-edit-form {
   display: grid;
@@ -652,6 +658,8 @@ input[type="datetime-local"] {
   .fixed-rule-row + .fixed-rule-row, .fixed-detail-list div, .dialog-subsection { border-color: #3b493d; }
   .fixed-rule-icon { background: #3a2e29; }
   .fixed-rule-open:hover .fixed-rule-name strong { color: #a8dbb5; }
+  .fixed-rule-row.is-dragging { background: #243628; box-shadow: 0 10px 24px rgb(0 0 0 / 28%); }
+  .fixed-scheduling-note, .fixed-order-status { color: #a5b0a7; }
   .dialog-close { background: #2a372d; color: #dce5dd; }
   .compact-form input, .inline-money-form input, .fixed-rule-form input, .fixed-rule-form select,
   .fixed-edit-form input, .fixed-edit-form select, .expense-edit-form input, .expense-edit-form select { border-color: #526154; background: #172119; }
@@ -906,7 +914,8 @@ input[type="datetime-local"] {
   .inline-money-form .form-status, .fixed-rule-form .form-status { grid-column: 1; }
   .fixed-rule-row { align-items: flex-start; }
   .income-breakdown { grid-template-columns: 1fr; }
-  .fixed-rule-open { grid-template-columns: 12px 34px minmax(0, 1fr) auto; gap: 7px; }
+  .fixed-rule-sortable { grid-template-columns: 22px minmax(0, 1fr); }
+  .fixed-rule-open { grid-template-columns: 34px minmax(0, 1fr) auto; gap: 7px; }
   .fixed-edit-form, .expense-edit-form { grid-template-columns: 1fr; }
   .edit-form-wide { grid-column: 1; }
   .dialog-actions { grid-template-columns: 1fr; }
@@ -952,4 +961,3 @@ input[type="datetime-local"] {
   .history-panel { grid-template-columns: 1fr; max-height: 360px; overflow-y: auto; }
   .finance-panel { max-height: 720px; overflow-y: auto; }
 }
-

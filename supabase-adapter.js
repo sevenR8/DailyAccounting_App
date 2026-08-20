@@ -93,6 +93,7 @@ export class SupabaseConnection {
 export class SupabaseLedgerAdapter {
   constructor(connection) {
     this.connection = connection;
+    this.fixedExpenseSchedulingSupported = null;
   }
 
   async findPersonalLedger(userId) {
@@ -328,14 +329,35 @@ export class SupabaseLedgerAdapter {
 
   async listFixedExpenseRules(ledgerId) {
     const parameters = new URLSearchParams({
-      select: 'id,category_id,item_name,amount,payment_method,scheduled_day,active_from,retired_at',
+      select: 'id,category_id,item_name,amount,payment_method,scheduled_day,recurrence_type,scheduled_month,sort_order,active_from,retired_at,created_at',
       ledger_id: `eq.${ledgerId}`,
       retired_at: 'is.null',
-      order: 'scheduled_day.asc',
+      order: 'sort_order.asc,created_at.asc',
     });
     const response = await this.connection.request(`/rest/v1/fixed_expense_rules?${parameters}`);
-    if (!response.ok) throw new Error('無法讀取固定開銷。');
-    return response.json();
+    if (response.ok) {
+      this.fixedExpenseSchedulingSupported = true;
+      return response.json();
+    }
+
+    const legacyParameters = new URLSearchParams({
+      select: 'id,category_id,item_name,amount,payment_method,scheduled_day,active_from,retired_at,created_at',
+      ledger_id: `eq.${ledgerId}`,
+      retired_at: 'is.null',
+      order: 'scheduled_day.asc,created_at.asc',
+    });
+    const legacyResponse = await this.connection.request(
+      `/rest/v1/fixed_expense_rules?${legacyParameters}`,
+    );
+    if (!legacyResponse.ok) throw new Error('無法讀取固定開銷。');
+    this.fixedExpenseSchedulingSupported = false;
+    const legacyRules = await legacyResponse.json();
+    return legacyRules.map((rule, index) => ({
+      ...rule,
+      recurrence_type: 'monthly',
+      scheduled_month: null,
+      sort_order: index,
+    }));
   }
 
   async createFixedExpenseRule({
@@ -345,18 +367,29 @@ export class SupabaseLedgerAdapter {
     amount,
     paymentMethod,
     scheduledDay,
+    recurrenceType,
+    scheduledMonth,
+    sortOrder,
   }) {
+    const body = {
+      ledger_id: ledgerId,
+      category_id: categoryId,
+      item_name: itemName,
+      amount,
+      payment_method: paymentMethod,
+      scheduled_day: scheduledDay,
+    };
+    if (recurrenceType !== undefined || this.fixedExpenseSchedulingSupported === true) {
+      Object.assign(body, {
+        recurrence_type: recurrenceType ?? 'monthly',
+        scheduled_month: recurrenceType === 'yearly' ? scheduledMonth : null,
+        sort_order: sortOrder ?? 0,
+      });
+    }
     const response = await this.connection.request('/rest/v1/fixed_expense_rules', {
       method: 'POST',
       headers: { Prefer: 'return=representation' },
-      body: JSON.stringify({
-        ledger_id: ledgerId,
-        category_id: categoryId,
-        item_name: itemName,
-        amount,
-        payment_method: paymentMethod,
-        scheduled_day: scheduledDay,
-      }),
+      body: JSON.stringify(body),
     });
     if (!response.ok) throw new Error('無法儲存固定開銷。');
     const [rule] = await response.json();
@@ -371,25 +404,48 @@ export class SupabaseLedgerAdapter {
     amount,
     paymentMethod,
     scheduledDay,
+    recurrenceType,
+    scheduledMonth,
   }) {
     const parameters = new URLSearchParams({
       id: `eq.${ruleId}`,
       ledger_id: `eq.${ledgerId}`,
     });
+    const body = {
+      category_id: categoryId,
+      item_name: itemName,
+      amount,
+      payment_method: paymentMethod,
+      scheduled_day: scheduledDay,
+    };
+    if (recurrenceType !== undefined || this.fixedExpenseSchedulingSupported === true) {
+      Object.assign(body, {
+        recurrence_type: recurrenceType ?? 'monthly',
+        scheduled_month: recurrenceType === 'yearly' ? scheduledMonth : null,
+      });
+    }
     const response = await this.connection.request(`/rest/v1/fixed_expense_rules?${parameters}`, {
       method: 'PATCH',
       headers: { Prefer: 'return=representation' },
-      body: JSON.stringify({
-        category_id: categoryId,
-        item_name: itemName,
-        amount,
-        payment_method: paymentMethod,
-        scheduled_day: scheduledDay,
-      }),
+      body: JSON.stringify(body),
     });
     if (!response.ok) throw new Error('無法更新固定開銷，請稍後再試一次。');
     const [rule] = await response.json();
     return rule;
+  }
+
+  async reorderFixedExpenseRules({ ledgerId, ruleIds }) {
+    const response = await this.connection.request(
+      '/rest/v1/rpc/reorder_fixed_expense_rules',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          p_ledger_id: ledgerId,
+          p_rule_ids: ruleIds,
+        }),
+      },
+    );
+    if (!response.ok) throw new Error('無法儲存固定開銷順序，請稍後再試一次。');
   }
 
   async syncFixedExpenseEntry({

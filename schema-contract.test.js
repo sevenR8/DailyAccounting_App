@@ -10,6 +10,10 @@ const financialMigration = await readFile(
   new URL('./supabase-0002-financial-overview.sql', import.meta.url),
   'utf8',
 );
+const fixedSchedulingMigration = await readFile(
+  new URL('./supabase-0003-fixed-expense-scheduling.sql', import.meta.url),
+  'utf8',
+);
 
 test('資料模型保留開銷的記錄者、可選付款者與同帳本外鍵', () => {
   assert.match(migration, /create table public\.expense_entries/i);
@@ -48,3 +52,11 @@ test('固定開銷規則依指定日期補建本期開銷且不重複', () => {
   assert.match(financialMigration, /on conflict \(fixed_expense_rule_id, accounting_period_start\)/i);
 });
 
+test('固定開銷支援年度月份、雲端排序與只在適用週期自動產生', () => {
+  assert.match(fixedSchedulingMigration, /recurrence_type text/i);
+  assert.match(fixedSchedulingMigration, /scheduled_month smallint/i);
+  assert.match(fixedSchedulingMigration, /sort_order integer/i);
+  assert.match(fixedSchedulingMigration, /reorder_fixed_expense_rules/i);
+  assert.match(fixedSchedulingMigration, /fixed_rule\.recurrence_type = 'yearly'/i);
+  assert.match(fixedSchedulingMigration, /continue;/i);
+});

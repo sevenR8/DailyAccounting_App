@@ -228,6 +228,16 @@ test('固定開銷點開後可編輯所有欄位並儲存本期與未來設定',
   assert.match(stylesSource, /\.fixed-edit-form/);
 });
 
+test('固定開銷可拖曳排序並選擇每月或每年指定月份產生', () => {
+  assert.match(appSource, /data-action="drag-fixed-expense"/);
+  assert.match(appSource, /reorderFixedExpenseRules/);
+  assert.match(appSource, /name="recurrenceType"/);
+  assert.match(appSource, /name="scheduledMonth"/);
+  assert.match(appSource, /每年 \$\{rule\.scheduled_month\} 月/);
+  assert.match(stylesSource, /\.fixed-rule-row\.is-dragging/);
+  assert.match(stylesSource, /touch-action:\s*none/);
+});
+
 test('每日一般開銷可開啟編輯視窗修改、刪除或複製', () => {
   assert.match(appSource, /data-action="open-expense-edit"/);
   assert.match(appSource, /class="expense-edit-form"/);
