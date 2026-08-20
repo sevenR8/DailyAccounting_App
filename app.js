@@ -1,28 +1,33 @@
-import { LedgerModule } from './ledger-module.js?v=43';
-import { calculateFinancialSummary } from './financial-summary.js?v=43';
-import { parseAmountExpression } from './amount-expression.js?v=43';
+import { LedgerModule } from './ledger-module.js?v=44';
+import { calculateFinancialSummary } from './financial-summary.js?v=44';
+import { parseAmountExpression } from './amount-expression.js?v=44';
 import {
   buildExpenseTemplates,
   dailyExpenseTotalTone,
   findExpenseTemplates,
   groupExpenseEntriesByDay,
-} from './daily-history.js?v=43';
+} from './daily-history.js?v=44';
 import {
   accountingPeriodFromStart,
   compareExpenseTotals,
   scheduledDateInAccountingPeriod,
   shiftAccountingPeriodStart,
-} from './accounting-period.js?v=43';
+} from './accounting-period.js?v=44';
 import {
   buildExpenseAnalysis,
   DEFAULT_MERCHANT_GROUPS,
-} from './expense-analysis.js?v=43';
+} from './expense-analysis.js?v=44';
+import {
+  advanceRepaymentsInPeriod,
+  applyPersonalExpenseAmounts,
+  decorateExpenseAdvances,
+} from './expense-advance.js?v=44';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=43';
+} from './supabase-adapter.js?v=44';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -381,6 +386,27 @@ function formatAmount(amount) {
   return new Intl.NumberFormat('zh-TW').format(amount);
 }
 
+function showExpenseSavedToast({ entryId, itemName, amount }) {
+  document.querySelector('.expense-saved-toast')?.remove();
+  const toast = document.createElement('aside');
+  toast.className = 'expense-saved-toast';
+  const message = document.createElement('span');
+  message.textContent = `已記錄 $${formatAmount(amount)}・${itemName}`;
+  const advanceButton = document.createElement('button');
+  advanceButton.type = 'button';
+  advanceButton.textContent = '設為代墊';
+  const advanceDialog = document.getElementById(`advance-expense-${entryId}`);
+  advanceButton.hidden = !advanceDialog;
+  advanceButton.addEventListener('click', () => {
+    window.clearTimeout(toast.dismissTimer);
+    toast.remove();
+    advanceDialog?.showModal();
+  });
+  toast.append(message, advanceButton);
+  document.body.append(toast);
+  toast.dismissTimer = window.setTimeout(() => toast.remove(), 6500);
+}
+
 function formatEntryTime(value) {
   return new Intl.DateTimeFormat('zh-TW', {
     timeZone: 'Asia/Taipei',
@@ -596,7 +622,7 @@ async function loadLedgerViewData(ledger, expenseAdapter, selectedStartsOn = nul
       starts_on: previousBounds.startsOn,
       ends_on: previousBounds.endsOn,
     };
-    const [otherIncomeEntries, analysisEntries, merchantGroups] = await Promise.all([
+    const [otherIncomeEntries, analysisEntries, merchantGroups, expenseAdvances] = await Promise.all([
       expenseAdapter.listOtherIncomeEntries({
         ledgerId: ledger.id,
         startsOn: period.starts_on,
@@ -608,6 +634,7 @@ async function loadLedgerViewData(ledger, expenseAdapter, selectedStartsOn = nul
         endsOn: period.ends_on,
       }),
       expenseAdapter.listMerchantGroups(ledger.id),
+      expenseAdapter.listExpenseAdvances(ledger.id),
     ]);
     financialOverview = {
       period,
@@ -616,6 +643,8 @@ async function loadLedgerViewData(ledger, expenseAdapter, selectedStartsOn = nul
       otherIncomeEntries,
       fixedExpenseRules,
       fixedExpenseSchedulingSupported: expenseAdapter.fixedExpenseSchedulingSupported === true,
+      expenseAdvances,
+      expenseAdvancesSupported: expenseAdapter.expenseAdvancesSupported === true,
       currentStartsOn: currentPeriod.starts_on,
       isCurrentPeriod,
       hasStoredPeriod: Boolean(storedPeriod),
@@ -683,6 +712,19 @@ async function renderLedger(
     const occurredAt = new Date(entry.occurred_at);
     return occurredAt >= periodStart && occurredAt < periodEnd;
   });
+  const expenseAdvances = decorateExpenseAdvances(financialOverview?.expenseAdvances ?? []);
+  const personalAnalysisEntries = applyPersonalExpenseAmounts(analysisEntries, expenseAdvances);
+  const personalPeriodEntries = personalAnalysisEntries.filter((entry) => {
+    const occurredAt = new Date(entry.occurred_at);
+    return occurredAt >= periodStart && occurredAt < periodEnd;
+  });
+  const periodAdvanceRepayments = financialOverview
+    ? advanceRepaymentsInPeriod(
+      expenseAdvances,
+      financialOverview.period.starts_on,
+      financialOverview.period.ends_on,
+    )
+    : [];
   const isCurrentPeriod = financialOverview?.isCurrentPeriod ?? true;
   const fixedExpensesForSummary = isCurrentPeriod
     ? (financialOverview?.fixedExpenseRules ?? []).filter((rule) => scheduledDateInAccountingPeriod(
@@ -697,6 +739,7 @@ async function renderLedger(
     fixedExpenseRules: fixedExpensesForSummary,
     salaryAmount: financialOverview.period.salary_amount,
     otherIncomeEntries: financialOverview.otherIncomeEntries,
+    advanceRepaymentEntries: periodAdvanceRepayments,
     previousCardBillAmount: financialOverview.period.previous_card_bill_amount,
     previousCardBillZeroConfirmed: financialOverview.period.previous_card_bill_zero_confirmed,
   }) : null;
@@ -709,6 +752,8 @@ async function renderLedger(
   const nonFixedExpenseTotal = cashTotal + creditCardTotal;
   const generatedExpenseTotal = calculatedSummary?.generatedExpenseTotal
     ?? periodEntries.reduce((total, entry) => total + entry.amount, 0);
+  const personalGeneratedExpenseTotal = personalPeriodEntries
+    .reduce((total, entry) => total + entry.amount, 0);
   const fixedExpenseTotal = calculatedSummary?.fixedExpenseTotal ?? null;
   const totalIncome = calculatedSummary?.totalIncome ?? null;
   const previousCardBillReady = calculatedSummary?.previousCardBillReady ?? false;
@@ -734,12 +779,12 @@ async function renderLedger(
   const previousPeriodEnd = previousPeriodForAnalysis?.endsOn
     ? new Date(localDateFromISO(previousPeriodForAnalysis.endsOn).getTime() + 86_400_000)
     : periodStart;
-  const previousEntries = analysisEntries.filter((entry) => {
+  const previousEntries = personalAnalysisEntries.filter((entry) => {
     const occurredAt = new Date(entry.occurred_at);
     return occurredAt >= previousPeriodStart && occurredAt < previousPeriodEnd;
   });
   const previousExpenseTotal = previousEntries.reduce((total, entry) => total + entry.amount, 0);
-  const periodComparison = compareExpenseTotals(generatedExpenseTotal, previousExpenseTotal);
+  const periodComparison = compareExpenseTotals(personalGeneratedExpenseTotal, previousExpenseTotal);
   const comparisonPercent = periodComparison.percent === null
     ? null
     : new Intl.NumberFormat('zh-TW', { maximumFractionDigits: 1 }).format(periodComparison.percent);
@@ -761,7 +806,7 @@ async function renderLedger(
       id: category.id,
       name: category.name,
       color: chartColors[index % chartColors.length],
-      amount: periodEntries
+      amount: personalPeriodEntries
         .filter((entry) => entry.category_id === category.id)
         .reduce((total, entry) => total + entry.amount, 0),
     }))
@@ -770,7 +815,7 @@ async function renderLedger(
   let chartCursor = 0;
   const chartSegments = categoryBreakdown.map((category) => {
     const startPercent = chartCursor;
-    chartCursor += (category.amount / generatedExpenseTotal) * 100;
+    chartCursor += (category.amount / personalGeneratedExpenseTotal) * 100;
     return `${category.color} ${startPercent}% ${chartCursor}%`;
   });
   const pieBackground = chartSegments.length
@@ -780,7 +825,7 @@ async function renderLedger(
     <li>
       <span class="legend-color" style="background:${category.color}"></span>
       <span>${escapeHtml(category.name)}</span>
-      <strong>${Math.round((category.amount / generatedExpenseTotal) * 100)}%</strong>
+      <strong>${Math.round((category.amount / personalGeneratedExpenseTotal) * 100)}%</strong>
       <small>$${formatAmount(category.amount)}</small>
     </li>`).join('');
   const suggestions = periodEntries;
@@ -931,6 +976,12 @@ async function renderLedger(
     entries.filter((entry) => activeCategoryIds.has(entry.category_id)),
   );
   const dailyHistory = groupExpenseEntriesByDay(suggestions);
+  const advancesByExpense = expenseAdvances.reduce((groups, advance) => {
+    const existing = groups.get(advance.expenseEntryId) ?? [];
+    existing.push(advance);
+    groups.set(advance.expenseEntryId, existing);
+    return groups;
+  }, new Map());
   const historyDisplayLimit = readHistoryDisplayLimit();
   const historyRows = dailyHistory.map((day, index) => `
     <details class="day-expense-group" data-history-index="${index}" ${historyDisplayLimit !== 'all' && index >= Number(historyDisplayLimit) ? 'hidden' : ''}>
@@ -958,7 +1009,7 @@ async function renderLedger(
               <span class="entry-date"><time datetime="${escapeHtml(entry.occurred_at)}">${escapeHtml(formatEntryTime(entry.occurred_at))}</time></span>
               <span class="entry-detail">
                 <strong>$${formatAmount(entry.amount)}・${escapeHtml(entry.item_name)}</strong>
-                <small>${escapeHtml(categoryNames.get(entry.category_id) || '未分類')}・${entry.payment_method === 'cash' ? '現金' : '信用卡'}</small>
+                <small>${escapeHtml(categoryNames.get(entry.category_id) || '未分類')}・${entry.payment_method === 'cash' ? '現金' : '信用卡'}${advancesByExpense.has(entry.id) ? `・代墊 $${formatAmount(advancesByExpense.get(entry.id).reduce((total, advance) => total + advance.amount, 0))}` : ''}</small>
               </span>
             </button>
             ${entry.is_fixed ? '<span class="fixed-entry-indicator" aria-label="固定開銷，請至固定開銷面板管理">固定</span>' : `
@@ -1019,11 +1070,49 @@ async function renderLedger(
                 data-action="duplicate-expense"
                 data-suggestion-index="${suggestionIndexById.get(entry.id)}"
               >複製一筆</button>
+              ${financialOverview?.expenseAdvancesSupported ? `
+                <button
+                  class="secondary-button"
+                  type="button"
+                  data-action="open-advance-dialog"
+                  data-dialog-id="advance-expense-${escapeHtml(entry.id)}"
+                >${advancesByExpense.has(entry.id) ? '管理代墊' : '設為代墊'}</button>` : ''}
               <button class="small-primary-button" type="submit">儲存變更</button>
             </div>
           </form>
         </div>
       </dialog>`).join('');
+  const advanceExpenseDialogs = suggestions
+    .filter((entry) => !entry.is_fixed)
+    .map((entry) => {
+      const entryAdvances = advancesByExpense.get(entry.id) ?? [];
+      const advancedAmount = entryAdvances.reduce((total, advance) => total + advance.amount, 0);
+      const availableAmount = Math.max(0, entry.amount - advancedAmount);
+      const existingRows = entryAdvances.map((advance) => `
+        <li>
+          <span><strong>${escapeHtml(advance.debtorName)}</strong><small>${advance.status === 'settled' ? '已全額收回' : `待收 $${formatAmount(advance.outstandingAmount)}`}</small></span>
+          <strong>$${formatAmount(advance.amount)}</strong>
+        </li>`).join('');
+      return `
+        <dialog class="finance-dialog advance-expense-dialog" id="advance-expense-${escapeHtml(entry.id)}">
+          <div class="dialog-content">
+            <div class="dialog-heading">
+              <div><p class="eyebrow">共同消費</p><h2>${escapeHtml(entry.item_name)}・$${formatAmount(entry.amount)}</h2></div>
+              <button class="dialog-close" type="button" data-action="close-dialog" aria-label="關閉">×</button>
+            </div>
+            <p class="dialog-note">實際付款仍保留 $${formatAmount(entry.amount)} 供${entry.payment_method === 'cash' ? '現金' : '信用卡'}對帳；消費分析會扣除代墊金額。</p>
+            <ul class="advance-existing-list">${existingRows || '<li class="empty-money-list">這筆開銷尚未設定代墊。</li>'}</ul>
+            ${availableAmount > 0 ? `
+              <form class="advance-create-form" data-entry-id="${escapeHtml(entry.id)}" data-available-amount="${availableAmount}">
+                <label>代墊對象<input name="debtorName" type="text" maxlength="80" placeholder="例如寶貝" required /></label>
+                <label>代墊金額<input name="amount" type="number" min="1" max="${availableAmount}" step="1" inputmode="numeric" value="${Math.floor(availableAmount / 2) || availableAmount}" required /></label>
+                <label class="edit-form-wide">預計收回日期（選填）<input name="expectedOn" type="date" /></label>
+                <p class="form-status edit-form-wide" aria-live="polite"></p>
+                <button class="small-primary-button edit-form-wide" type="submit">儲存代墊</button>
+              </form>` : '<p class="dialog-note">這筆開銷的全部金額已分配為代墊。</p>'}
+          </div>
+        </dialog>`;
+    }).join('');
 
   const periodLabel = `${formatPeriodDate(periodStart)}－${formatPeriodDate(new Date(periodEnd.getTime() - 1))}`;
   const periodMonthLabel = new Intl.DateTimeFormat('zh-TW', {
@@ -1046,7 +1135,7 @@ async function renderLedger(
       endsOn: financialOverview.period.ends_on,
     },
     previousPeriod: previousPeriodForAnalysis,
-    currentEntries: periodEntries,
+    currentEntries: personalPeriodEntries,
     previousEntries,
     fixedExpenses: fixedExpensesForSummary,
     categories: ledger.categories,
@@ -1061,6 +1150,7 @@ async function renderLedger(
   }) : '';
   const salaryAmount = financialOverview?.period.salary_amount ?? 0;
   const otherIncomeTotal = calculatedSummary?.otherIncomeTotal ?? 0;
+  const advanceRepaymentTotal = calculatedSummary?.advanceRepaymentTotal ?? 0;
   const previousCardBillAmount = financialOverview?.period.previous_card_bill_zero_confirmed
     ? 0
     : financialOverview?.period.previous_card_bill_amount;
@@ -1072,6 +1162,68 @@ async function renderLedger(
   const supportsFixedExpenseScheduling = financialOverview?.fixedExpenseSchedulingSupported === true;
   const otherIncomeList = financialOverview?.otherIncomeEntries.map((income) => `
     <li><span>${escapeHtml(income.name)}</span><strong>+$${formatAmount(income.amount)}</strong></li>`).join('') || '';
+  const outstandingAdvanceTotal = expenseAdvances
+    .reduce((total, advance) => total + advance.outstandingAmount, 0);
+  const expenseForAdvance = (advance) => advance.expense
+    ?? analysisEntries.find((entry) => entry.id === advance.expenseEntryId)
+    ?? { item_name: '原始開銷', amount: advance.amount, occurred_at: advance.createdAt };
+  const advanceOverviewRows = [...expenseAdvances]
+    .sort((left, right) => {
+      if (left.status === 'settled' && right.status !== 'settled') return 1;
+      if (left.status !== 'settled' && right.status === 'settled') return -1;
+      return right.createdAt.localeCompare(left.createdAt);
+    })
+    .map((advance) => {
+      const expense = expenseForAdvance(advance);
+      const statusLabel = advance.status === 'settled'
+        ? '已收回'
+        : advance.status === 'partial'
+          ? '部分收回'
+          : '待收';
+      return `
+        <li>
+          <button type="button" data-action="open-advance-dialog" data-dialog-id="advance-detail-${escapeHtml(advance.id)}">
+            <span class="advance-person-mark" aria-hidden="true">${escapeHtml(Array.from(advance.debtorName)[0] || '代')}</span>
+            <span class="advance-row-copy">
+              <strong>${escapeHtml(advance.debtorName)}・${escapeHtml(expense.item_name)}</strong>
+              <small>${escapeHtml(formatEntryDate(expense.occurred_at))}・${statusLabel}</small>
+            </span>
+            <span class="advance-row-amount"><strong>$${formatAmount(advance.outstandingAmount)}</strong><small>原代墊 $${formatAmount(advance.amount)}</small></span>
+          </button>
+        </li>`;
+    }).join('');
+  const advanceDetailDialogs = expenseAdvances.map((advance) => {
+    const expense = expenseForAdvance(advance);
+    const repaymentRows = advance.repayments.map((repayment) => `
+      <li><span>${escapeHtml(formatEntryDate(repayment.receivedAt))}・${repayment.receiptMethod === 'cash' ? '現金' : '轉帳'}</span><strong>+$${formatAmount(repayment.amount)}</strong></li>`).join('');
+    return `
+      <dialog class="finance-dialog advance-detail-dialog" id="advance-detail-${escapeHtml(advance.id)}">
+        <div class="dialog-content">
+          <div class="dialog-heading">
+            <div><p class="eyebrow">代墊紀錄</p><h2>${escapeHtml(advance.debtorName)}・${escapeHtml(expense.item_name)}</h2></div>
+            <button class="dialog-close" type="button" data-action="close-dialog" aria-label="關閉">×</button>
+          </div>
+          <dl class="fixed-detail-list">
+            <div><dt>實際支付</dt><dd>$${formatAmount(expense.amount)}</dd></div>
+            <div><dt>代墊金額</dt><dd>$${formatAmount(advance.amount)}</dd></div>
+            <div><dt>已收回</dt><dd>$${formatAmount(advance.receivedAmount)}</dd></div>
+            <div><dt>尚待收回</dt><dd>$${formatAmount(advance.outstandingAmount)}</dd></div>
+          </dl>
+          <div class="dialog-subsection">
+            <h3>收回紀錄</h3>
+            <ul class="money-list">${repaymentRows || '<li class="empty-money-list">尚未收到代墊款</li>'}</ul>
+          </div>
+          ${advance.outstandingAmount > 0 ? `
+            <form class="advance-repayment-form" data-advance-id="${escapeHtml(advance.id)}" data-outstanding-amount="${advance.outstandingAmount}">
+              <label>本次收回金額<input name="amount" type="number" min="1" max="${advance.outstandingAmount}" step="1" inputmode="numeric" value="${advance.outstandingAmount}" required /></label>
+              <label>收款方式<select name="receiptMethod"><option value="bank_transfer">轉帳</option><option value="cash">現金</option></select></label>
+              <label class="edit-form-wide">收到日期與時間<input name="receivedAt" type="datetime-local" value="${toDateTimeLocalValue()}" required /></label>
+              <p class="form-status edit-form-wide" aria-live="polite"></p>
+              <button class="small-primary-button edit-form-wide" type="submit">記錄收回</button>
+            </form>` : '<p class="advance-settled-note">✓ 這筆代墊已全額收回</p>'}
+        </div>
+      </dialog>`;
+  }).join('');
   const fixedExpenseList = financialOverview?.fixedExpenseRules.map((rule) => `
     <li class="fixed-rule-row fixed-rule-sortable" data-rule-id="${escapeHtml(rule.id)}">
       <button
@@ -1166,6 +1318,20 @@ async function renderLedger(
   const financialPanel = financialOverview ? `
     <section class="finance-panel" id="financial-management-section" data-mobile-section="finance">
       ${mobileFinanceHeading}
+      <section class="advance-overview-section">
+        <div class="finance-overview-heading">
+          <div>
+            <h2>待收代墊</h2>
+            <p>全部待收 NT$ ${formatAmount(outstandingAdvanceTotal)}・本期已收 NT$ ${formatAmount(advanceRepaymentTotal)}</p>
+          </div>
+          ${financialOverview.expenseAdvancesSupported
+            ? '<span class="period-read-only">從開銷紀錄設定</span>'
+            : '<span class="period-read-only">需要資料庫升級</span>'}
+        </div>
+        ${financialOverview.expenseAdvancesSupported ? `
+          <ul class="advance-overview-list">${advanceOverviewRows || '<li class="advance-empty-state">尚無代墊紀錄。新增開銷後，可從儲存提示或開銷編輯頁設為代墊。</li>'}</ul>`
+          : '<p class="advance-migration-note">請在 Supabase SQL Editor 執行 <code>supabase-0005-expense-advances.sql</code>。</p>'}
+      </section>
       <section class="income-overview-section">
         <div class="finance-overview-heading">
           <div>
@@ -1275,6 +1441,7 @@ async function renderLedger(
         </div>
       </dialog>
       ${fixedExpenseDialogs}
+      ${advanceDetailDialogs}
     </section>` : `
     <section class="finance-panel migration-notice" id="financial-management-section" data-mobile-section="finance">
       ${mobileFinanceHeading}
@@ -1313,7 +1480,7 @@ async function renderLedger(
         </div>
         <div class="chart-body">
           <div class="expense-pie" role="img" aria-label="本期分類圓餅圖" style="background:${pieBackground}">
-            <div><span>已產生開銷</span><strong>$${formatAmount(generatedExpenseTotal)}</strong></div>
+            <div><span>個人開銷</span><strong>$${formatAmount(personalGeneratedExpenseTotal)}</strong></div>
           </div>
           <ul class="chart-legend">${chartLegend || '<li class="empty-chart">新增開銷後會顯示分類占比</li>'}</ul>
         </div>
@@ -1329,6 +1496,7 @@ async function renderLedger(
         <div class="savings-summary"><span>本期可存額</span><strong>${financialOverview && !previousCardBillReady ? '待輸入帳單' : savingsAmount === null ? '—' : `$${formatAmount(savingsAmount)}`}</strong></div>
       </section>
       ${analysisPage}
+      ${advanceExpenseDialogs}
       ${financialPanel}
       <section class="quick-entry-panel" id="quick-entry-section" data-mobile-section="record">
         <div>
@@ -1741,7 +1909,7 @@ async function renderLedger(
     button.disabled = true;
     status.textContent = '正在儲存…';
     try {
-      await expenseAdapter.createExpenseEntry({
+      const createdEntry = await expenseAdapter.createExpenseEntry({
         ledgerId: ledger.id,
         categoryId: formData.get('categoryId'),
         itemName,
@@ -1750,6 +1918,7 @@ async function renderLedger(
         occurredAt: new Date(formData.get('occurredAt')).toISOString(),
       });
       await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
+      showExpenseSavedToast({ entryId: createdEntry.id, itemName, amount });
     } catch (error) {
       status.textContent = error.message;
       button.disabled = false;
@@ -1760,6 +1929,75 @@ async function renderLedger(
     const dialog = document.getElementById(dialogId);
     if (dialog && !dialog.open) dialog.showModal();
   };
+
+  document.querySelectorAll('[data-action="open-advance-dialog"]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const parentDialog = button.closest('dialog');
+      if (parentDialog?.open) parentDialog.close();
+      openDialog(button.dataset.dialogId);
+    });
+  });
+
+  document.querySelectorAll('.advance-create-form').forEach((form) => {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const formData = new FormData(form);
+      const amount = Number(formData.get('amount'));
+      const debtorName = formData.get('debtorName').trim();
+      const availableAmount = Number(form.dataset.availableAmount);
+      const button = form.querySelector('button[type="submit"]');
+      const status = form.querySelector('.form-status');
+      if (!debtorName || !Number.isInteger(amount) || amount <= 0 || amount > availableAmount) {
+        status.textContent = `請輸入 1 至 ${formatAmount(availableAmount)} 元的代墊金額。`;
+        return;
+      }
+      button.disabled = true;
+      status.textContent = '正在儲存代墊…';
+      try {
+        await expenseAdapter.createExpenseAdvance({
+          ledgerId: ledger.id,
+          expenseEntryId: form.dataset.entryId,
+          debtorName,
+          amount,
+          expectedOn: formData.get('expectedOn') || null,
+        });
+        await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
+      } catch (error) {
+        status.textContent = error.message;
+        button.disabled = false;
+      }
+    });
+  });
+
+  document.querySelectorAll('.advance-repayment-form').forEach((form) => {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const formData = new FormData(form);
+      const amount = Number(formData.get('amount'));
+      const outstandingAmount = Number(form.dataset.outstandingAmount);
+      const button = form.querySelector('button[type="submit"]');
+      const status = form.querySelector('.form-status');
+      if (!Number.isInteger(amount) || amount <= 0 || amount > outstandingAmount) {
+        status.textContent = `請輸入 1 至 ${formatAmount(outstandingAmount)} 元的收回金額。`;
+        return;
+      }
+      button.disabled = true;
+      status.textContent = '正在儲存收回紀錄…';
+      try {
+        await expenseAdapter.createAdvanceRepayment({
+          ledgerId: ledger.id,
+          advanceId: form.dataset.advanceId,
+          amount,
+          receiptMethod: formData.get('receiptMethod'),
+          receivedAt: new Date(formData.get('receivedAt')).toISOString(),
+        });
+        await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
+      } catch (error) {
+        status.textContent = error.message;
+        button.disabled = false;
+      }
+    });
+  });
 
   document.querySelector('[data-action="open-ledger-settings"]')?.addEventListener('click', () => {
     const userMenu = document.querySelector('.user-menu');

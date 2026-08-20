@@ -95,6 +95,7 @@ export class SupabaseLedgerAdapter {
     this.connection = connection;
     this.fixedExpenseSchedulingSupported = null;
     this.expenseAnalysisSettingsSupported = null;
+    this.expenseAdvancesSupported = null;
   }
 
   async findPersonalLedger(userId) {
@@ -312,6 +313,75 @@ export class SupabaseLedgerAdapter {
     if (!response.ok) {
       throw new Error('無法刪除這筆開銷，請確認網路後再試一次。');
     }
+  }
+
+  async listExpenseAdvances(ledgerId) {
+    const parameters = new URLSearchParams({
+      select: 'id,expense_entry_id,debtor_name,amount,expected_on,created_at,expense_entries(id,item_name,amount,payment_method,occurred_at),advance_repayments(id,amount,receipt_method,received_at,created_at)',
+      ledger_id: `eq.${ledgerId}`,
+      order: 'created_at.desc',
+    });
+    const response = await this.connection.request(`/rest/v1/expense_advances?${parameters}`);
+    if (!response.ok) {
+      this.expenseAdvancesSupported = false;
+      return [];
+    }
+    this.expenseAdvancesSupported = true;
+    const advances = await response.json();
+    return advances.map((advance) => ({
+      id: advance.id,
+      expenseEntryId: advance.expense_entry_id,
+      debtorName: advance.debtor_name,
+      amount: advance.amount,
+      expectedOn: advance.expected_on,
+      createdAt: advance.created_at,
+      expense: advance.expense_entries,
+      repayments: (advance.advance_repayments ?? [])
+        .sort((left, right) => right.received_at.localeCompare(left.received_at))
+        .map((repayment) => ({
+          id: repayment.id,
+          amount: repayment.amount,
+          receiptMethod: repayment.receipt_method,
+          receivedAt: repayment.received_at,
+          createdAt: repayment.created_at,
+        })),
+    }));
+  }
+
+  async createExpenseAdvance({ ledgerId, expenseEntryId, debtorName, amount, expectedOn }) {
+    const response = await this.connection.request('/rest/v1/rpc/save_expense_advance', {
+      method: 'POST',
+      body: JSON.stringify({
+        p_ledger_id: ledgerId,
+        p_expense_entry_id: expenseEntryId,
+        p_debtor_name: debtorName,
+        p_amount: amount,
+        p_expected_on: expectedOn || null,
+      }),
+    });
+    if (!response.ok) throw new Error('無法設定這筆代墊，請確認代墊金額沒有超過開銷。');
+    return response.json();
+  }
+
+  async createAdvanceRepayment({
+    ledgerId,
+    advanceId,
+    amount,
+    receiptMethod,
+    receivedAt,
+  }) {
+    const response = await this.connection.request('/rest/v1/rpc/record_advance_repayment', {
+      method: 'POST',
+      body: JSON.stringify({
+        p_ledger_id: ledgerId,
+        p_advance_id: advanceId,
+        p_amount: amount,
+        p_receipt_method: receiptMethod,
+        p_received_at: receivedAt,
+      }),
+    });
+    if (!response.ok) throw new Error('無法儲存代墊收回，請確認金額沒有超過待收額。');
+    return response.json();
   }
 
   async ensureCurrentAccountingPeriod(ledgerId) {

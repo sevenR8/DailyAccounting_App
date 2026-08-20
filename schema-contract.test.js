@@ -18,6 +18,10 @@ const expenseAnalysisMigration = await readFile(
   new URL('./supabase-0004-expense-analysis.sql', import.meta.url),
   'utf8',
 );
+const expenseAdvancesMigration = await readFile(
+  new URL('./supabase-0005-expense-advances.sql', import.meta.url),
+  'utf8',
+);
 
 test('資料模型保留開銷的記錄者、可選付款者與同帳本外鍵', () => {
   assert.match(migration, /create table public\.expense_entries/i);
@@ -79,4 +83,13 @@ test('消費分析設定由帳本成員讀取且只有帳本建立者能管理',
   assert.match(expenseAnalysisMigration, /帳本擁有者可管理店家群組/i);
   assert.match(expenseAnalysisMigration, /public\.is_ledger_owner\(p_ledger_id\)/i);
   assert.match(expenseAnalysisMigration, /grant execute on function public\.save_merchant_group/i);
+});
+
+test('代墊獨立保存待收金額與分次收回紀錄', () => {
+  assert.match(expenseAdvancesMigration, /create table if not exists public\.expense_advances/i);
+  assert.match(expenseAdvancesMigration, /create table if not exists public\.advance_repayments/i);
+  assert.match(expenseAdvancesMigration, /save_expense_advance/i);
+  assert.match(expenseAdvancesMigration, /record_advance_repayment/i);
+  assert.match(expenseAdvancesMigration, /repayment_exceeds_outstanding/i);
+  assert.match(expenseAdvancesMigration, /ledger members read advances/i);
 });

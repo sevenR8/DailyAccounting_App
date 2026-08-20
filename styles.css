@@ -264,6 +264,7 @@ button { font: inherit; cursor: pointer; }
 .finance-panel { display: grid; align-content: start; gap: 30px; }
 .income-overview-section,
 .card-bill-overview-section,
+.advance-overview-section,
 .fixed-overview-section { display: grid; gap: 12px; }
 .finance-overview-heading { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
 .finance-overview-heading h2 { margin: 0; font-size: 1.2rem; }
@@ -290,6 +291,97 @@ button { font: inherit; cursor: pointer; }
 .income-marker { display: grid; place-items: center; width: 28px; aspect-ratio: 1; flex: 0 0 auto; border-radius: 9px; font-size: 1.25rem; }
 .salary-marker { background: #e5f567; color: #183626; }
 .other-marker { background: #ded8ff; color: #433990; }
+.advance-overview-list,
+.advance-existing-list {
+  overflow: hidden;
+  padding: 0 14px;
+  margin: 0;
+  border: 1px solid #d9e2dc;
+  border-radius: 20px;
+  background: #fff;
+  list-style: none;
+}
+.advance-overview-list > li + li,
+.advance-existing-list > li + li { border-top: 1px solid #edf0eb; }
+.advance-overview-list button {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  border: 0;
+  padding: 13px 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.advance-person-mark {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  aspect-ratio: 1;
+  border-radius: 13px;
+  background: #e8e1ff;
+  color: #51408e;
+  font-weight: 900;
+}
+.advance-row-copy,
+.advance-row-amount { display: grid; gap: 3px; min-width: 0; }
+.advance-row-copy strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.advance-row-copy small,
+.advance-row-amount small { color: #748078; font-size: 0.68rem; }
+.advance-row-amount { justify-items: end; white-space: nowrap; }
+.advance-empty-state,
+.advance-migration-note { padding: 17px; color: #69756d; font-size: 0.8rem; line-height: 1.55; }
+.advance-migration-note { margin: 0; border: 1px dashed #d89949; border-radius: 15px; background: #fff9ed; }
+.advance-existing-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 0;
+}
+.advance-existing-list li > span { display: grid; gap: 3px; }
+.advance-existing-list small { color: #748078; }
+.advance-create-form,
+.advance-repayment-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding-top: 4px;
+}
+.advance-create-form label,
+.advance-repayment-form label { display: grid; gap: 6px; font-size: 0.82rem; font-weight: 800; }
+.advance-create-form input,
+.advance-repayment-form input,
+.advance-repayment-form select {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #cbd4c9;
+  border-radius: 12px;
+  padding: 11px;
+  background: white;
+  color: inherit;
+  font: inherit;
+}
+.advance-settled-note { margin: 0; border-radius: 13px; padding: 12px; background: #e9f4df; color: #28543a; font-weight: 800; }
+.expense-saved-toast {
+  position: fixed;
+  z-index: 100;
+  right: 18px;
+  bottom: calc(18px + env(safe-area-inset-bottom));
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: min(92vw, 430px);
+  border-radius: 16px;
+  padding: 12px 14px;
+  background: #183524;
+  color: #f4f7f1;
+  box-shadow: 0 14px 36px rgb(15 29 19 / 28%);
+}
+.expense-saved-toast span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.expense-saved-toast button { flex: 0 0 auto; border: 0; border-radius: 9px; padding: 8px 10px; background: #c9ef7b; color: #193522; font-weight: 900; }
 .credit-card-payment-card {
   display: flex;
   justify-content: space-between;
@@ -713,7 +805,13 @@ input[type="datetime-local"] {
   .credit-card-payment-card:hover, .credit-card-payment-card:focus-visible { background: #302b49; }
   .credit-card-payment-copy small, .compact-form .form-helper { color: #aaa4bf; }
   .credit-card-payment-amount { color: #d6ceff; }
-  .fixed-overview-list, .finance-dialog { border-color: #3b493d; background: #172119; color: #eff4ed; }
+  .fixed-overview-list, .advance-overview-list, .advance-existing-list, .finance-dialog { border-color: #3b493d; background: #172119; color: #eff4ed; }
+  .advance-overview-list > li + li, .advance-existing-list > li + li { border-color: #3b493d; }
+  .advance-person-mark { background: #343052; color: #ddd5ff; }
+  .advance-row-copy small, .advance-row-amount small, .advance-empty-state, .advance-existing-list small { color: #aeb9af; }
+  .advance-migration-note { border-color: #8d6f41; background: #292316; color: #d5c8a9; }
+  .advance-create-form input, .advance-repayment-form input, .advance-repayment-form select { border-color: #526154; background: #172119; }
+  .advance-settled-note { background: #263b29; color: #b9e3c2; }
   .settings-section, .category-settings-row { border-color: #3b493d; }
   .settings-section > div > p, .settings-unavailable, .cycle-settings-form .form-status,
   .category-settings-form .form-status, .category-create-form .form-status { color: #aeb9af; }
@@ -1001,7 +1099,7 @@ input[type="datetime-local"] {
   .income-breakdown { grid-template-columns: 1fr; }
   .fixed-rule-sortable { grid-template-columns: 42px minmax(0, 1fr); }
   .fixed-rule-open { grid-template-columns: 34px minmax(0, 1fr) auto; gap: 7px; }
-  .fixed-edit-form, .expense-edit-form { grid-template-columns: 1fr; }
+  .fixed-edit-form, .expense-edit-form, .advance-create-form, .advance-repayment-form { grid-template-columns: 1fr; }
   .edit-form-wide { grid-column: 1; }
   .dialog-actions { grid-template-columns: 1fr; }
   .cycle-settings-form, .category-create-form { grid-template-columns: 1fr; }
@@ -1009,6 +1107,7 @@ input[type="datetime-local"] {
   .category-settings-form { grid-template-columns: minmax(0, 1fr) auto; }
   .category-settings-form .category-toggle { grid-column: 2; }
   .category-settings-form .form-status { grid-column: 1 / -1; }
+  .expense-saved-toast { right: 12px; bottom: calc(86px + env(safe-area-inset-bottom)); left: 12px; }
 }
 
 @media (min-width: 900px) {

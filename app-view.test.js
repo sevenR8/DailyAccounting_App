@@ -8,7 +8,7 @@ const stylesSource = await readFile(new URL('./styles.css', import.meta.url), 'u
 test('本期總覽包含分類圓餅圖與各分類占比', () => {
   assert.match(appSource, /class="expense-pie"/);
   assert.match(appSource, /本期開銷分類占比/);
-  assert.match(appSource, /category\.amount \/ generatedExpenseTotal/);
+  assert.match(appSource, /category\.amount \/ personalGeneratedExpenseTotal/);
   assert.match(
     appSource,
     /\.filter\(\(category\) => category\.amount > 0\)\s*\.sort\(\(left, right\) => right\.amount - left\.amount\)/,
@@ -426,4 +426,21 @@ test('展開每日紀錄後，每筆開銷右側提供垃圾桶刪除按鈕', ()
   assert.match(appSource, /aria-label="刪除開銷/);
   assert.match(appSource, /deleteExpenseEntry/);
   assert.match(stylesSource, /\.expense-entry-delete/);
+});
+
+test('代墊只從儲存提示或開銷內頁設定，不干擾快速記帳欄位', () => {
+  assert.match(appSource, /showExpenseSavedToast/);
+  assert.match(appSource, /設為代墊/);
+  assert.match(appSource, /class="advance-create-form"/);
+  assert.doesNotMatch(appSource, /id="expense-form"[\s\S]{0,1600}name="debtorName"/);
+});
+
+test('待收代墊顯示在本期收入上方，並可記錄部分收回', () => {
+  const advanceIndex = appSource.indexOf('class="advance-overview-section"');
+  const incomeIndex = appSource.indexOf('class="income-overview-section"');
+  assert.ok(advanceIndex >= 0 && advanceIndex < incomeIndex);
+  assert.match(appSource, /全部待收/);
+  assert.match(appSource, /class="advance-repayment-form"/);
+  assert.match(appSource, /createAdvanceRepayment/);
+  assert.match(stylesSource, /\.advance-overview-list/);
 });
