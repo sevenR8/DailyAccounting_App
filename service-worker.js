@@ -1,8 +1,8 @@
-const CACHE_NAME = 'daily-ledger-shell-v33';
+const CACHE_NAME = 'daily-ledger-shell-v34';
 const APP_SHELL = [
   './',
   './index.html',
-  './styles.css?v=33',
+  './styles.css?v=34',
   './app.js',
   './ledger-module.js',
   './financial-summary.js',
@@ -59,4 +59,3 @@ self.addEventListener('fetch', (event) => {
     caches.match(event.request).then((cachedResponse) => cachedResponse || fetch(event.request)),
   );
 });
-

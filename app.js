@@ -1,23 +1,23 @@
-import { LedgerModule } from './ledger-module.js?v=33';
-import { calculateFinancialSummary } from './financial-summary.js?v=33';
+import { LedgerModule } from './ledger-module.js?v=34';
+import { calculateFinancialSummary } from './financial-summary.js?v=34';
 import {
   buildExpenseTemplates,
   dailyExpenseTotalTone,
   findExpenseTemplates,
   groupExpenseEntriesByDay,
-} from './daily-history.js?v=33';
+} from './daily-history.js?v=34';
 import {
   accountingPeriodFromStart,
   compareExpenseTotals,
   scheduledDateInAccountingPeriod,
   shiftAccountingPeriodStart,
-} from './accounting-period.js?v=33';
+} from './accounting-period.js?v=34';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=33';
+} from './supabase-adapter.js?v=34';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -25,6 +25,7 @@ const EXPENSE_TIME_REFRESH_INTERVAL = 5 * 60 * 1000;
 const HISTORY_DISPLAY_LIMIT_STORAGE_KEY = 'daily-ledger-history-display-limit';
 const HISTORY_DISPLAY_LIMIT_OPTIONS = ['5', '10', '15', 'all'];
 let cleanupLedgerView = () => {};
+let accessTokenRefreshPromise = null;
 
 const preventZoomGesture = (event) => {
   if (event.cancelable) event.preventDefault();
@@ -75,31 +76,43 @@ function readHistoryDisplayLimit() {
   return HISTORY_DISPLAY_LIMIT_OPTIONS.includes(storedLimit) ? storedLimit : '5';
 }
 
-async function getAccessToken(session = readSession()) {
+async function getAccessToken(session = readSession(), { forceRefresh = false } = {}) {
   if (!session) return null;
 
-  if (!session.refreshToken || session.expiresAt > Math.floor(Date.now() / 1000) + 60) {
+  if (!forceRefresh && session.expiresAt > Math.floor(Date.now() / 1000) + 60) {
     return session.accessToken;
   }
+  if (!session.refreshToken) return forceRefresh ? null : session.accessToken;
 
-  const response = await fetch(
-    `${config.supabaseUrl.replace(/\/$/, '')}/auth/v1/token?grant_type=refresh_token`,
-    {
-      method: 'POST',
-      headers: { apikey: config.supabaseAnonKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: session.refreshToken }),
-    },
-  );
+  if (!accessTokenRefreshPromise) {
+    accessTokenRefreshPromise = (async () => {
+      const response = await fetch(
+        `${config.supabaseUrl.replace(/\/$/, '')}/auth/v1/token?grant_type=refresh_token`,
+        {
+          method: 'POST',
+          headers: { apikey: config.supabaseAnonKey, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refresh_token: session.refreshToken }),
+        },
+      );
 
-  if (!response.ok) return null;
+      if (!response.ok) return null;
 
-  const refreshedSession = await response.json();
-  saveSession({
-    accessToken: refreshedSession.access_token,
-    refreshToken: refreshedSession.refresh_token,
-    expiresAt: refreshedSession.expires_at,
-  });
-  return refreshedSession.access_token;
+      const refreshedSession = await response.json();
+      saveSession({
+        accessToken: refreshedSession.access_token,
+        refreshToken: refreshedSession.refresh_token,
+        expiresAt: refreshedSession.expires_at,
+      });
+      return refreshedSession.access_token;
+    })();
+  }
+
+  const activeRefreshPromise = accessTokenRefreshPromise;
+  try {
+    return await activeRefreshPromise;
+  } finally {
+    if (accessTokenRefreshPromise === activeRefreshPromise) accessTokenRefreshPromise = null;
+  }
 }
 
 function renderSetup() {
@@ -1398,6 +1411,10 @@ async function bootstrap() {
       supabaseUrl: config.supabaseUrl,
       supabaseAnonKey: config.supabaseAnonKey,
       accessToken,
+      accessTokenProvider: ({ forceRefresh = false } = {}) => getAccessToken(
+        readSession(),
+        { forceRefresh },
+      ),
     });
     const user = await connection.getUser();
     const expenseAdapter = new SupabaseLedgerAdapter(connection);
@@ -1423,4 +1440,3 @@ async function bootstrap() {
 }
 
 bootstrap();
-

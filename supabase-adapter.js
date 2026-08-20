@@ -4,19 +4,67 @@ const jsonHeaders = (accessToken, anonKey) => ({
   'Content-Type': 'application/json',
 });
 
+const networkUnavailableError = (cause) => new Error(
+  '目前無法連線，請確認網路後再試一次。',
+  { cause },
+);
+
+const authenticationExpiredError = () => new Error('登入已失效，請重新登入。');
+
 export class SupabaseConnection {
-  constructor({ supabaseUrl, supabaseAnonKey, accessToken, fetchImpl = fetch }) {
+  constructor({
+    supabaseUrl,
+    supabaseAnonKey,
+    accessToken,
+    accessTokenProvider = null,
+    fetchImpl = fetch,
+  }) {
     this.supabaseUrl = supabaseUrl.replace(/\/$/, '');
     this.supabaseAnonKey = supabaseAnonKey;
     this.accessToken = accessToken;
+    this.accessTokenProvider = accessTokenProvider;
     this.fetchImpl = fetchImpl;
   }
 
+  async resolveAccessToken(forceRefresh = false) {
+    if (!this.accessTokenProvider) return this.accessToken;
+
+    let accessToken;
+    try {
+      accessToken = await this.accessTokenProvider({ forceRefresh });
+    } catch (error) {
+      throw networkUnavailableError(error);
+    }
+
+    if (accessToken) this.accessToken = accessToken;
+    return accessToken;
+  }
+
+  async fetchWithAccessToken(path, options, accessToken) {
+    try {
+      return await this.fetchImpl.call(globalThis, `${this.supabaseUrl}${path}`, {
+        ...options,
+        headers: { ...jsonHeaders(accessToken, this.supabaseAnonKey), ...options.headers },
+      });
+    } catch (error) {
+      throw networkUnavailableError(error);
+    }
+  }
+
   async request(path, options = {}) {
-    return this.fetchImpl.call(globalThis, `${this.supabaseUrl}${path}`, {
-      ...options,
-      headers: { ...jsonHeaders(this.accessToken, this.supabaseAnonKey), ...options.headers },
-    });
+    const accessToken = await this.resolveAccessToken(false);
+    if (!accessToken) throw authenticationExpiredError();
+
+    const response = await this.fetchWithAccessToken(path, options, accessToken);
+    if (response.status !== 401) return response;
+    if (!this.accessTokenProvider) throw authenticationExpiredError();
+
+    const refreshedAccessToken = await this.resolveAccessToken(true);
+    if (!refreshedAccessToken) throw authenticationExpiredError();
+
+    const retriedResponse = await this.fetchWithAccessToken(path, options, refreshedAccessToken);
+    if (retriedResponse.status === 401) throw authenticationExpiredError();
+    return retriedResponse;
   }
 
   async getUser() {
@@ -419,4 +467,3 @@ export async function sendMagicLink({
     throw new Error('無法寄送登入連結。請確認 Supabase 的 Email 登入已啟用後再試一次。');
   }
 }
-

@@ -25,6 +25,65 @@ test('帳本連線以 Window 作為瀏覽器 fetch 的呼叫端', async () => {
   assert.deepEqual(await connection.getUser(), { id: 'user-1' });
 });
 
+test('閒置後憑證失效時會刷新登入憑證並安全重試原本的開銷寫入', async () => {
+  const authorizationHeaders = [];
+  const tokenRequests = [];
+  const connection = new SupabaseConnection({
+    supabaseUrl: 'https://example.supabase.co',
+    supabaseAnonKey: 'public-key',
+    accessToken: 'expired-token',
+    accessTokenProvider: async ({ forceRefresh }) => {
+      tokenRequests.push(forceRefresh);
+      return forceRefresh ? 'fresh-token' : 'expired-token';
+    },
+    fetchImpl: async (_url, options) => {
+      authorizationHeaders.push(options.headers.Authorization);
+      if (options.headers.Authorization === 'Bearer expired-token') {
+        return { ok: false, status: 401, json: async () => ({ message: 'JWT expired' }) };
+      }
+      return { ok: true, status: 201, json: async () => [{ id: 'expense-1' }] };
+    },
+  });
+
+  const entry = await new SupabaseLedgerAdapter(connection).createExpenseEntry({
+    ledgerId: 'ledger-1',
+    categoryId: 'category-1',
+    itemName: '早餐',
+    amount: 39,
+    paymentMethod: 'credit_card',
+    occurredAt: '2026-08-19T00:00:00.000Z',
+  });
+
+  assert.deepEqual(entry, { id: 'expense-1' });
+  assert.deepEqual(authorizationHeaders, ['Bearer expired-token', 'Bearer fresh-token']);
+  assert.deepEqual(tokenRequests, [false, true]);
+});
+
+test('網路中斷與登入失效會顯示不同錯誤', async () => {
+  const offlineConnection = new SupabaseConnection({
+    supabaseUrl: 'https://example.supabase.co',
+    supabaseAnonKey: 'public-key',
+    accessToken: 'access-token',
+    fetchImpl: async () => { throw new TypeError('Failed to fetch'); },
+  });
+  const expiredConnection = new SupabaseConnection({
+    supabaseUrl: 'https://example.supabase.co',
+    supabaseAnonKey: 'public-key',
+    accessToken: 'expired-token',
+    accessTokenProvider: async () => null,
+    fetchImpl: async () => ({ ok: false, status: 401, json: async () => ({}) }),
+  });
+
+  await assert.rejects(
+    offlineConnection.request('/rest/v1/expense_entries'),
+    /目前無法連線，請確認網路後再試一次/,
+  );
+  await assert.rejects(
+    expiredConnection.request('/rest/v1/expense_entries'),
+    /登入已失效，請重新登入/,
+  );
+});
+
 test('個人帳本佈建保留原始顯示名稱給資料庫決定帳本名稱', async () => {
   const calls = [];
   const connection = new SupabaseConnection({
@@ -311,4 +370,3 @@ test('刪除固定開銷會停用規則並保留既有支出紀錄', async () =>
     retired_at: '2026-08-19T04:30:00.000Z',
   });
 });
-

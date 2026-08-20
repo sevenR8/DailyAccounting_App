@@ -42,7 +42,7 @@ test('登入後頂部只保留使用者縮寫與可展開的帳號選單', () =>
 });
 
 test('已保存登入狀態時直接顯示帳本啟動畫面，不會先閃過登入頁', () => {
-  assert.match(appSource, /async function getAccessToken\(session = readSession\(\)\)/);
+  assert.match(appSource, /async function getAccessToken\(session = readSession\(\), \{ forceRefresh = false \} = \{\}\)/);
   assert.match(
     appSource,
     /async function bootstrap\(\)[\s\S]*const storedSession = readSession\(\);[\s\S]*if \(!storedSession\) \{[\s\S]*renderSignIn\(\);[\s\S]*return;[\s\S]*\}[\s\S]*renderLedgerResume\(\);[\s\S]*const accessToken = await getAccessToken\(storedSession\);/,
@@ -50,6 +50,13 @@ test('已保存登入狀態時直接顯示帳本啟動畫面，不會先閃過�
   assert.doesNotMatch(appSource, /if \(!app\.firstElementChild\) renderSignIn\(\);/);
   assert.match(appSource, /class="ledger-resume"/);
   assert.doesNotMatch(appSource, />正在準備你的帳本</);
+});
+
+test('所有帳務請求都能取得最新登入憑證且共用同一個刷新作業', () => {
+  assert.match(appSource, /let accessTokenRefreshPromise = null;/);
+  assert.match(appSource, /if \(!accessTokenRefreshPromise\)/);
+  assert.match(appSource, /accessTokenProvider: \(\{ forceRefresh = false \} = \{\}\) => getAccessToken/);
+  assert.match(appSource, /readSession\(\),\s*\{ forceRefresh \}/);
 });
 
 test('本期摘要以乾淨文字顯示收入、現金、信用卡、總開銷、固定開銷及可存額', () => {
@@ -248,4 +255,3 @@ test('展開每日紀錄後，每筆開銷右側提供垃圾桶刪除按鈕', ()
   assert.match(appSource, /deleteExpenseEntry/);
   assert.match(stylesSource, /\.expense-entry-delete/);
 });
-
