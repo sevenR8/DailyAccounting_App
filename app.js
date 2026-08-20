@@ -1,23 +1,23 @@
-import { LedgerModule } from './ledger-module.js?v=36';
-import { calculateFinancialSummary } from './financial-summary.js?v=36';
+import { LedgerModule } from './ledger-module.js?v=39';
+import { calculateFinancialSummary } from './financial-summary.js?v=39';
 import {
   buildExpenseTemplates,
   dailyExpenseTotalTone,
   findExpenseTemplates,
   groupExpenseEntriesByDay,
-} from './daily-history.js?v=36';
+} from './daily-history.js?v=39';
 import {
   accountingPeriodFromStart,
   compareExpenseTotals,
   scheduledDateInAccountingPeriod,
   shiftAccountingPeriodStart,
-} from './accounting-period.js?v=36';
+} from './accounting-period.js?v=39';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=36';
+} from './supabase-adapter.js?v=39';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -29,6 +29,113 @@ let cleanupLedgerView = () => {};
 let accessTokenRefreshPromise = null;
 let ledgerViewInteractionVersion = 0;
 let ledgerViewSyncBaseline = 0;
+
+const installSwipeBackGesture = ({ gestureTarget, animatedSurface, onBack }) => {
+  if (!gestureTarget || !animatedSurface) return;
+
+  const ignoredStartSelector = [
+    'input',
+    'textarea',
+    'select',
+    'button',
+    'a',
+    '[contenteditable="true"]',
+    '[data-action="drag-fixed-expense"]',
+  ].join(',');
+  let startX = null;
+  let startY = null;
+  let swipeDistance = 0;
+  let tracking = false;
+  let animationTimer = null;
+
+  const clearSurfaceState = () => {
+    if (animationTimer !== null) window.clearTimeout(animationTimer);
+    animationTimer = null;
+    animatedSurface.classList.remove(
+      'is-swipe-backing',
+      'is-swipe-resetting',
+      'is-swipe-closing',
+    );
+    animatedSurface.style.removeProperty('--swipe-back-distance');
+  };
+
+  const resetTracking = () => {
+    startX = null;
+    startY = null;
+    swipeDistance = 0;
+    tracking = false;
+  };
+
+  const restoreSurface = () => {
+    animatedSurface.classList.remove('is-swipe-backing');
+    animatedSurface.classList.add('is-swipe-resetting');
+    animatedSurface.style.setProperty('--swipe-back-distance', '0px');
+    animationTimer = window.setTimeout(clearSurfaceState, 180);
+    resetTracking();
+  };
+
+  const startSwipeBack = (event) => {
+    if (
+      window.innerWidth >= 900
+      || event.touches.length !== 1
+      || event.target.closest(ignoredStartSelector)
+    ) return;
+    const touch = event.touches[0];
+    startX = touch.clientX;
+    startY = touch.clientY;
+    swipeDistance = 0;
+    tracking = true;
+    clearSurfaceState();
+  };
+
+  const moveSwipeBack = (event) => {
+    if (!tracking || event.touches.length !== 1) return;
+    const touch = event.touches[0];
+    const horizontalDistance = touch.clientX - startX;
+    const verticalDistance = touch.clientY - startY;
+    if (
+      Math.abs(verticalDistance) > 28
+      && Math.abs(verticalDistance) > Math.abs(horizontalDistance)
+    ) {
+      clearSurfaceState();
+      resetTracking();
+      return;
+    }
+    if (horizontalDistance <= 0) return;
+
+    swipeDistance = Math.min(horizontalDistance, window.innerWidth);
+    if (swipeDistance > 6 && event.cancelable) event.preventDefault();
+    animatedSurface.classList.add('is-swipe-backing');
+    animatedSurface.style.setProperty('--swipe-back-distance', `${swipeDistance}px`);
+  };
+
+  const finishSwipeBack = () => {
+    if (!tracking) return;
+    const closeThreshold = Math.min(72, window.innerWidth * 0.22);
+    if (swipeDistance < closeThreshold) {
+      restoreSurface();
+      return;
+    }
+
+    animatedSurface.classList.remove('is-swipe-backing');
+    animatedSurface.classList.add('is-swipe-closing');
+    animatedSurface.style.setProperty('--swipe-back-distance', '105vw');
+    animationTimer = window.setTimeout(() => {
+      onBack();
+      clearSurfaceState();
+      resetTracking();
+    }, 180);
+  };
+
+  const cancelSwipeBack = () => {
+    if (tracking) restoreSurface();
+  };
+
+  gestureTarget.addEventListener('touchstart', startSwipeBack, { passive: true });
+  gestureTarget.addEventListener('touchmove', moveSwipeBack, { passive: false });
+  gestureTarget.addEventListener('touchend', finishSwipeBack, { passive: true });
+  gestureTarget.addEventListener('touchcancel', cancelSwipeBack, { passive: true });
+};
 
 const preventZoomGesture = (event) => {
   if (event.cancelable) event.preventDefault();
@@ -498,6 +605,71 @@ async function renderLedger(
     .map((category) => `<option value="${escapeHtml(category.id)}" ${category.id === selectedId ? 'selected' : ''}>${escapeHtml(category.name)}</option>`)
     .join('');
   const categoryOptions = categoryOptionsFor();
+  const isLedgerOwner = ledger.ownerId === user.id
+    || ledger.members.some((member) => member.userId === user.id && member.role === 'owner');
+  const defaultCategoryTags = ledger.categories
+    .filter((category) => category.isDefault !== false)
+    .map((category) => `<span>${escapeHtml(category.name)}</span>`)
+    .join('');
+  const customCategoryRows = ledger.categories
+    .filter((category) => category.isDefault === false)
+    .map((category) => `
+      <li class="category-settings-row ${category.retiredAt ? 'is-retired' : ''}">
+        <form class="category-settings-form" data-category-id="${escapeHtml(category.id)}">
+          <label>
+            <span class="sr-only">分類名稱</span>
+            <input name="categoryName" type="text" maxlength="50" value="${escapeHtml(category.name)}" required />
+          </label>
+          <button class="secondary-button" type="submit">儲存</button>
+          <button
+            class="category-toggle"
+            type="button"
+            data-action="toggle-category"
+            data-category-id="${escapeHtml(category.id)}"
+          >${category.retiredAt ? '啟用' : '停用'}</button>
+          <p class="form-status" aria-live="polite"></p>
+        </form>
+      </li>`)
+    .join('');
+  const settingsDialog = `
+    <dialog class="finance-dialog settings-dialog" id="ledger-settings-dialog">
+      <div class="dialog-content">
+        <div class="dialog-heading">
+          <div><p class="eyebrow">帳本偏好</p><h2>設定</h2></div>
+          <button class="dialog-close" type="button" data-action="close-dialog" aria-label="關閉">×</button>
+        </div>
+        ${isLedgerOwner ? `
+          <section class="settings-section">
+            <div>
+              <h3>帳務週期</h3>
+              <p>設定每期從每月幾日開始，可輸入 1–28。</p>
+            </div>
+            ${financialOverview ? `
+              <form class="cycle-settings-form" id="cycle-settings-form">
+                <label>每期從每月第
+                  <input name="cycleStartDay" type="number" min="1" max="28" step="1" inputmode="numeric" value="${financialOverview.settings.cycle_start_day}" required />
+                  日開始
+                </label>
+                <button class="small-primary-button" type="submit">儲存週期</button>
+                <p class="form-status" aria-live="polite">既有帳務週期與歷史紀錄不會被修改。</p>
+              </form>` : '<p class="settings-unavailable">目前無法讀取帳務週期設定。</p>'}
+          </section>
+          <section class="settings-section">
+            <div>
+              <h3>自訂分類</h3>
+              <p>新增後會出現在快速記帳及固定開銷的分類選單。</p>
+            </div>
+            <div class="default-category-tags" aria-label="預設分類">${defaultCategoryTags}</div>
+            <ul class="category-settings-list">${customCategoryRows || '<li class="empty-category-settings">尚未新增自訂分類</li>'}</ul>
+            <form class="category-create-form" id="category-create-form">
+              <input name="categoryName" type="text" maxlength="50" placeholder="例如：貸款" aria-label="新增分類名稱" required />
+              <button class="small-primary-button" type="submit">新增分類</button>
+              <p class="form-status" aria-live="polite"></p>
+            </form>
+            <p class="dialog-note">停用只會從新的記帳選單隱藏，既有歷史紀錄仍會保留原分類。</p>
+          </section>` : '<p class="settings-unavailable">只有帳本建立者可以修改分類與帳務週期。</p>'}
+      </div>
+    </dialog>`;
   const scheduledMonthOptionsFor = (selectedMonth = 1) => Array.from(
     { length: 12 },
     (_, index) => index + 1,
@@ -853,10 +1025,12 @@ async function renderLedger(
           <summary aria-label="開啟帳號選單">…</summary>
           <div class="user-menu-popover">
             <p>${escapeHtml(userEmail)}</p>
+            <button class="menu-action" type="button" data-action="open-ledger-settings">帳本設定</button>
             <button class="menu-sign-out" type="button" id="sign-out">登出</button>
           </div>
         </details>
       </header>
+      ${settingsDialog}
       ${financialOverview ? `
         <section class="period-navigation" data-mobile-section="overview" aria-label="切換帳務月份">
           <div class="period-switcher">
@@ -1067,9 +1241,16 @@ async function renderLedger(
     setActiveMobileNavigation('finance');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
-  document.querySelector('[data-action="open-mobile-finance"]')?.addEventListener('click', showMobileFinance);
-  document.querySelector('[data-action="close-mobile-finance"]')?.addEventListener('click', () => {
+  const closeMobileFinance = () => {
     showMobileMainSection('overview', 'period-overview-section');
+  };
+  document.querySelector('[data-action="open-mobile-finance"]')?.addEventListener('click', showMobileFinance);
+  document.querySelector('[data-action="close-mobile-finance"]')?.addEventListener('click', closeMobileFinance);
+  const financePanel = document.querySelector('.finance-panel');
+  installSwipeBackGesture({
+    gestureTarget: financePanel,
+    animatedSurface: financePanel,
+    onBack: () => showMobileMainSection('overview', 'period-overview-section'),
   });
   mobileNavigationButtons.forEach((button) => {
     button.addEventListener('click', () => {
@@ -1253,6 +1434,145 @@ async function renderLedger(
     if (dialog && !dialog.open) dialog.showModal();
   };
 
+  document.querySelector('[data-action="open-ledger-settings"]')?.addEventListener('click', () => {
+    const userMenu = document.querySelector('.user-menu');
+    if (userMenu) userMenu.open = false;
+    openDialog('ledger-settings-dialog');
+  });
+
+  document.querySelector('#cycle-settings-form')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const cycleStartDay = Number(new FormData(form).get('cycleStartDay'));
+    const button = form.querySelector('button[type="submit"]');
+    const status = form.querySelector('.form-status');
+    if (!Number.isInteger(cycleStartDay) || cycleStartDay < 1 || cycleStartDay > 28) {
+      status.textContent = '請輸入 1 到 28 之間的日期。';
+      return;
+    }
+    button.disabled = true;
+    status.textContent = '正在儲存…';
+    try {
+      const settings = await expenseAdapter.updateFinancialSettings({
+        ledgerId: ledger.id,
+        cycleStartDay,
+        defaultSalaryAmount: financialOverview.settings.default_salary_amount,
+      });
+      financialOverview.settings = settings;
+      saveCachedLedgerView({
+        ledger,
+        user,
+        selectedStartsOn: activeStartsOn,
+        viewData: resolvedViewData,
+      });
+      status.textContent = `已設定每月 ${cycleStartDay} 日開始；既有週期不變。`;
+    } catch (error) {
+      status.textContent = error.message;
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  document.querySelector('#category-create-form')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const categoryName = new FormData(form).get('categoryName').trim();
+    const button = form.querySelector('button[type="submit"]');
+    const status = form.querySelector('.form-status');
+    if (!categoryName) {
+      status.textContent = '請輸入分類名稱。';
+      return;
+    }
+    if (ledger.categories.some((category) => category.name.localeCompare(
+      categoryName,
+      'zh-TW',
+      { sensitivity: 'base' },
+    ) === 0)) {
+      status.textContent = '這個分類名稱已經存在。';
+      return;
+    }
+    button.disabled = true;
+    status.textContent = '正在新增…';
+    try {
+      const category = await expenseAdapter.createCategory({
+        ledgerId: ledger.id,
+        name: categoryName,
+      });
+      ledger.categories.push(category);
+      await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
+    } catch (error) {
+      status.textContent = error.message;
+      button.disabled = false;
+    }
+  });
+
+  document.querySelectorAll('.category-settings-form').forEach((form) => {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const category = ledger.categories.find((item) => item.id === form.dataset.categoryId);
+      const categoryName = new FormData(form).get('categoryName').trim();
+      const button = form.querySelector('button[type="submit"]');
+      const status = form.querySelector('.form-status');
+      if (!categoryName) {
+        status.textContent = '請輸入分類名稱。';
+        return;
+      }
+      if (ledger.categories.some((item) => item.id !== category.id && item.name.localeCompare(
+        categoryName,
+        'zh-TW',
+        { sensitivity: 'base' },
+      ) === 0)) {
+        status.textContent = '這個分類名稱已經存在。';
+        return;
+      }
+      button.disabled = true;
+      status.textContent = '正在儲存…';
+      try {
+        const updatedCategory = await expenseAdapter.updateCategory({
+          ledgerId: ledger.id,
+          categoryId: category.id,
+          name: categoryName,
+          retiredAt: category.retiredAt,
+        });
+        Object.assign(category, updatedCategory);
+        await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
+      } catch (error) {
+        status.textContent = error.message;
+        button.disabled = false;
+      }
+    });
+  });
+
+  document.querySelectorAll('[data-action="toggle-category"]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const category = ledger.categories.find((item) => item.id === button.dataset.categoryId);
+      const form = button.closest('.category-settings-form');
+      const status = form.querySelector('.form-status');
+      if (!category.retiredAt) {
+        const activeCategories = ledger.categories.filter((item) => !item.retiredAt);
+        if (activeCategories.length <= 1) {
+          status.textContent = '至少需要保留一個啟用中的分類。';
+          return;
+        }
+      }
+      button.disabled = true;
+      status.textContent = category.retiredAt ? '正在啟用…' : '正在停用…';
+      try {
+        const updatedCategory = await expenseAdapter.updateCategory({
+          ledgerId: ledger.id,
+          categoryId: category.id,
+          name: category.name,
+          retiredAt: category.retiredAt ? null : new Date().toISOString(),
+        });
+        Object.assign(category, updatedCategory);
+        await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
+      } catch (error) {
+        status.textContent = error.message;
+        button.disabled = false;
+      }
+    });
+  });
+
   document.querySelectorAll('[data-action="open-expense-edit"]').forEach((button) => {
     button.addEventListener('click', () => openDialog(button.dataset.dialogId));
   });
@@ -1262,6 +1582,11 @@ async function renderLedger(
   document.querySelectorAll('.finance-dialog').forEach((dialog) => {
     dialog.addEventListener('click', (event) => {
       if (event.target === dialog) dialog.close();
+    });
+    installSwipeBackGesture({
+      gestureTarget: dialog.querySelector('.dialog-content'),
+      animatedSurface: dialog,
+      onBack: () => dialog.close(),
     });
   });
 
@@ -1331,15 +1656,31 @@ async function renderLedger(
         fixedRuleList.querySelectorAll('.fixed-rule-sortable[data-rule-id]'),
         (row) => row.dataset.ruleId,
       );
+      fixedRuleList.addEventListener('selectstart', (event) => {
+        if (event.target.closest('.fixed-rule-sortable')) event.preventDefault();
+      });
+      fixedRuleList.addEventListener('contextmenu', (event) => {
+        if (event.target.closest('[data-action="drag-fixed-expense"]')) event.preventDefault();
+      });
+      fixedRuleList.addEventListener('dragstart', (event) => {
+        if (event.target.closest('.fixed-rule-sortable')) event.preventDefault();
+      });
       document.querySelectorAll('[data-action="drag-fixed-expense"]').forEach((grip) => {
         grip.addEventListener('pointerdown', (event) => {
           if (event.button !== 0 || grip.disabled) return;
           const draggedRow = grip.closest('.fixed-rule-sortable');
           const originalOrder = orderedRuleIds();
           let moved = false;
+          document.getSelection()?.removeAllRanges();
+          document.documentElement.classList.add('is-reordering-fixed-expense');
           draggedRow.classList.add('is-dragging');
           grip.setPointerCapture(event.pointerId);
           event.preventDefault();
+
+          const finishDraggingState = () => {
+            draggedRow.classList.remove('is-dragging');
+            document.documentElement.classList.remove('is-reordering-fixed-expense');
+          };
 
           const moveRow = (moveEvent) => {
             moved = true;
@@ -1361,7 +1702,7 @@ async function renderLedger(
             if (grip.hasPointerCapture(finishEvent.pointerId)) {
               grip.releasePointerCapture(finishEvent.pointerId);
             }
-            draggedRow.classList.remove('is-dragging');
+            finishDraggingState();
             const updatedOrder = orderedRuleIds();
             if (!moved || updatedOrder.every((id, index) => id === originalOrder[index])) return;
 
@@ -1385,7 +1726,7 @@ async function renderLedger(
             if (grip.hasPointerCapture(cancelEvent.pointerId)) {
               grip.releasePointerCapture(cancelEvent.pointerId);
             }
-            draggedRow.classList.remove('is-dragging');
+            finishDraggingState();
             originalOrder.forEach((ruleId) => {
               const row = fixedRuleList.querySelector(`[data-rule-id="${CSS.escape(ruleId)}"]`);
               if (row) fixedRuleList.append(row);

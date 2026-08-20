@@ -24,6 +24,7 @@ export class InMemoryLedgerAdapter {
       categories: defaultCategoryNames.map((categoryName, index) => ({
         id: `category-${index + 1}`,
         name: categoryName,
+        isDefault: true,
         retiredAt: null,
       })),
     };
@@ -36,4 +37,3 @@ export class InMemoryLedgerAdapter {
     return this.ledgersByOwner.size;
   }
 }
-
