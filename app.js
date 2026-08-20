@@ -1499,11 +1499,11 @@ async function renderLedger(
       <section class="summary-panel" data-mobile-section="overview" aria-label="本期帳務摘要">
         <button class="summary-mobile-open" type="button" data-action="open-mobile-finance" aria-label="開啟帳務管理，查看與編輯收入、信用卡繳納及固定開銷"></button>
         <div><span>本期收入</span><strong>${totalIncome === null ? '—' : `$${formatAmount(totalIncome)}`}</strong></div>
-        <div class="net-cash-summary"><span>現金</span><strong>${netCashOutflowTotal < 0 ? '+' : ''}$${formatAmount(Math.abs(netCashOutflowTotal))}</strong><small>${netCashOutflowTotal < 0 ? '淨流入' : '淨支出'}・實付 $${formatAmount(cashTotal)}${advanceRepaymentTotal > 0 ? `・代墊收回 +$${formatAmount(advanceRepaymentTotal)}` : ''}</small></div>
-        <div><span>信用卡</span><strong>$${formatAmount(creditCardTotal)}</strong><small>實際刷卡額</small></div>
-        <div><span>總開銷</span><strong>$${formatAmount(personalNonFixedExpenseTotal)}</strong><small>個人負擔・已排除代墊</small></div>
+        <div><span>現金</span><strong>${netCashOutflowTotal < 0 ? '+' : ''}$${formatAmount(Math.abs(netCashOutflowTotal))}</strong></div>
+        <div><span>信用卡</span><strong>$${formatAmount(creditCardTotal)}</strong></div>
+        <div><span>總開銷</span><strong>$${formatAmount(personalNonFixedExpenseTotal)}</strong></div>
         <div><span>本期固定開銷</span><strong>${fixedExpenseTotal === null ? '—' : `$${formatAmount(fixedExpenseTotal)}`}</strong></div>
-        <div class="savings-summary"><span>本期可存額</span><strong>${financialOverview && !previousCardBillReady ? '待輸入帳單' : savingsAmount === null ? '—' : `$${formatAmount(savingsAmount)}`}</strong>${advanceRepaymentTotal > 0 ? `<small>已加回代墊收回 +$${formatAmount(advanceRepaymentTotal)}</small>` : ''}</div>
+        <div class="savings-summary"><span>本期可存額</span><strong>${financialOverview && !previousCardBillReady ? '待輸入帳單' : savingsAmount === null ? '—' : `$${formatAmount(savingsAmount)}`}</strong></div>
       </section>
       ${analysisPage}
       ${advanceExpenseDialogs}
