@@ -22,7 +22,7 @@ import {
   advancesVisibleInPeriod,
   applyPersonalExpenseAmounts,
   decorateExpenseAdvances,
-} from './expense-advance.js?v=52';
+} from './expense-advance.js?v=55';
 import {
   sendMagicLink,
   startGoogleSignIn,
@@ -1100,7 +1100,7 @@ async function renderLedger(
               <div><p class="eyebrow">共同消費</p><h2>${escapeHtml(entry.item_name)}・$${formatAmount(entry.amount)}</h2></div>
               <button class="dialog-close" type="button" data-action="close-dialog" aria-label="關閉">×</button>
             </div>
-            <p class="dialog-note">實際付款仍保留 $${formatAmount(entry.amount)} 供${entry.payment_method === 'cash' ? '現金' : '信用卡'}對帳；消費分析會扣除代墊金額。</p>
+            <p class="dialog-note">實際付款仍保留 $${formatAmount(entry.amount)} 供${entry.payment_method === 'cash' ? '現金' : '信用卡'}對帳；收到代墊款後，消費分析才會扣除實際收回金額。</p>
             <ul class="advance-existing-list">${existingRows || '<li class="empty-money-list">這筆開銷尚未設定代墊。</li>'}</ul>
             ${availableAmount > 0 ? `
               <form class="advance-create-form" data-entry-id="${escapeHtml(entry.id)}" data-available-amount="${availableAmount}">

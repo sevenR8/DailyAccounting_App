@@ -8,14 +8,29 @@ import {
   decorateExpenseAdvances,
 } from './expense-advance.js';
 
-test('代墊保留實際支付金額，消費分析只計入自己負擔額', () => {
-  const [entry] = applyPersonalExpenseAmounts(
-    [{ id: 'hotel', amount: 9000 }],
-    [{ expenseEntryId: 'hotel', amount: 4500 }],
-  );
+test('總開銷只扣除實際收回的代墊款，尚未收回時保留完整支出', () => {
+  const entries = [{ id: 'toy', amount: 798 }];
 
-  assert.equal(entry.paid_amount, 9000);
-  assert.equal(entry.amount, 4500);
+  const [outstanding] = applyPersonalExpenseAmounts(entries, [{
+    expenseEntryId: 'toy',
+    amount: 798,
+    repayments: [],
+  }]);
+  const [partial] = applyPersonalExpenseAmounts(entries, [{
+    expenseEntryId: 'toy',
+    amount: 798,
+    repayments: [{ amount: 300 }],
+  }]);
+  const [settled] = applyPersonalExpenseAmounts(entries, [{
+    expenseEntryId: 'toy',
+    amount: 798,
+    repayments: [{ amount: 798 }],
+  }]);
+
+  assert.equal(outstanding.paid_amount, 798);
+  assert.equal(outstanding.amount, 798);
+  assert.equal(partial.amount, 498);
+  assert.equal(settled.amount, 0);
 });
 
 test('待收代墊可區分未收、部分收回與已結清', () => {

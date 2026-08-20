@@ -26,16 +26,22 @@ export function decorateExpenseAdvances(advances = []) {
 }
 
 export function applyPersonalExpenseAmounts(entries = [], advances = []) {
-  const advancedByExpense = new Map();
+  const receivedByExpense = new Map();
   advances.forEach((advance) => {
-    advancedByExpense.set(
+    const receivedAmount = Math.min(
+      Number(advance.amount || 0),
+      advance.receivedAmount == null
+        ? sumRepayments(advance)
+        : Number(advance.receivedAmount || 0),
+    );
+    receivedByExpense.set(
       advance.expenseEntryId,
-      (advancedByExpense.get(advance.expenseEntryId) ?? 0) + Number(advance.amount || 0),
+      (receivedByExpense.get(advance.expenseEntryId) ?? 0) + receivedAmount,
     );
   });
   return entries.map((entry) => ({
     ...entry,
-    amount: Math.max(0, Number(entry.amount) - (advancedByExpense.get(entry.id) ?? 0)),
+    amount: Math.max(0, Number(entry.amount) - (receivedByExpense.get(entry.id) ?? 0)),
     paid_amount: Number(entry.amount),
   }));
 }
