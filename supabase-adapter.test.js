@@ -133,8 +133,8 @@ test('帳本查詢只使用目前使用者的個人帳本，並轉成帳本模�
     name: '小明的帳本',
     members: [{ userId: 'user-1', role: 'owner' }],
     categories: [
-      { id: 'category-1', name: '貸款', isDefault: false, retiredAt: null },
-      { id: 'category-2', name: '娛樂', isDefault: true, retiredAt: null },
+      { id: 'category-1', name: '貸款', isDefault: false, analysisNature: 'maintenance', retiredAt: null },
+      { id: 'category-2', name: '娛樂', isDefault: true, analysisNature: 'pleasure', retiredAt: null },
     ],
   });
 });
@@ -177,11 +177,60 @@ test('帳本擁有者可新增、重新命名、停用及重新啟用自訂分�
     name: '房貸', retired_at: '2026-08-20T00:00:00.000Z',
   });
   assert.deepEqual(created, {
-    id: 'category-7', name: '貸款', isDefault: false, retiredAt: null,
+    id: 'category-7', name: '貸款', isDefault: false, analysisNature: 'maintenance', retiredAt: null,
   });
   assert.deepEqual(updated, {
-    id: 'category-7', name: '房貸', isDefault: false,
+    id: 'category-7', name: '房貸', isDefault: false, analysisNature: 'maintenance',
     retiredAt: '2026-08-20T00:00:00.000Z',
+  });
+});
+
+test('分析開銷依指定兩期日期範圍讀取且不套用全帳本筆數上限', async () => {
+  let requestUrl;
+  const connection = new SupabaseConnection({
+    supabaseUrl: 'https://example.supabase.co', supabaseAnonKey: 'public-key', accessToken: 'token',
+    fetchImpl: async (url) => { requestUrl = url; return response([]); },
+  });
+
+  await new SupabaseLedgerAdapter(connection).listExpenseEntriesForRange({
+    ledgerId: 'ledger-1', startsOn: '2026-07-05', endsOn: '2026-09-04',
+  });
+
+  assert.match(requestUrl, /occurred_at=gte\.2026-07-05/);
+  assert.match(requestUrl, /occurred_at=lt\.2026-09-05/);
+  assert.doesNotMatch(requestUrl, /limit=/);
+});
+
+test('帳本分析設定可讀取並以雲端程序原子儲存店家別名', async () => {
+  const calls = [];
+  const connection = new SupabaseConnection({
+    supabaseUrl: 'https://example.supabase.co', supabaseAnonKey: 'public-key', accessToken: 'token',
+    fetchImpl: async (url, options) => {
+      calls.push({ url, options });
+      if (url.includes('merchant_groups')) return response([{
+        id: 'merchant-1', name: '7-11', group_type: 'convenience', retired_at: null,
+        created_at: '2026-08-01T00:00:00Z',
+        merchant_aliases: [
+          { id: 'alias-2', alias: '711', created_at: '2026-08-02T00:00:00Z' },
+          { id: 'alias-1', alias: '7-11', created_at: '2026-08-01T00:00:00Z' },
+        ],
+      }]);
+      return response({ id: 'merchant-1' });
+    },
+  });
+  const adapter = new SupabaseLedgerAdapter(connection);
+
+  const groups = await adapter.listMerchantGroups('ledger-1');
+  await adapter.saveMerchantGroup({
+    ledgerId: 'ledger-1', groupId: 'merchant-1', name: '7-11',
+    groupType: 'convenience', aliases: ['7-11', '711', '統一超商'],
+  });
+
+  assert.deepEqual(groups[0].aliases, ['7-11', '711']);
+  assert.equal(calls[1].url, 'https://example.supabase.co/rest/v1/rpc/save_merchant_group');
+  assert.deepEqual(JSON.parse(calls[1].options.body), {
+    p_ledger_id: 'ledger-1', p_group_id: 'merchant-1', p_name: '7-11',
+    p_group_type: 'convenience', p_aliases: ['7-11', '711', '統一超商'],
   });
 });
 

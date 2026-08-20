@@ -1,10 +1,11 @@
-const CACHE_NAME = 'daily-ledger-shell-v42';
+const CACHE_NAME = 'daily-ledger-shell-v43';
 const APP_SHELL = [
   './',
   './index.html',
-  './styles.css?v=42',
+  './styles.css?v=43',
   './app.js',
   './amount-expression.js',
+  './expense-analysis.js',
   './ledger-module.js',
   './financial-summary.js',
   './daily-history.js',
@@ -21,7 +22,16 @@ self.addEventListener('install', (event) => {
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    Promise.all([
+      caches.keys().then((cacheNames) => Promise.all(
+        cacheNames
+          .filter((cacheName) => cacheName.startsWith('daily-ledger-shell-') && cacheName !== CACHE_NAME)
+          .map((cacheName) => caches.delete(cacheName)),
+      )),
+      self.clients.claim(),
+    ]),
+  );
 });
 
 async function networkFirst(request) {
@@ -45,6 +55,7 @@ self.addEventListener('fetch', (event) => {
     '/index.html',
     '/styles.css',
     '/app.js',
+    '/expense-analysis.js',
     '/ledger-module.js',
     '/financial-summary.js',
     '/daily-history.js',

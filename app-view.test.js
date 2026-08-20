@@ -132,14 +132,18 @@ test('所有帳務請求都能取得最新登入憑證且共用同一個刷新�
 });
 
 test('本期摘要以乾淨文字顯示收入、現金、信用卡、總開銷、固定開銷及可存額', () => {
-  assert.match(appSource, /本期收入/);
-  assert.match(appSource, /<span>現金<\/span>/);
-  assert.match(appSource, /<span>信用卡<\/span>/);
-  assert.match(appSource, /<span>總開銷<\/span>/);
-  assert.doesNotMatch(appSource, /非固定/);
-  assert.match(appSource, /本期固定開銷/);
-  assert.match(appSource, /本期可存額/);
-  assert.match(appSource, /待輸入帳單/);
+  const summarySource = appSource.slice(
+    appSource.indexOf('<section class="summary-panel"'),
+    appSource.indexOf('${analysisPage}'),
+  );
+  assert.match(summarySource, /本期收入/);
+  assert.match(summarySource, /<span>現金<\/span>/);
+  assert.match(summarySource, /<span>信用卡<\/span>/);
+  assert.match(summarySource, /<span>總開銷<\/span>/);
+  assert.doesNotMatch(summarySource, /非固定/);
+  assert.match(summarySource, /本期固定開銷/);
+  assert.match(summarySource, /本期可存額/);
+  assert.match(summarySource, /待輸入帳單/);
 });
 
 test('桌面版使用多欄一頁式總覽，手機版仍維持單欄', () => {
@@ -170,7 +174,8 @@ test('手機摘要卡可開啟獨立帳務管理頁並保留桌面完整資訊',
   assert.match(appSource, /class="mobile-finance-heading"/);
   assert.match(appSource, /data-action="close-mobile-finance"/);
   assert.match(appSource, /data-mobile-view="\$\{preferredMobileView\}"/);
-  assert.match(appSource, /const preferredMobileView = app\.querySelector\('\.ledger-home'\)\?\.dataset\.mobileView === 'finance'/);
+  assert.match(appSource, /const existingLedgerView = app\.querySelector\('\.ledger-home'\)\?\.dataset\.mobileView;/);
+  assert.match(appSource, /\['finance', 'analysis'\]\.includes\(existingLedgerView\)/);
   assert.match(appSource, /ledgerHome\.dataset\.mobileView = 'finance'/);
   assert.match(appSource, /ledgerHome\.dataset\.mobileView = 'main'/);
   assert.match(
@@ -182,6 +187,42 @@ test('手機摘要卡可開啟獨立帳務管理頁並保留桌面完整資訊',
     /\.ledger-home\[data-mobile-view="finance"\] > \.finance-panel\s*\{[^}]*display:\s*grid;/,
   );
   assert.match(stylesSource, /@media \(min-width: 900px\)[\s\S]*\.finance-panel \{ grid-area: finance; \}/);
+});
+
+test('整張圓餅圖卡片可開啟含七項分析的單一長頁', () => {
+  assert.match(appSource, /data-action="open-analysis" role="button" tabindex="0"/);
+  assert.match(appSource, /buildExpenseAnalysis\(\{/);
+  assert.match(appSource, /class="analysis-page"/);
+  assert.match(appSource, /01・生活全貌/);
+  assert.match(appSource, /02・日常節奏/);
+  assert.match(appSource, /03・主要去向/);
+  assert.match(appSource, /04・生活尺度/);
+  assert.match(appSource, /05・生活習慣/);
+  assert.match(appSource, /06・消費心情/);
+  assert.match(appSource, /07・前後變化/);
+  assert.match(appSource, /ledgerHome\.dataset\.mobileView = 'analysis'/);
+  assert.match(appSource, /data-action="close-analysis"/);
+  assert.match(appSource, /animatedSurface: analysisPanel/);
+});
+
+test('分析內頁可切換帳務週期並使用文青風響應式卡片', () => {
+  assert.match(appSource, /data-analysis-period-direction="previous"/);
+  assert.match(appSource, /data-analysis-period-direction="next"/);
+  assert.match(stylesSource, /\.ledger-home\[data-mobile-view="analysis"\] > \.analysis-page/);
+  assert.match(stylesSource, /background:\s*#f4f0e5/);
+  assert.match(stylesSource, /font-family:\s*"Noto Serif TC"/);
+  assert.match(stylesSource, /@media \(min-width: 1000px\)[\s\S]*grid-template-columns:\s*repeat\(2/);
+  assert.match(stylesSource, /@media \(max-width: 899px\)[\s\S]*\.analysis-total-grid,[\s\S]*grid-template-columns:\s*1fr/);
+});
+
+test('帳本建立者可設定分類分析性質與店家別名', () => {
+  assert.match(appSource, /class="category-analysis-form"/);
+  assert.match(appSource, /name="analysisNature"/);
+  assert.match(appSource, /class="merchant-settings-form"/);
+  assert.match(appSource, /id="merchant-create-form"/);
+  assert.match(appSource, /saveMerchantGroup/);
+  assert.match(appSource, /retireMerchantGroup/);
+  assert.match(appSource, /規則只改變分析分組，不會修改原始記帳名稱/);
 });
 
 test('手機所有內頁可向右滑動關閉或返回上一頁', () => {

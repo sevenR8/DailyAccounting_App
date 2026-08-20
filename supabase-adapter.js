@@ -94,15 +94,26 @@ export class SupabaseLedgerAdapter {
   constructor(connection) {
     this.connection = connection;
     this.fixedExpenseSchedulingSupported = null;
+    this.expenseAnalysisSettingsSupported = null;
   }
 
   async findPersonalLedger(userId) {
-    const parameters = new URLSearchParams({
-      select: 'id,name,personal_owner_id,ledger_members(user_id,role),categories(id,name,is_default,retired_at,created_at)',
+    const analysisParameters = new URLSearchParams({
+      select: 'id,name,personal_owner_id,ledger_members(user_id,role),categories(id,name,is_default,analysis_nature,retired_at,created_at)',
       personal_owner_id: `eq.${userId}`,
       limit: '1',
     });
-    const response = await this.connection.request(`/rest/v1/ledgers?${parameters}`);
+    let response = await this.connection.request(`/rest/v1/ledgers?${analysisParameters}`);
+    this.expenseAnalysisSettingsSupported = response.ok;
+
+    if (!response.ok) {
+      const legacyParameters = new URLSearchParams({
+        select: 'id,name,personal_owner_id,ledger_members(user_id,role),categories(id,name,is_default,retired_at,created_at)',
+        personal_owner_id: `eq.${userId}`,
+        limit: '1',
+      });
+      response = await this.connection.request(`/rest/v1/ledgers?${legacyParameters}`);
+    }
 
     if (!response.ok) {
       throw new Error('無法讀取既有帳本，請確認 Supabase 設定與登入狀態。');
@@ -125,6 +136,8 @@ export class SupabaseLedgerAdapter {
           id: category.id,
           name: category.name,
           isDefault: category.is_default === true,
+          analysisNature: category.analysis_nature
+            ?? (category.name === '娛樂' ? 'pleasure' : 'maintenance'),
           retiredAt: category.retired_at,
         })),
     };
@@ -137,19 +150,25 @@ export class SupabaseLedgerAdapter {
       categories: (ledger.categories ?? []).map((category) => ({
         ...category,
         isDefault: category.isDefault ?? true,
+        analysisNature: category.analysisNature
+          ?? (category.name === '娛樂' ? 'pleasure' : 'maintenance'),
       })),
     };
   }
 
-  async createCategory({ ledgerId, name }) {
+  async createCategory({ ledgerId, name, analysisNature = 'maintenance' }) {
+    const body = {
+      ledger_id: ledgerId,
+      name,
+      is_default: false,
+    };
+    if (this.expenseAnalysisSettingsSupported === true) {
+      body.analysis_nature = analysisNature;
+    }
     const response = await this.connection.request('/rest/v1/categories', {
       method: 'POST',
       headers: { Prefer: 'return=representation' },
-      body: JSON.stringify({
-        ledger_id: ledgerId,
-        name,
-        is_default: false,
-      }),
+      body: JSON.stringify(body),
     });
     if (!response.ok) throw new Error('無法新增分類，請確認名稱沒有重複。');
     const [category] = await response.json();
@@ -157,19 +176,25 @@ export class SupabaseLedgerAdapter {
       id: category.id,
       name: category.name,
       isDefault: category.is_default === true,
+      analysisNature: category.analysis_nature
+        ?? (category.name === '娛樂' ? 'pleasure' : 'maintenance'),
       retiredAt: category.retired_at,
     };
   }
 
-  async updateCategory({ ledgerId, categoryId, name, retiredAt }) {
+  async updateCategory({ ledgerId, categoryId, name, retiredAt, analysisNature }) {
     const parameters = new URLSearchParams({
       id: `eq.${categoryId}`,
       ledger_id: `eq.${ledgerId}`,
     });
+    const body = { name, retired_at: retiredAt };
+    if (analysisNature && this.expenseAnalysisSettingsSupported === true) {
+      body.analysis_nature = analysisNature;
+    }
     const response = await this.connection.request(`/rest/v1/categories?${parameters}`, {
       method: 'PATCH',
       headers: { Prefer: 'return=representation' },
-      body: JSON.stringify({ name, retired_at: retiredAt }),
+      body: JSON.stringify(body),
     });
     if (!response.ok) throw new Error('無法更新分類，請確認名稱沒有重複。');
     const [category] = await response.json();
@@ -177,6 +202,9 @@ export class SupabaseLedgerAdapter {
       id: category.id,
       name: category.name,
       isDefault: category.is_default === true,
+      analysisNature: category.analysis_nature
+        ?? analysisNature
+        ?? (category.name === '娛樂' ? 'pleasure' : 'maintenance'),
       retiredAt: category.retired_at,
     };
   }
@@ -192,6 +220,24 @@ export class SupabaseLedgerAdapter {
     if (!response.ok) {
       throw new Error('無法讀取開銷紀錄，請稍後再試一次。');
     }
+    return response.json();
+  }
+
+  async listExpenseEntriesForRange({ ledgerId, startsOn, endsOn }) {
+    const endExclusive = new Date(`${endsOn}T00:00:00Z`);
+    endExclusive.setUTCDate(endExclusive.getUTCDate() + 1);
+    const parameters = new URLSearchParams({
+      select: 'id,category_id,item_name,amount,payment_method,occurred_at,is_fixed,created_at',
+      ledger_id: `eq.${ledgerId}`,
+      order: 'occurred_at.desc',
+    });
+    parameters.append('occurred_at', `gte.${startsOn}T00:00:00+08:00`);
+    parameters.append(
+      'occurred_at',
+      `lt.${endExclusive.toISOString().slice(0, 10)}T00:00:00+08:00`,
+    );
+    const response = await this.connection.request(`/rest/v1/expense_entries?${parameters}`);
+    if (!response.ok) throw new Error('無法讀取分析期間的開銷紀錄。');
     return response.json();
   }
 
@@ -290,6 +336,72 @@ export class SupabaseLedgerAdapter {
     if (!response.ok) throw new Error('無法讀取指定帳務週期。');
     const [period] = await response.json();
     return period ?? null;
+  }
+
+  async getPreviousAccountingPeriod({ ledgerId, startsOn }) {
+    const parameters = new URLSearchParams({
+      select: 'ledger_id,starts_on,ends_on,salary_amount,previous_card_bill_amount,previous_card_bill_zero_confirmed',
+      ledger_id: `eq.${ledgerId}`,
+      starts_on: `lt.${startsOn}`,
+      order: 'starts_on.desc',
+      limit: '1',
+    });
+    const response = await this.connection.request(`/rest/v1/accounting_periods?${parameters}`);
+    if (!response.ok) throw new Error('無法讀取前一期帳務週期。');
+    const [period] = await response.json();
+    return period ?? null;
+  }
+
+  async listMerchantGroups(ledgerId) {
+    const parameters = new URLSearchParams({
+      select: 'id,name,group_type,retired_at,created_at,merchant_aliases(id,alias,created_at)',
+      ledger_id: `eq.${ledgerId}`,
+      retired_at: 'is.null',
+      order: 'group_type.asc,created_at.asc',
+    });
+    const response = await this.connection.request(`/rest/v1/merchant_groups?${parameters}`);
+    if (!response.ok) {
+      this.expenseAnalysisSettingsSupported = false;
+      return [];
+    }
+    this.expenseAnalysisSettingsSupported = true;
+    const groups = await response.json();
+    return groups.map((group) => ({
+      id: group.id,
+      name: group.name,
+      groupType: group.group_type,
+      retiredAt: group.retired_at,
+      aliases: (group.merchant_aliases ?? [])
+        .sort((left, right) => left.created_at.localeCompare(right.created_at))
+        .map((alias) => alias.alias),
+    }));
+  }
+
+  async saveMerchantGroup({ ledgerId, groupId = null, name, groupType, aliases }) {
+    const response = await this.connection.request('/rest/v1/rpc/save_merchant_group', {
+      method: 'POST',
+      body: JSON.stringify({
+        p_ledger_id: ledgerId,
+        p_group_id: groupId,
+        p_name: name,
+        p_group_type: groupType,
+        p_aliases: aliases,
+      }),
+    });
+    if (!response.ok) throw new Error('無法儲存店家與別名，請確認名稱沒有重複。');
+    return response.json();
+  }
+
+  async retireMerchantGroup({ ledgerId, groupId, retiredAt }) {
+    const response = await this.connection.request('/rest/v1/rpc/retire_merchant_group', {
+      method: 'POST',
+      body: JSON.stringify({
+        p_ledger_id: ledgerId,
+        p_group_id: groupId,
+        p_retired_at: retiredAt,
+      }),
+    });
+    if (!response.ok) throw new Error('無法停用店家規則，請稍後再試一次。');
   }
 
   async getFinancialSettings(ledgerId) {

@@ -14,6 +14,10 @@ const fixedSchedulingMigration = await readFile(
   new URL('./supabase-0003-fixed-expense-scheduling.sql', import.meta.url),
   'utf8',
 );
+const expenseAnalysisMigration = await readFile(
+  new URL('./supabase-0004-expense-analysis.sql', import.meta.url),
+  'utf8',
+);
 
 test('資料模型保留開銷的記錄者、可選付款者與同帳本外鍵', () => {
   assert.match(migration, /create table public\.expense_entries/i);
@@ -59,4 +63,20 @@ test('固定開銷支援年度月份、雲端排序與只在適用週期自動�
   assert.match(fixedSchedulingMigration, /reorder_fixed_expense_rules/i);
   assert.match(fixedSchedulingMigration, /fixed_rule\.recurrence_type = 'yearly'/i);
   assert.match(fixedSchedulingMigration, /continue;/i);
+});
+
+test('消費分析保存分類性質、帳本店家群組與歷史別名規則', () => {
+  assert.match(expenseAnalysisMigration, /analysis_nature text/i);
+  assert.match(expenseAnalysisMigration, /maintenance.*pleasure/is);
+  assert.match(expenseAnalysisMigration, /create table if not exists public\.merchant_groups/i);
+  assert.match(expenseAnalysisMigration, /create table if not exists public\.merchant_aliases/i);
+  assert.match(expenseAnalysisMigration, /seed_default_merchant_groups/i);
+  assert.match(expenseAnalysisMigration, /save_merchant_group/i);
+});
+
+test('消費分析設定由帳本成員讀取且只有帳本建立者能管理', () => {
+  assert.match(expenseAnalysisMigration, /帳本成員可讀取店家群組/i);
+  assert.match(expenseAnalysisMigration, /帳本擁有者可管理店家群組/i);
+  assert.match(expenseAnalysisMigration, /public\.is_ledger_owner\(p_ledger_id\)/i);
+  assert.match(expenseAnalysisMigration, /grant execute on function public\.save_merchant_group/i);
 });

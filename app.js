@@ -1,24 +1,28 @@
-import { LedgerModule } from './ledger-module.js?v=42';
-import { calculateFinancialSummary } from './financial-summary.js?v=42';
-import { parseAmountExpression } from './amount-expression.js?v=42';
+import { LedgerModule } from './ledger-module.js?v=43';
+import { calculateFinancialSummary } from './financial-summary.js?v=43';
+import { parseAmountExpression } from './amount-expression.js?v=43';
 import {
   buildExpenseTemplates,
   dailyExpenseTotalTone,
   findExpenseTemplates,
   groupExpenseEntriesByDay,
-} from './daily-history.js?v=42';
+} from './daily-history.js?v=43';
 import {
   accountingPeriodFromStart,
   compareExpenseTotals,
   scheduledDateInAccountingPeriod,
   shiftAccountingPeriodStart,
-} from './accounting-period.js?v=42';
+} from './accounting-period.js?v=43';
+import {
+  buildExpenseAnalysis,
+  DEFAULT_MERCHANT_GROUPS,
+} from './expense-analysis.js?v=43';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=42';
+} from './supabase-adapter.js?v=43';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -406,6 +410,137 @@ function formatPeriodDate(value) {
   return `${dateParts.year}/${dateParts.month}/${dateParts.day}`;
 }
 
+function formatAnalysisPercent(value, maximumFractionDigits = 0) {
+  return `${new Intl.NumberFormat('zh-TW', { maximumFractionDigits }).format(value || 0)}%`;
+}
+
+function renderExpenseAnalysis({
+  analysis,
+  periodMonthLabel,
+  periodLabel,
+  canGoNext,
+  chartColors,
+}) {
+  const maximumWeekdayAverage = Math.max(
+    1,
+    ...analysis.weekdayDistribution.map((weekday) => weekday.average),
+  );
+  const weekdayRows = analysis.weekdayDistribution.map((weekday) => `
+    <li>
+      <span>${escapeHtml(weekday.shortLabel)}</span>
+      <span class="analysis-bar-track"><span style="width:${Math.max(2, (weekday.average / maximumWeekdayAverage) * 100)}%"></span></span>
+      <strong>$${formatAmount(weekday.average)}</strong>
+      <small>${weekday.occurrences} 週平均</small>
+    </li>`).join('');
+  const topItemRows = analysis.topItems.map((item, index) => `
+    <tr>
+      <td><span class="analysis-rank">${index + 1}</span></td>
+      <th scope="row">${escapeHtml(item.name)}<small>${item.count} 筆</small></th>
+      <td>$${formatAmount(item.amount)}</td>
+    </tr>`).join('');
+  const countryCards = analysis.countryComparisons.map((country, index) => `
+    <li style="--country-accent:${chartColors[(index + 3) % chartColors.length]}">
+      <span>${escapeHtml(country.name)}</span>
+      <strong>${formatAnalysisPercent(country.ratio)}</strong>
+      <small>我的比例</small>
+      <em>基準 NT$${formatAmount(country.amount)}</em>
+    </li>`).join('');
+  const merchantBlock = (title, summary, emptyMessage) => `
+    <section class="merchant-analysis-block">
+      <div class="analysis-subheading">
+        <div><p>${escapeHtml(title)}</p><strong>$${formatAmount(summary.total)}</strong></div>
+        <div><span>${summary.count} 次</span><small>平均 $${formatAmount(summary.average)}</small></div>
+      </div>
+      <p class="analysis-share">占日常開銷 ${formatAnalysisPercent(summary.share, 1)}</p>
+      <ul>${summary.items.map((item) => `
+        <li><span>${escapeHtml(item.name)}<small>${item.count} 次・平均 $${formatAmount(item.average)}</small></span><strong>$${formatAmount(item.amount)}</strong></li>`).join('') || `<li class="analysis-empty">${escapeHtml(emptyMessage)}</li>`}</ul>
+    </section>`;
+  const nature = analysis.spendingNature;
+  const natureTotal = Math.max(1, nature.maintenance.amount + nature.pleasure.amount);
+  const pleasureItems = nature.pleasure.items.slice(0, 6).map((item) => `
+    <li><span>${escapeHtml(item.name)}<small>${item.count} 筆</small></span><strong>$${formatAmount(item.amount)}</strong></li>`).join('');
+  const comparisonValue = (row) => {
+    if (row.status === 'new') return '新增';
+    if (row.status === 'none') return '本期無開銷';
+    if (row.status === 'same') return '0%';
+    const arrow = row.status === 'up' ? '↑' : '↓';
+    return `${arrow} ${formatAnalysisPercent(Math.abs(row.percentChange), 1)}`;
+  };
+  const comparisonRows = analysis.comparison.rows.map((row) => `
+    <tr>
+      <th scope="row">${escapeHtml(row.label)}</th>
+      <td>$${formatAmount(row.currentAmount)}</td>
+      <td>$${formatAmount(row.previousAmount)}</td>
+      <td class="comparison-${row.status}">${escapeHtml(comparisonValue(row))}</td>
+    </tr>`).join('');
+
+  return `
+    <section class="analysis-page" id="expense-analysis-page" aria-label="${escapeHtml(periodMonthLabel)}消費分析">
+      <header class="analysis-page-header">
+        <button class="analysis-back" type="button" data-action="close-analysis" aria-label="返回本期總覽">‹</button>
+        <div><p class="eyebrow">生活消費誌</p><h1>${escapeHtml(periodMonthLabel)}分析</h1></div>
+        <div class="analysis-period-switcher" aria-label="切換分析週期">
+          <button type="button" data-analysis-period-direction="previous" aria-label="查看上一期分析">‹</button>
+          <span><strong>${escapeHtml(periodMonthLabel)}</strong><small>${escapeHtml(periodLabel)}</small></span>
+          <button type="button" data-analysis-period-direction="next" aria-label="查看下一期分析" ${canGoNext ? '' : 'disabled'}>›</button>
+        </div>
+      </header>
+
+      <section class="analysis-section analysis-totals-section">
+        <div class="analysis-section-heading"><p class="eyebrow">01・生活全貌</p><h2>本期生活成本</h2></div>
+        <div class="analysis-total-grid">
+          <article class="analysis-total-primary"><span>完整生活開銷</span><strong>NT$ ${formatAmount(analysis.totals.completeLivingSpend)}</strong><small>非固定開銷＋本期全部固定開銷</small></article>
+          <article><span>日常開銷每日平均</span><strong>NT$ ${formatAmount(analysis.totals.dailyAverage)}</strong><small>非固定開銷・${analysis.period.elapsedDays} 天</small></article>
+          <article><span>完整生活成本每日平均</span><strong>NT$ ${formatAmount(analysis.totals.completeDailyAverage)}</strong><small>包含固定成本</small></article>
+        </div>
+      </section>
+
+      <section class="analysis-section analysis-weekday-section">
+        <div class="analysis-section-heading"><p class="eyebrow">02・日常節奏</p><h2>星期消費分布</h2><span>不含固定開銷</span></div>
+        <ul class="weekday-analysis">${weekdayRows}</ul>
+      </section>
+
+      <section class="analysis-section analysis-top-section">
+        <div class="analysis-section-heading"><p class="eyebrow">03・主要去向</p><h2>非固定開銷 Top 10</h2><span>相同項目與店家別名已合併</span></div>
+        <div class="analysis-table-scroll"><table class="analysis-top-table"><tbody>${topItemRows || '<tr><td class="analysis-empty">本期尚無非固定開銷</td></tr>'}</tbody></table></div>
+      </section>
+
+      <section class="analysis-section analysis-country-section">
+        <div class="analysis-section-heading"><p class="eyebrow">04・生活尺度</p><h2>各國生活費比較</h2><span>單人・每月・包含房租・固定參考基準</span></div>
+        <p class="country-projection">本期完整生活成本推估 <strong>NT$ ${formatAmount(analysis.totals.projectedCompleteLivingSpend)}</strong></p>
+        <ul class="country-analysis-grid">${countryCards}</ul>
+      </section>
+
+      <section class="analysis-section analysis-merchants-section">
+        <div class="analysis-section-heading"><p class="eyebrow">05・生活習慣</p><h2>速食與超商</h2><span>固定開銷不納入</span></div>
+        <div class="merchant-analysis-grid">
+          ${merchantBlock('速食店', analysis.merchantAnalysis.fastFood, '本期沒有速食店開銷')}
+          ${merchantBlock('便利商店', analysis.merchantAnalysis.convenience, '本期沒有便利商店開銷')}
+        </div>
+      </section>
+
+      <section class="analysis-section analysis-nature-section">
+        <div class="analysis-section-heading"><p class="eyebrow">06・消費心情</p><h2>維持生活與快樂支出</h2><span>依分類設定・不含固定開銷</span></div>
+        <div class="nature-analysis-grid">
+          <div class="nature-balance" role="img" aria-label="維持生活 ${formatAnalysisPercent(nature.maintenance.share)}，快樂支出 ${formatAnalysisPercent(nature.pleasure.share)}">
+            <span class="nature-maintenance" style="width:${(nature.maintenance.amount / natureTotal) * 100}%"></span>
+            <span class="nature-pleasure" style="width:${(nature.pleasure.amount / natureTotal) * 100}%"></span>
+          </div>
+          <article><span>維持生活</span><strong>$${formatAmount(nature.maintenance.amount)}</strong><small>${formatAnalysisPercent(nature.maintenance.share)}</small></article>
+          <article><span>快樂支出</span><strong>$${formatAmount(nature.pleasure.amount)}</strong><small>${formatAnalysisPercent(nature.pleasure.share)}</small></article>
+          <ul class="pleasure-item-list">${pleasureItems || '<li class="analysis-empty">本期尚無快樂支出</li>'}</ul>
+        </div>
+      </section>
+
+      <section class="analysis-section analysis-comparison-section">
+        <div class="analysis-section-heading"><p class="eyebrow">07・前後變化</p><h2>${escapeHtml(analysis.comparison.label)}</h2><span>同期 ${analysis.comparison.elapsedDays} 天・不含固定開銷</span></div>
+        <blockquote>${escapeHtml(analysis.comparison.summary)}</blockquote>
+        <p class="previous-full-total">完整上期總額 <strong>NT$ ${formatAmount(analysis.comparison.previousFullTotal)}</strong></p>
+        <div class="analysis-table-scroll"><table class="comparison-table"><thead><tr><th>項目</th><th>本期同期</th><th>上期同期</th><th>變化</th></tr></thead><tbody>${comparisonRows}</tbody></table></div>
+      </section>
+    </section>`;
+}
+
 function currentAccountingPeriod(now = new Date(), startDay = 5) {
   let start = new Date(now.getFullYear(), now.getMonth(), startDay);
   if (now < start) {
@@ -451,13 +586,32 @@ async function loadLedgerViewData(ledger, expenseAdapter, selectedStartsOn = nul
       previous_card_bill_amount: null,
       previous_card_bill_zero_confirmed: false,
     };
-    const otherIncomeEntries = await expenseAdapter.listOtherIncomeEntries({
+    const fallbackPreviousStartsOn = shiftAccountingPeriodStart(period.starts_on, -1);
+    const previousStoredPeriod = await expenseAdapter.getPreviousAccountingPeriod({
       ledgerId: ledger.id,
       startsOn: period.starts_on,
-      endsOn: period.ends_on,
-    });
+    }).catch(() => null);
+    const previousBounds = accountingPeriodFromStart(fallbackPreviousStartsOn);
+    const previousPeriod = previousStoredPeriod ?? {
+      starts_on: previousBounds.startsOn,
+      ends_on: previousBounds.endsOn,
+    };
+    const [otherIncomeEntries, analysisEntries, merchantGroups] = await Promise.all([
+      expenseAdapter.listOtherIncomeEntries({
+        ledgerId: ledger.id,
+        startsOn: period.starts_on,
+        endsOn: period.ends_on,
+      }),
+      expenseAdapter.listExpenseEntriesForRange({
+        ledgerId: ledger.id,
+        startsOn: previousPeriod.starts_on,
+        endsOn: period.ends_on,
+      }),
+      expenseAdapter.listMerchantGroups(ledger.id),
+    ]);
     financialOverview = {
       period,
+      previousPeriod,
       settings,
       otherIncomeEntries,
       fixedExpenseRules,
@@ -466,6 +620,9 @@ async function loadLedgerViewData(ledger, expenseAdapter, selectedStartsOn = nul
       isCurrentPeriod,
       hasStoredPeriod: Boolean(storedPeriod),
     };
+    financialOverview.analysisSettingsSupported = expenseAdapter.expenseAnalysisSettingsSupported === true;
+    financialOverview.merchantGroups = merchantGroups;
+    financialOverview.analysisEntries = analysisEntries;
     financialOverviewLoaded = true;
   } catch (error) {
     financialOverview = null;
@@ -475,6 +632,9 @@ async function loadLedgerViewData(ledger, expenseAdapter, selectedStartsOn = nul
   return {
     financialOverview,
     entries,
+    analysisEntries: financialOverview?.analysisEntries ?? entries,
+    merchantGroups: financialOverview?.merchantGroups ?? [],
+    analysisSettingsSupported: financialOverview?.analysisSettingsSupported ?? false,
     cacheable: financialOverviewLoaded || entriesLoaded,
   };
 }
@@ -486,12 +646,19 @@ async function renderLedger(
   selectedStartsOn = null,
   { viewData = null, persistViewData = true } = {},
 ) {
-  const preferredMobileView = app.querySelector('.ledger-home')?.dataset.mobileView === 'finance'
-    ? 'finance'
+  const existingLedgerView = app.querySelector('.ledger-home')?.dataset.mobileView;
+  const preferredMobileView = ['finance', 'analysis'].includes(existingLedgerView)
+    ? existingLedgerView
     : 'main';
   const resolvedViewData = viewData
     ?? await loadLedgerViewData(ledger, expenseAdapter, selectedStartsOn);
-  const { financialOverview, entries } = resolvedViewData;
+  const {
+    financialOverview,
+    entries,
+    analysisEntries = entries,
+    merchantGroups = [],
+    analysisSettingsSupported = false,
+  } = resolvedViewData;
   if (persistViewData) {
     saveCachedLedgerView({
       ledger,
@@ -512,7 +679,7 @@ async function renderLedger(
   const periodEnd = financialOverview
     ? new Date(localDateFromISO(financialOverview.period.ends_on).getTime() + 86_400_000)
     : fallbackPeriod.end;
-  const periodEntries = entries.filter((entry) => {
+  const periodEntries = analysisEntries.filter((entry) => {
     const occurredAt = new Date(entry.occurred_at);
     return occurredAt >= periodStart && occurredAt < periodEnd;
   });
@@ -553,10 +720,23 @@ async function renderLedger(
   const nextStartsOn = activeStartsOn
     ? shiftAccountingPeriodStart(activeStartsOn, 1)
     : null;
-  const previousPeriodStart = previousStartsOn ? localDateFromISO(previousStartsOn) : periodStart;
-  const previousEntries = entries.filter((entry) => {
+  const previousPeriodForAnalysis = financialOverview?.previousPeriod
+    ? {
+      startsOn: financialOverview.previousPeriod.starts_on,
+      endsOn: financialOverview.previousPeriod.ends_on,
+    }
+    : previousStartsOn
+      ? accountingPeriodFromStart(previousStartsOn)
+      : null;
+  const previousPeriodStart = previousPeriodForAnalysis?.startsOn
+    ? localDateFromISO(previousPeriodForAnalysis.startsOn)
+    : periodStart;
+  const previousPeriodEnd = previousPeriodForAnalysis?.endsOn
+    ? new Date(localDateFromISO(previousPeriodForAnalysis.endsOn).getTime() + 86_400_000)
+    : periodStart;
+  const previousEntries = analysisEntries.filter((entry) => {
     const occurredAt = new Date(entry.occurred_at);
-    return occurredAt >= previousPeriodStart && occurredAt < periodStart;
+    return occurredAt >= previousPeriodStart && occurredAt < previousPeriodEnd;
   });
   const previousExpenseTotal = previousEntries.reduce((total, entry) => total + entry.amount, 0);
   const periodComparison = compareExpenseTotals(generatedExpenseTotal, previousExpenseTotal);
@@ -614,6 +794,9 @@ async function renderLedger(
   const categoryOptions = categoryOptionsFor();
   const isLedgerOwner = ledger.ownerId === user.id
     || ledger.members.some((member) => member.userId === user.id && member.role === 'owner');
+  const merchantGroupsForAnalysis = merchantGroups.length
+    ? merchantGroups
+    : DEFAULT_MERCHANT_GROUPS;
   const defaultCategoryTags = ledger.categories
     .filter((category) => category.isDefault !== false)
     .map((category) => `<span>${escapeHtml(category.name)}</span>`)
@@ -638,6 +821,35 @@ async function renderLedger(
         </form>
       </li>`)
     .join('');
+  const categoryAnalysisRows = ledger.categories.map((category) => `
+    <li>
+      <form class="category-analysis-form" data-category-id="${escapeHtml(category.id)}">
+        <span>${escapeHtml(category.name)}</span>
+        <select name="analysisNature" aria-label="${escapeHtml(category.name)}的分析性質">
+          <option value="maintenance" ${category.analysisNature !== 'pleasure' ? 'selected' : ''}>維持生活</option>
+          <option value="pleasure" ${category.analysisNature === 'pleasure' ? 'selected' : ''}>快樂支出</option>
+        </select>
+        <button class="secondary-button" type="submit">儲存</button>
+        <p class="form-status" aria-live="polite"></p>
+      </form>
+    </li>`).join('');
+  const merchantSettingsRows = merchantGroups.map((group) => `
+    <li>
+      <form class="merchant-settings-form" data-merchant-group-id="${escapeHtml(group.id)}">
+        <input name="merchantName" type="text" maxlength="60" value="${escapeHtml(group.name)}" aria-label="店家名稱" required />
+        <select name="merchantType" aria-label="店家類型">
+          <option value="fast_food" ${group.groupType === 'fast_food' ? 'selected' : ''}>速食店</option>
+          <option value="convenience" ${group.groupType === 'convenience' ? 'selected' : ''}>便利商店</option>
+          <option value="other" ${group.groupType === 'other' ? 'selected' : ''}>其他分析店家</option>
+        </select>
+        <textarea name="aliases" rows="2" aria-label="店家別名，每行一個" placeholder="每行輸入一個別名">${escapeHtml(group.aliases.join('\n'))}</textarea>
+        <div class="merchant-settings-actions">
+          <button class="merchant-retire" type="button" data-action="retire-merchant-group">停用</button>
+          <button class="secondary-button" type="submit">儲存規則</button>
+        </div>
+        <p class="form-status" aria-live="polite"></p>
+      </form>
+    </li>`).join('');
   const settingsDialog = `
     <dialog class="finance-dialog settings-dialog" id="ledger-settings-dialog">
       <div class="dialog-content">
@@ -674,7 +886,35 @@ async function renderLedger(
               <p class="form-status" aria-live="polite"></p>
             </form>
             <p class="dialog-note">停用只會從新的記帳選單隱藏，既有歷史紀錄仍會保留原分類。</p>
-          </section>` : '<p class="settings-unavailable">只有帳本建立者可以修改分類與帳務週期。</p>'}
+          </section>
+          <section class="settings-section">
+            <div>
+              <h3>消費分析分類</h3>
+              <p>設定各分類屬於「維持生活」或「快樂支出」；重新命名後仍會保留。</p>
+            </div>
+            ${analysisSettingsSupported
+              ? `<ul class="category-analysis-list">${categoryAnalysisRows}</ul>`
+              : '<p class="settings-unavailable">執行 supabase-0004-expense-analysis.sql 後即可同步分析分類。</p>'}
+          </section>
+          <section class="settings-section">
+            <div>
+              <h3>速食店、超商與別名</h3>
+              <p>每行一個別名。規則只改變分析分組，不會修改原始記帳名稱。</p>
+            </div>
+            ${analysisSettingsSupported ? `
+              <ul class="merchant-settings-list">${merchantSettingsRows}</ul>
+              <form class="merchant-create-form" id="merchant-create-form">
+                <input name="merchantName" type="text" maxlength="60" placeholder="店家名稱，例如：美廉社" required />
+                <select name="merchantType" aria-label="新店家類型">
+                  <option value="convenience">便利商店</option>
+                  <option value="fast_food">速食店</option>
+                  <option value="other">其他分析店家</option>
+                </select>
+                <textarea name="aliases" rows="2" placeholder="別名，每行一個"></textarea>
+                <button class="small-primary-button" type="submit">新增店家規則</button>
+                <p class="form-status" aria-live="polite"></p>
+              </form>` : '<p class="settings-unavailable">目前先使用內建店家規則；完成資料庫升級後即可自行管理。</p>'}
+          </section>` : '<p class="settings-unavailable">只有帳本建立者可以修改分類、店家規則與帳務週期。</p>'}
       </div>
     </dialog>`;
   const scheduledMonthOptionsFor = (selectedMonth = 1) => Array.from(
@@ -800,6 +1040,25 @@ async function renderLedger(
       && nextStartsOn
       && nextStartsOn <= financialOverview.currentStartsOn,
   );
+  const expenseAnalysis = financialOverview ? buildExpenseAnalysis({
+    period: {
+      startsOn: financialOverview.period.starts_on,
+      endsOn: financialOverview.period.ends_on,
+    },
+    previousPeriod: previousPeriodForAnalysis,
+    currentEntries: periodEntries,
+    previousEntries,
+    fixedExpenses: fixedExpensesForSummary,
+    categories: ledger.categories,
+    merchantGroups: merchantGroupsForAnalysis,
+  }) : null;
+  const analysisPage = expenseAnalysis ? renderExpenseAnalysis({
+    analysis: expenseAnalysis,
+    periodMonthLabel,
+    periodLabel,
+    canGoNext,
+    chartColors,
+  }) : '';
   const salaryAmount = financialOverview?.period.salary_amount ?? 0;
   const otherIncomeTotal = calculatedSummary?.otherIncomeTotal ?? 0;
   const previousCardBillAmount = financialOverview?.period.previous_card_bill_zero_confirmed
@@ -1047,7 +1306,7 @@ async function renderLedger(
           </div>
           <div class="period-comparison comparison-${periodComparison.direction}">${escapeHtml(comparisonText)}</div>
         </section>` : ''}
-      <section class="chart-panel" id="period-overview-section" data-mobile-section="overview" aria-label="本期開銷分類占比">
+      <section class="chart-panel chart-panel-action" id="period-overview-section" data-mobile-section="overview" data-action="open-analysis" role="button" tabindex="0" aria-label="本期開銷分類占比，開啟七項消費分析">
         <div class="chart-heading">
           <p class="eyebrow">本期總覽</p>
           <span>${escapeHtml(periodLabel)}</span>
@@ -1058,6 +1317,7 @@ async function renderLedger(
           </div>
           <ul class="chart-legend">${chartLegend || '<li class="empty-chart">新增開銷後會顯示分類占比</li>'}</ul>
         </div>
+        <span class="chart-enter-hint">查看七項消費分析 <span aria-hidden="true">›</span></span>
       </section>
       <section class="summary-panel" data-mobile-section="overview" aria-label="本期帳務摘要">
         <button class="summary-mobile-open" type="button" data-action="open-mobile-finance" aria-label="開啟帳務管理，查看與編輯收入、信用卡繳納及固定開銷"></button>
@@ -1068,6 +1328,7 @@ async function renderLedger(
         <div><span>本期固定開銷</span><strong>${fixedExpenseTotal === null ? '—' : `$${formatAmount(fixedExpenseTotal)}`}</strong></div>
         <div class="savings-summary"><span>本期可存額</span><strong>${financialOverview && !previousCardBillReady ? '待輸入帳單' : savingsAmount === null ? '—' : `$${formatAmount(savingsAmount)}`}</strong></div>
       </section>
+      ${analysisPage}
       ${financialPanel}
       <section class="quick-entry-panel" id="quick-entry-section" data-mobile-section="record">
         <div>
@@ -1276,6 +1537,21 @@ async function renderLedger(
   const closeMobileFinance = () => {
     showMobileMainSection('overview', 'period-overview-section');
   };
+  const showExpenseAnalysis = () => {
+    ledgerHome.dataset.mobileView = 'analysis';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+  const closeExpenseAnalysis = () => {
+    showMobileMainSection('overview', 'period-overview-section');
+  };
+  const chartPanelAction = document.querySelector('[data-action="open-analysis"]');
+  chartPanelAction?.addEventListener('click', showExpenseAnalysis);
+  chartPanelAction?.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    showExpenseAnalysis();
+  });
+  document.querySelector('[data-action="close-analysis"]')?.addEventListener('click', closeExpenseAnalysis);
   document.querySelector('[data-action="open-mobile-finance"]')?.addEventListener('click', showMobileFinance);
   document.querySelector('[data-action="close-mobile-finance"]')?.addEventListener('click', closeMobileFinance);
   const financePanel = document.querySelector('.finance-panel');
@@ -1283,6 +1559,12 @@ async function renderLedger(
     gestureTarget: financePanel,
     animatedSurface: financePanel,
     onBack: () => showMobileMainSection('overview', 'period-overview-section'),
+  });
+  const analysisPanel = document.querySelector('.analysis-page');
+  installSwipeBackGesture({
+    gestureTarget: analysisPanel,
+    animatedSurface: analysisPanel,
+    onBack: closeExpenseAnalysis,
   });
   mobileNavigationButtons.forEach((button) => {
     button.addEventListener('click', () => {
@@ -1300,6 +1582,10 @@ async function renderLedger(
     if (window.innerWidth >= 900) return;
     if (ledgerHome.dataset.mobileView === 'finance') {
       setActiveMobileNavigation('finance');
+      return;
+    }
+    if (ledgerHome.dataset.mobileView === 'analysis') {
+      setActiveMobileNavigation('overview');
       return;
     }
     if (mobileNavigationFrame !== null) return;
@@ -1425,6 +1711,15 @@ async function renderLedger(
     nextPeriodButton.addEventListener('click', async () => {
       if (!canGoNext) return;
       nextPeriodButton.disabled = true;
+      await renderLedger(ledger, user, expenseAdapter, nextStartsOn);
+    });
+    document.querySelector('[data-analysis-period-direction="previous"]')?.addEventListener('click', async (event) => {
+      event.currentTarget.disabled = true;
+      await renderLedger(ledger, user, expenseAdapter, previousStartsOn);
+    });
+    document.querySelector('[data-analysis-period-direction="next"]')?.addEventListener('click', async (event) => {
+      if (!canGoNext) return;
+      event.currentTarget.disabled = true;
       await renderLedger(ledger, user, expenseAdapter, nextStartsOn);
     });
   }
@@ -1600,6 +1895,91 @@ async function renderLedger(
         await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
       } catch (error) {
         status.textContent = error.message;
+        button.disabled = false;
+      }
+    });
+  });
+
+  document.querySelectorAll('.category-analysis-form').forEach((form) => {
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const category = ledger.categories.find((item) => item.id === form.dataset.categoryId);
+      const analysisNature = new FormData(form).get('analysisNature');
+      const button = form.querySelector('button[type="submit"]');
+      const status = form.querySelector('.form-status');
+      button.disabled = true;
+      status.textContent = '正在儲存…';
+      try {
+        const updatedCategory = await expenseAdapter.updateCategory({
+          ledgerId: ledger.id,
+          categoryId: category.id,
+          name: category.name,
+          retiredAt: category.retiredAt,
+          analysisNature,
+        });
+        Object.assign(category, updatedCategory);
+        await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
+      } catch (error) {
+        status.textContent = error.message;
+        button.disabled = false;
+      }
+    });
+  });
+
+  const merchantAliasesFrom = (formData) => String(formData.get('aliases') ?? '')
+    .split(/[\n,，]+/)
+    .map((alias) => alias.trim())
+    .filter(Boolean);
+  const saveMerchantSettingsForm = async (form, groupId = null) => {
+    const formData = new FormData(form);
+    const name = formData.get('merchantName').trim();
+    const button = form.querySelector('button[type="submit"]');
+    const status = form.querySelector('.form-status');
+    if (!name) {
+      status.textContent = '請輸入店家名稱。';
+      return;
+    }
+    button.disabled = true;
+    status.textContent = '正在儲存…';
+    try {
+      await expenseAdapter.saveMerchantGroup({
+        ledgerId: ledger.id,
+        groupId,
+        name,
+        groupType: formData.get('merchantType'),
+        aliases: merchantAliasesFrom(formData),
+      });
+      await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
+    } catch (error) {
+      status.textContent = error.message;
+      button.disabled = false;
+    }
+  };
+  document.querySelectorAll('.merchant-settings-form').forEach((form) => {
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      saveMerchantSettingsForm(form, form.dataset.merchantGroupId);
+    });
+  });
+  document.querySelector('#merchant-create-form')?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    saveMerchantSettingsForm(event.currentTarget);
+  });
+  document.querySelectorAll('[data-action="retire-merchant-group"]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const form = button.closest('.merchant-settings-form');
+      const name = form.elements.merchantName.value;
+      if (!window.confirm(`停用「${name}」的分析規則？原始記帳內容不會被修改。`)) return;
+      button.disabled = true;
+      try {
+        await expenseAdapter.retireMerchantGroup({
+          ledgerId: ledger.id,
+          groupId: form.dataset.merchantGroupId,
+          retiredAt: new Date().toISOString(),
+        });
+        await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
+      } catch (error) {
+        form.querySelector('.form-status').textContent = error.message;
         button.disabled = false;
       }
     });
