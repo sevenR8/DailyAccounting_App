@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   advanceRepaymentsInPeriod,
+  advancesVisibleInPeriod,
   applyPersonalExpenseAmounts,
   decorateExpenseAdvances,
 } from './expense-advance.js';
@@ -43,4 +44,33 @@ test('只有本帳務週期內收到的代墊款納入當期現金流', () => {
   }], '2026-08-05', '2026-09-04');
 
   assert.deepEqual(repayments.map((item) => item.amount), [2000]);
+});
+
+test('已結清代墊只在收回週期顯示，尚未結清者會跨期保留', () => {
+  const advances = decorateExpenseAdvances([
+    {
+      id: 'outstanding',
+      amount: 4500,
+      repayments: [],
+    },
+    {
+      id: 'settled-this-period',
+      amount: 798,
+      repayments: [{ amount: 798, receivedAt: '2026-08-20T03:00:00Z' }],
+    },
+    {
+      id: 'settled-last-period',
+      amount: 1000,
+      repayments: [{ amount: 1000, receivedAt: '2026-07-20T03:00:00Z' }],
+    },
+  ]);
+
+  assert.deepEqual(
+    advancesVisibleInPeriod(advances, '2026-08-05', '2026-09-04').map(({ id }) => id),
+    ['outstanding', 'settled-this-period'],
+  );
+  assert.deepEqual(
+    advancesVisibleInPeriod(advances, '2026-09-05', '2026-10-04').map(({ id }) => id),
+    ['outstanding'],
+  );
 });

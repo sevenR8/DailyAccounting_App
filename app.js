@@ -19,9 +19,10 @@ import {
 } from './expense-analysis.js?v=44';
 import {
   advanceRepaymentsInPeriod,
+  advancesVisibleInPeriod,
   applyPersonalExpenseAmounts,
   decorateExpenseAdvances,
-} from './expense-advance.js?v=44';
+} from './expense-advance.js?v=52';
 import {
   sendMagicLink,
   startGoogleSignIn,
@@ -1162,10 +1163,15 @@ async function renderLedger(
     <li><span>${escapeHtml(income.name)}</span><strong>+$${formatAmount(income.amount)}</strong></li>`).join('') || '';
   const outstandingAdvanceTotal = expenseAdvances
     .reduce((total, advance) => total + advance.outstandingAmount, 0);
+  const visibleExpenseAdvances = advancesVisibleInPeriod(
+    expenseAdvances,
+    financialOverview?.period.starts_on,
+    financialOverview?.period.ends_on,
+  );
   const expenseForAdvance = (advance) => advance.expense
     ?? analysisEntries.find((entry) => entry.id === advance.expenseEntryId)
     ?? { item_name: '原始開銷', amount: advance.amount, occurred_at: advance.createdAt };
-  const advanceOverviewRows = [...expenseAdvances]
+  const advanceOverviewRows = [...visibleExpenseAdvances]
     .sort((left, right) => {
       if (left.status === 'settled' && right.status !== 'settled') return 1;
       if (left.status !== 'settled' && right.status === 'settled') return -1;

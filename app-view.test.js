@@ -467,6 +467,7 @@ test('待收代墊顯示在本期收入上方，並可記錄部分收回', () =>
   assert.match(appSource, /全部待收/);
   assert.match(appSource, /class="advance-repayment-form"/);
   assert.match(appSource, /createAdvanceRepayment/);
+  assert.match(appSource, /advancesVisibleInPeriod/);
   assert.match(stylesSource, /\.advance-overview-list/);
 });
 
