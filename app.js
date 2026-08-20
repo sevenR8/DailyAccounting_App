@@ -22,7 +22,7 @@ import {
   advancesVisibleInPeriod,
   applyPersonalExpenseAmounts,
   decorateExpenseAdvances,
-} from './expense-advance.js?v=55';
+} from './expense-advance.js?v=56';
 import {
   sendMagicLink,
   startGoogleSignIn,
@@ -1106,7 +1106,7 @@ async function renderLedger(
               <form class="advance-create-form" data-entry-id="${escapeHtml(entry.id)}" data-available-amount="${availableAmount}">
                 <label>代墊對象<input name="debtorName" type="text" maxlength="80" placeholder="例如寶貝" required /></label>
                 <label>代墊金額<input name="amount" type="number" min="1" max="${availableAmount}" step="1" inputmode="numeric" value="${Math.floor(availableAmount / 2) || availableAmount}" required /></label>
-                <label class="edit-form-wide">預計收回日期（選填）<input name="expectedOn" type="date" /></label>
+                <label class="edit-form-wide">預計收回日期（選填）<span class="advance-date-control"><input name="expectedOn" type="date" /></span></label>
                 <p class="form-status edit-form-wide" aria-live="polite"></p>
                 <button class="small-primary-button edit-form-wide" type="submit">儲存代墊</button>
               </form>` : '<p class="dialog-note">這筆開銷的全部金額已分配為代墊。</p>'}
@@ -1223,7 +1223,7 @@ async function renderLedger(
             <form class="advance-edit-form" data-advance-id="${escapeHtml(advance.id)}" data-minimum-amount="${minimumEditableAmount}" data-maximum-amount="${maximumEditableAmount}">
               <label>代墊對象<input name="debtorName" type="text" maxlength="80" value="${escapeHtml(advance.debtorName)}" required /></label>
               <label>代墊金額<input name="amount" type="number" min="${minimumEditableAmount}" max="${maximumEditableAmount}" step="1" inputmode="numeric" value="${advance.amount}" required /></label>
-              <label class="edit-form-wide">預計收回日期（選填）<input name="expectedOn" type="date" value="${escapeHtml(advance.expectedOn ?? '')}" /></label>
+              <label class="edit-form-wide">預計收回日期（選填）<span class="advance-date-control"><input name="expectedOn" type="date" value="${escapeHtml(advance.expectedOn ?? '')}" /></span></label>
               <p class="form-status edit-form-wide" aria-live="polite"></p>
               <button class="small-primary-button edit-form-wide" type="submit">儲存代墊變更</button>
             </form>
