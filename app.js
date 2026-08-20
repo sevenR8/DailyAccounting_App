@@ -1,23 +1,24 @@
-import { LedgerModule } from './ledger-module.js?v=41';
-import { calculateFinancialSummary } from './financial-summary.js?v=41';
+import { LedgerModule } from './ledger-module.js?v=42';
+import { calculateFinancialSummary } from './financial-summary.js?v=42';
+import { parseAmountExpression } from './amount-expression.js?v=42';
 import {
   buildExpenseTemplates,
   dailyExpenseTotalTone,
   findExpenseTemplates,
   groupExpenseEntriesByDay,
-} from './daily-history.js?v=41';
+} from './daily-history.js?v=42';
 import {
   accountingPeriodFromStart,
   compareExpenseTotals,
   scheduledDateInAccountingPeriod,
   shiftAccountingPeriodStart,
-} from './accounting-period.js?v=41';
+} from './accounting-period.js?v=42';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=41';
+} from './supabase-adapter.js?v=42';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -1074,7 +1075,11 @@ async function renderLedger(
         </div>
         <form class="expense-form" id="expense-form">
           <label>金額
-            <input id="expense-amount" name="amount" type="number" min="1" step="1" inputmode="numeric" placeholder="例如 100" required autofocus />
+            <span class="expense-amount-control">
+              <input id="expense-amount" name="amount" type="text" inputmode="numeric" pattern="[0-9+＋ ]+" placeholder="例如 39+100" aria-describedby="expense-amount-result" required autofocus />
+              <button type="button" data-action="append-amount-plus" aria-label="再加一筆金額">＋</button>
+            </span>
+            <small class="expense-amount-result" id="expense-amount-result" aria-live="polite"></small>
           </label>
           <section class="smart-suggestions" id="smart-suggestions" ${quickEntryTemplates.length ? '' : 'hidden'} aria-label="常用記帳紀錄">
             <div class="smart-suggestions-heading">
@@ -1144,6 +1149,8 @@ async function renderLedger(
   const smartSuggestionsTitle = document.querySelector('#smart-suggestions-title');
   const smartSuggestionList = document.querySelector('#smart-suggestion-list');
   const expenseAmountInput = document.querySelector('#expense-amount');
+  const expenseAmountResult = document.querySelector('#expense-amount-result');
+  const appendAmountPlusButton = document.querySelector('[data-action="append-amount-plus"]');
   const expenseOccurredAtInput = document.querySelector('#expense-occurred-at');
   let expenseOccurredAtManuallyEdited = false;
   const syncExpenseOccurredAt = () => {
@@ -1154,14 +1161,21 @@ async function renderLedger(
     expenseOccurredAtManuallyEdited = true;
   });
   const renderSmartSuggestions = () => {
+    const calculatedAmount = parseAmountExpression(expenseAmountInput.value);
+    const isAddition = /[+＋]/.test(expenseAmountInput.value);
     const matchingTemplates = findExpenseTemplates(
       quickEntryTemplates,
-      expenseAmountInput.value,
+      calculatedAmount ?? '',
       5,
     );
+    expenseAmountResult.textContent = isAddition && calculatedAmount !== null
+      ? `= $${formatAmount(calculatedAmount)}`
+      : isAddition
+        ? '請繼續輸入下一筆金額'
+        : '';
     smartSuggestions.hidden = matchingTemplates.length === 0;
-    smartSuggestionsTitle.textContent = expenseAmountInput.value
-      ? `符合 $${formatAmount(Number(expenseAmountInput.value))}`
+    smartSuggestionsTitle.textContent = calculatedAmount !== null
+      ? `符合 $${formatAmount(calculatedAmount)}`
       : '常用紀錄';
     smartSuggestionList.innerHTML = matchingTemplates.map((template) => {
       const templateIndex = quickEntryTemplates.indexOf(template);
@@ -1178,6 +1192,18 @@ async function renderLedger(
     }).join('');
   };
   expenseAmountInput.addEventListener('input', renderSmartSuggestions);
+  appendAmountPlusButton.addEventListener('click', () => {
+    const currentValue = expenseAmountInput.value.trim();
+    if (currentValue && !/[+＋]$/.test(currentValue)) {
+      expenseAmountInput.value = `${currentValue}+`;
+      expenseAmountInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    expenseAmountInput.focus();
+    expenseAmountInput.setSelectionRange(
+      expenseAmountInput.value.length,
+      expenseAmountInput.value.length,
+    );
+  });
   smartSuggestionList.addEventListener('click', (event) => {
     const button = event.target.closest('[data-quick-template-index]');
     if (!button) return;
@@ -1410,7 +1436,7 @@ async function renderLedger(
     const button = form.querySelector('button[type="submit"]');
     const status = document.querySelector('#expense-status');
     const itemName = formData.get('itemName').trim();
-    const amount = Number(formData.get('amount'));
+    const amount = parseAmountExpression(formData.get('amount'));
 
     if (!itemName || !Number.isInteger(amount) || amount <= 0) {
       status.textContent = '請填寫正確的整數金額與項目名稱。';

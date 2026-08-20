@@ -469,6 +469,30 @@ html.is-reordering-fixed-expense .fixed-rule-sortable { -webkit-user-select: non
   color: inherit;
   font: inherit;
 }
+.expense-amount-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 48px;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+.expense-amount-control button {
+  display: grid;
+  place-items: center;
+  min-width: 48px;
+  border: 1px solid #8fa493;
+  border-radius: 13px;
+  background: #dfeadd;
+  color: #24422d;
+  font-size: 1.35rem;
+  font-weight: 900;
+}
+.expense-amount-result {
+  min-height: 1.2em;
+  color: #3d7b54;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
 
 input[type="datetime-local"] {
   width: auto;
@@ -666,6 +690,8 @@ input[type="datetime-local"] {
   .user-menu-popover p { color: #aeb9af; }
   .email-sign-in input { background: #172119; border-color: #526154; }
   .expense-form input:not([type="radio"]), .expense-form select { background: #172119; border-color: #526154; }
+  .expense-amount-control button { border-color: #526154; background: #2a412e; color: #dce5dd; }
+  .expense-amount-result { color: #a8dbb5; }
   .expense-datetime-control { border-color: #526154; background: #172119; }
   .expense-datetime-control input[type="datetime-local"] { border: 0; background: transparent; }
   .expense-form fieldset { border-color: #3b493d; }
