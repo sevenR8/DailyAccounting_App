@@ -1409,11 +1409,14 @@ async function renderLedger(
             <h2>本期收入</h2>
             <p>${escapeHtml(periodMonthLabel)}・合計 NT$ ${formatAmount(totalIncome)}</p>
           </div>
-          ${!isHistoricalPeriod
-            ? '<button class="text-action" type="button" data-action="open-income-dialog">更新收入</button>'
-            : '<span class="period-read-only">歷史紀錄</span>'}
+          ${isHistoricalPeriod ? '<span class="period-read-only">歷史紀錄</span>' : ''}
         </div>
-        <div class="income-overview-card">
+        <div
+          class="income-overview-card"
+          ${!isHistoricalPeriod
+            ? 'data-action="open-income-dialog" role="button" tabindex="0" aria-label="編輯本期收入與帳單"'
+            : ''}
+        >
           <div class="income-total-row"><span>本期收入合計</span><strong>$ ${formatAmount(totalIncome)}</strong></div>
           <div class="income-breakdown">
             <div><span class="income-marker salary-marker">＋</span><span><small>薪資收入</small><strong>$ ${formatAmount(salaryAmount)}</strong></span></div>
@@ -2563,6 +2566,11 @@ async function renderLedger(
   if (financialOverview && !isHistoricalPeriod) {
     document.querySelectorAll('[data-action="open-income-dialog"]').forEach((button) => {
       button.addEventListener('click', () => openDialog('income-dialog'));
+      button.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        openDialog('income-dialog');
+      });
     });
     document.querySelector('[data-action="open-fixed-rule-dialog"]').addEventListener('click', () => {
       openDialog('fixed-rule-dialog');

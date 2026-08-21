@@ -317,6 +317,8 @@ button { font: inherit; cursor: pointer; }
   padding: 16px;
   background: linear-gradient(135deg, #fbffe6, #fff 74%);
 }
+.income-overview-card[data-action="open-income-dialog"] { cursor: pointer; text-align: left; }
+.income-overview-card[data-action="open-income-dialog"]:focus-visible { outline: 3px solid #7cae8f; outline-offset: 3px; }
 .income-total-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-bottom: 13px; border-bottom: 1px solid #e5e8d8; }
 .income-total-row span { color: #667166; font-size: 0.82rem; }
 .income-total-row strong { font-size: 1.35rem; }
