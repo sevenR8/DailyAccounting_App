@@ -1605,14 +1605,9 @@ async function renderLedger(
             </div>
             <div class="smart-suggestion-list" id="smart-suggestion-list"></div>
           </section>
-          <div class="expense-item-detail-row">
-            <label>項目名稱
-              <input id="expense-item-name" name="itemName" type="text" maxlength="100" placeholder="例如 晚餐" required />
-            </label>
-            <label>細項
-              <textarea id="expense-item-detail" name="itemDetail" maxlength="200" rows="3" placeholder="可逐行輸入細項"></textarea>
-            </label>
-          </div>
+          <label>項目名稱
+            <input id="expense-item-name" name="itemName" type="text" maxlength="100" placeholder="例如 晚餐" required />
+          </label>
           <label>分類
             <select id="expense-category" name="categoryId" required>${categoryOptions}</select>
           </label>
@@ -1762,7 +1757,6 @@ async function renderLedger(
     const template = quickEntryTemplates[Number(button.dataset.quickTemplateIndex)];
     document.querySelector('#expense-amount').value = template.amount;
     document.querySelector('#expense-item-name').value = template.itemName;
-    document.querySelector('#expense-item-detail').value = template.itemDetail ?? '';
     document.querySelector('#expense-category').value = template.categoryId;
     document.querySelector(`input[name="paymentMethod"][value="${template.paymentMethod}"]`).checked = true;
     paymentMethodManuallyEdited = false;
@@ -2124,7 +2118,7 @@ async function renderLedger(
         ledgerId: ledger.id,
         categoryId: formData.get('categoryId'),
         itemName,
-        itemDetail: String(formData.get('itemDetail') ?? '').trim(),
+        itemDetail: '',
         amount,
         paymentMethod: formData.get('paymentMethod'),
         occurredAt: new Date(formData.get('occurredAt')).toISOString(),
@@ -3060,7 +3054,6 @@ async function renderLedger(
       const entry = suggestions[Number(button.dataset.suggestionIndex)];
       document.querySelector('#expense-amount').value = entry.amount;
       document.querySelector('#expense-item-name').value = entry.item_name;
-      document.querySelector('#expense-item-detail').value = entry.item_detail ?? '';
       document.querySelector('#expense-category').value = entry.category_id;
       document.querySelector(`input[name="paymentMethod"][value="${entry.payment_method}"]`).checked = true;
       expenseOccurredAtManuallyEdited = false;
