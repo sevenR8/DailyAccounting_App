@@ -596,23 +596,31 @@ async function loadLedgerViewData(ledger, expenseAdapter, selectedStartsOn = nul
     ]);
     const targetStartsOn = selectedStartsOn ?? currentPeriod.starts_on;
     const isCurrentPeriod = targetStartsOn === currentPeriod.starts_on;
+    const isFuturePeriod = targetStartsOn > currentPeriod.starts_on;
     const storedPeriod = isCurrentPeriod
       ? currentPeriod
       : await expenseAdapter.getAccountingPeriod({ ledgerId: ledger.id, startsOn: targetStartsOn });
     const targetBounds = accountingPeriodFromStart(targetStartsOn);
+    const fallbackPreviousStartsOn = shiftAccountingPeriodStart(targetStartsOn, -1);
+    const previousStoredPeriod = await expenseAdapter.getPreviousAccountingPeriod({
+      ledgerId: ledger.id,
+      startsOn: targetStartsOn,
+    }).catch(() => null);
     const period = storedPeriod ?? {
       ledger_id: ledger.id,
       starts_on: targetBounds.startsOn,
       ends_on: targetBounds.endsOn,
-      salary_amount: 0,
-      previous_card_bill_amount: null,
-      previous_card_bill_zero_confirmed: false,
+      // 未來週期先沿用上一期作為預設，儲存或修改時才建立該期資料。
+      salary_amount: isFuturePeriod
+        ? (previousStoredPeriod?.salary_amount ?? settings?.default_salary_amount ?? 0)
+        : 0,
+      previous_card_bill_amount: isFuturePeriod
+        ? (previousStoredPeriod?.previous_card_bill_amount ?? null)
+        : null,
+      previous_card_bill_zero_confirmed: isFuturePeriod
+        ? Boolean(previousStoredPeriod?.previous_card_bill_zero_confirmed)
+        : false,
     };
-    const fallbackPreviousStartsOn = shiftAccountingPeriodStart(period.starts_on, -1);
-    const previousStoredPeriod = await expenseAdapter.getPreviousAccountingPeriod({
-      ledgerId: ledger.id,
-      startsOn: period.starts_on,
-    }).catch(() => null);
     const previousBounds = accountingPeriodFromStart(fallbackPreviousStartsOn);
     const previousPeriod = previousStoredPeriod ?? {
       starts_on: previousBounds.startsOn,
@@ -643,6 +651,7 @@ async function loadLedgerViewData(ledger, expenseAdapter, selectedStartsOn = nul
       expenseAdvancesSupported: expenseAdapter.expenseAdvancesSupported === true,
       currentStartsOn: currentPeriod.starts_on,
       isCurrentPeriod,
+      isFuturePeriod,
       hasStoredPeriod: Boolean(storedPeriod),
     };
     financialOverview.analysisSettingsSupported = expenseAdapter.expenseAnalysisSettingsSupported === true;
@@ -722,7 +731,9 @@ async function renderLedger(
     )
     : [];
   const isCurrentPeriod = financialOverview?.isCurrentPeriod ?? true;
-  const fixedExpensesForSummary = isCurrentPeriod
+  const isFuturePeriod = financialOverview?.isFuturePeriod ?? false;
+  const isHistoricalPeriod = Boolean(financialOverview && !isCurrentPeriod && !isFuturePeriod);
+  const fixedExpensesForSummary = !isHistoricalPeriod
     ? (financialOverview?.fixedExpenseRules ?? []).filter((rule) => scheduledDateInAccountingPeriod(
       financialOverview.period.starts_on,
       financialOverview.period.ends_on,
@@ -1160,11 +1171,8 @@ async function renderLedger(
     day: 'numeric',
   });
   const periodShortLabel = `${periodShortDate.format(periodStart)}－${periodShortDate.format(new Date(periodEnd.getTime() - 1))}`;
-  const canGoNext = Boolean(
-    financialOverview
-      && nextStartsOn
-      && nextStartsOn <= financialOverview.currentStartsOn,
-  );
+  // 未來週期採預覽模式，可直接往下一期瀏覽；尚未儲存的週期會沿用上一期設定。
+  const canGoNext = Boolean(financialOverview && nextStartsOn);
   const expenseAnalysis = financialOverview ? buildExpenseAnalysis({
     period: {
       startsOn: financialOverview.period.starts_on,
@@ -1311,7 +1319,7 @@ async function renderLedger(
           <strong class="fixed-rule-amount">$${formatAmount(entry.amount)}</strong>
         </div>
       </li>`).join('');
-  const displayedFixedExpenseList = isCurrentPeriod ? fixedExpenseList : historicalFixedExpenseList;
+  const displayedFixedExpenseList = isHistoricalPeriod ? historicalFixedExpenseList : fixedExpenseList;
   const fixedExpenseDialogs = financialOverview?.fixedExpenseRules.map((rule) => `
     <dialog class="finance-dialog fixed-detail-dialog" id="fixed-rule-detail-${escapeHtml(rule.id)}">
       <div class="dialog-content">
@@ -1394,7 +1402,7 @@ async function renderLedger(
             <h2>本期收入</h2>
             <p>${escapeHtml(periodMonthLabel)}・合計 NT$ ${formatAmount(totalIncome)}</p>
           </div>
-          ${isCurrentPeriod
+          ${!isHistoricalPeriod
             ? '<button class="text-action" type="button" data-action="open-income-dialog">更新收入</button>'
             : '<span class="period-read-only">歷史紀錄</span>'}
         </div>
@@ -1410,7 +1418,7 @@ async function renderLedger(
         <button
           class="credit-card-payment-card"
           type="button"
-          ${isCurrentPeriod ? 'data-action="open-income-dialog"' : 'disabled'}
+          ${!isHistoricalPeriod ? 'data-action="open-income-dialog"' : 'disabled'}
           aria-label="更新本月信用卡繳納"
         >
           <span class="credit-card-payment-copy">
@@ -1426,12 +1434,12 @@ async function renderLedger(
             <h2>每期固定開銷</h2>
             <p>${escapeHtml(periodMonthLabel)}・合計 NT$ ${formatAmount(fixedExpenseTotal)}／期</p>
           </div>
-          ${isCurrentPeriod
+          ${!isHistoricalPeriod
             ? '<button class="text-action" type="button" data-action="open-fixed-rule-dialog">＋ 新增</button>'
             : '<span class="period-read-only">實際產生</span>'}
         </div>
-        <ul class="fixed-overview-list" data-reorderable="${isCurrentPeriod && supportsFixedExpenseScheduling ? 'true' : 'false'}">${displayedFixedExpenseList || `<li class="fixed-empty-state">${isCurrentPeriod ? '尚未設定固定開銷，點「＋新增」開始設定。' : '這個週期沒有已產生的固定開銷。'}</li>`}</ul>
-        ${isCurrentPeriod && !supportsFixedExpenseScheduling
+        <ul class="fixed-overview-list" data-reorderable="${!isHistoricalPeriod && supportsFixedExpenseScheduling ? 'true' : 'false'}">${displayedFixedExpenseList || `<li class="fixed-empty-state">${isHistoricalPeriod ? '這個週期沒有已產生的固定開銷。' : '尚未設定固定開銷，點「＋新增」開始設定。'}</li>`}</ul>
+        ${!isHistoricalPeriod && !supportsFixedExpenseScheduling
           ? '<p class="fixed-scheduling-note">執行資料庫升級後，即可拖曳排序並新增每年固定開銷。</p>'
           : '<p class="form-status fixed-order-status" id="fixed-order-status" aria-live="polite"></p>'}
       </section>
@@ -2448,7 +2456,7 @@ async function renderLedger(
     });
   });
 
-  if (financialOverview && isCurrentPeriod) {
+  if (financialOverview && !isHistoricalPeriod) {
     document.querySelectorAll('[data-action="open-income-dialog"]').forEach((button) => {
       button.addEventListener('click', () => openDialog('income-dialog'));
     });

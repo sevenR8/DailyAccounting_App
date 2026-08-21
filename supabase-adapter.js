@@ -543,14 +543,12 @@ export class SupabaseLedgerAdapter {
     previousCardBillAmount,
     previousCardBillZeroConfirmed,
   }) {
-    const parameters = new URLSearchParams({
-      ledger_id: `eq.${ledgerId}`,
-      starts_on: `eq.${startsOn}`,
-    });
-    const response = await this.connection.request(`/rest/v1/accounting_periods?${parameters}`, {
-      method: 'PATCH',
-      headers: { Prefer: 'return=representation' },
+    const response = await this.connection.request('/rest/v1/accounting_periods', {
+      method: 'POST',
+      headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
       body: JSON.stringify({
+        ledger_id: ledgerId,
+        starts_on: startsOn,
         salary_amount: salaryAmount,
         previous_card_bill_amount: previousCardBillAmount,
         previous_card_bill_zero_confirmed: previousCardBillZeroConfirmed,
