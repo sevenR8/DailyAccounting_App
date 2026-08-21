@@ -22,16 +22,17 @@ import {
 } from './expense-analysis.js?v=60';
 import {
   advanceRepaymentsInPeriod,
+  applyAnalysisExpenseAmounts,
   advancesVisibleInPeriod,
   applyPersonalExpenseAmounts,
   decorateExpenseAdvances,
-} from './expense-advance.js?v=56';
+} from './expense-advance.js?v=57';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=73';
+} from './supabase-adapter.js?v=74';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -719,6 +720,7 @@ async function renderLedger(
   });
   const expenseAdvances = decorateExpenseAdvances(financialOverview?.expenseAdvances ?? []);
   const personalAnalysisEntries = applyPersonalExpenseAmounts(analysisEntries, expenseAdvances);
+  const analysisPersonalEntries = applyAnalysisExpenseAmounts(analysisEntries, expenseAdvances);
   const personalPeriodEntries = personalAnalysisEntries.filter((entry) => {
     const occurredAt = new Date(entry.occurred_at);
     return occurredAt >= periodStart && occurredAt < periodEnd;
@@ -791,6 +793,10 @@ async function renderLedger(
     ? new Date(localDateFromISO(previousPeriodForAnalysis.endsOn).getTime() + 86_400_000)
     : periodStart;
   const previousEntries = personalAnalysisEntries.filter((entry) => {
+    const occurredAt = new Date(entry.occurred_at);
+    return occurredAt >= previousPeriodStart && occurredAt < previousPeriodEnd;
+  });
+  const previousAnalysisEntries = analysisPersonalEntries.filter((entry) => {
     const occurredAt = new Date(entry.occurred_at);
     return occurredAt >= previousPeriodStart && occurredAt < previousPeriodEnd;
   });
@@ -1179,8 +1185,8 @@ async function renderLedger(
       endsOn: financialOverview.period.ends_on,
     },
     previousPeriod: previousPeriodForAnalysis,
-    currentEntries: personalPeriodEntries,
-    previousEntries,
+    currentEntries: analysisPersonalEntries,
+    previousEntries: previousAnalysisEntries,
     fixedExpenses: fixedExpensesForSummary,
     categories: ledger.categories,
     merchantGroups: merchantGroupsForAnalysis,

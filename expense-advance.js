@@ -46,6 +46,24 @@ export function applyPersonalExpenseAmounts(entries = [], advances = []) {
   }));
 }
 
+// Analysis uses the amount that the account owner truly bears. A fully
+// advanced expense contributes zero, while a partial advance contributes only
+// the unadvanced remainder, regardless of whether the repayment has arrived.
+export function applyAnalysisExpenseAmounts(entries = [], advances = []) {
+  const advancedByExpense = new Map();
+  advances.forEach((advance) => {
+    advancedByExpense.set(
+      advance.expenseEntryId,
+      (advancedByExpense.get(advance.expenseEntryId) ?? 0) + Number(advance.amount || 0),
+    );
+  });
+  return entries.map((entry) => ({
+    ...entry,
+    amount: Math.max(0, Number(entry.amount) - (advancedByExpense.get(entry.id) ?? 0)),
+    paid_amount: Number(entry.amount),
+  }));
+}
+
 export function advanceRepaymentsInPeriod(advances = [], startsOn, endsOn) {
   if (!startsOn || !endsOn) return [];
   return advances.flatMap((advance) => (advance.repayments ?? [])

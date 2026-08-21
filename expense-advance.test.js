@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   advanceRepaymentsInPeriod,
   advancesVisibleInPeriod,
+  applyAnalysisExpenseAmounts,
   applyPersonalExpenseAmounts,
   decorateExpenseAdvances,
 } from './expense-advance.js';
@@ -31,6 +32,22 @@ test('總開銷只扣除實際收回的代墊款，尚未收回時保留完整�
   assert.equal(outstanding.amount, 798);
   assert.equal(partial.amount, 498);
   assert.equal(settled.amount, 0);
+});
+
+test('分析只計入自己的代墊負擔，全額代墊不會進入分析', () => {
+  const entries = [
+    { id: 'full', amount: 798 },
+    { id: 'half', amount: 9000 },
+    { id: 'none', amount: 300 },
+  ];
+  const [full, half, none] = applyAnalysisExpenseAmounts(entries, [
+    { expenseEntryId: 'full', amount: 798 },
+    { expenseEntryId: 'half', amount: 4500 },
+  ]);
+
+  assert.equal(full.amount, 0);
+  assert.equal(half.amount, 4500);
+  assert.equal(none.amount, 300);
 });
 
 test('待收代墊可區分未收、部分收回與已結清', () => {
