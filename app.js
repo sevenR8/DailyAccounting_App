@@ -31,7 +31,7 @@ import {
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=66';
+} from './supabase-adapter.js?v=67';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -1587,8 +1587,7 @@ async function renderLedger(
           <label>分類
             <select id="expense-category" name="categoryId" required>${categoryOptions}</select>
           </label>
-          <fieldset>
-            <legend>付款方式</legend>
+          <fieldset class="payment-method-fieldset" aria-label="付款方式">
             <label><input type="radio" name="paymentMethod" value="cash" checked /> 現金</label>
             <label><input type="radio" name="paymentMethod" value="credit_card" /> 信用卡</label>
           </fieldset>

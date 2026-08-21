@@ -667,6 +667,24 @@ input[type="datetime-local"] {
 .expense-form fieldset { display: flex; flex-wrap: wrap; gap: 14px; margin: 0; padding: 12px; border: 1px solid #d4dbd3; border-radius: 13px; }
 .expense-form legend { padding: 0 4px; font-weight: 800; }
 .expense-form fieldset label { display: flex; gap: 6px; align-items: center; }
+.expense-form .payment-method-fieldset {
+  grid-column: 1;
+  justify-self: start;
+  width: 50%;
+  min-width: 170px;
+  gap: 8px;
+  padding: 5px 8px;
+  border-color: #aeb9ae;
+  border-radius: 9px;
+}
+.payment-method-fieldset label {
+  gap: 4px;
+  color: #566157;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.payment-method-fieldset input[type="radio"] { margin: 0; }
 
 .smart-suggestions {
   display: grid;
@@ -831,6 +849,8 @@ input[type="datetime-local"] {
   .expense-datetime-control { border-color: #526154; background: #172119; }
   .expense-datetime-control input[type="datetime-local"] { border: 0; background: transparent; }
   .expense-form fieldset { border-color: #3b493d; }
+  .expense-form .payment-method-fieldset { border-color: #526154; }
+  .payment-method-fieldset label { color: #dce5dd; }
   .smart-suggestions-heading strong { color: #a8dbb5; }
   .smart-suggestions-heading small, .smart-suggestion-list small { color: #aeb9af; }
   .smart-suggestion-list button { border-color: #425146; background: #202c22; color: #dce5dd; }
@@ -1030,6 +1050,7 @@ input[type="datetime-local"] {
     padding: 16px;
   }
   .quick-entry-panel { gap: 10px; }
+  .expense-form { gap: 10px; }
   .period-navigation,
   .chart-panel,
   .finance-panel,
@@ -1190,7 +1211,7 @@ input[type="datetime-local"] {
   .chart-panel, .summary-panel, .finance-panel, .quick-entry-panel, .history-panel { padding: 18px; }
   .expense-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .expense-form .expense-datetime-field { grid-column: 1 / -1; }
-  .expense-form fieldset, .expense-form .email-button, .expense-form .form-status { grid-column: 1 / -1; }
+  .expense-form fieldset:not(.payment-method-fieldset), .expense-form .email-button, .expense-form .form-status { grid-column: 1 / -1; }
 }
 
 @media (min-width: 1240px) {
