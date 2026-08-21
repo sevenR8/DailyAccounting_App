@@ -495,9 +495,9 @@ html.is-reordering-fixed-expense .fixed-rule-sortable { -webkit-user-select: non
 .fixed-rule-amount { font-size: 0.9rem; white-space: nowrap; }
 .historical-fixed-row { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 9px; align-items: center; padding: 13px 0; }
 .fixed-empty-state { padding: 18px 0; color: #6d776f; font-size: 0.82rem; line-height: 1.5; }
-.finance-dialog { width: min(92vw, 560px); max-height: 88vh; border: 0; border-radius: 22px; padding: 0; background: white; color: #253229; box-shadow: 0 24px 70px rgb(15 29 19 / 28%); touch-action: pan-y; }
+.finance-dialog { width: min(92vw, 560px); max-height: min(88dvh, 88vh); overflow: hidden; border: 0; border-radius: 22px; padding: 0; background: white; color: #253229; box-shadow: 0 24px 70px rgb(15 29 19 / 28%); touch-action: pan-y; }
 .finance-dialog::backdrop { background: rgb(15 28 18 / 55%); backdrop-filter: blur(3px); }
-.dialog-content { display: grid; gap: 16px; overflow-y: auto; max-height: 88vh; padding: 20px; }
+.dialog-content { display: grid; min-height: 0; gap: 16px; overflow-y: auto; max-height: min(88dvh, 88vh); padding: 20px 20px 28px; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 .dialog-heading { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
 .dialog-heading h2 { margin: 2px 0 0; font-size: 1.25rem; }
 .dialog-close { display: grid; place-items: center; width: 34px; aspect-ratio: 1; border: 0; border-radius: 50%; background: #edf1eb; color: #34443a; font-size: 1.3rem; cursor: pointer; }
@@ -615,9 +615,13 @@ html.is-reordering-fixed-expense .fixed-rule-sortable { -webkit-user-select: non
   font: inherit;
 }
 .expense-edit-form textarea {
-  min-height: 96px;
+  min-height: 128px;
+  max-height: min(42dvh, 320px);
+  overflow-y: auto;
   resize: vertical;
   line-height: 1.5;
+  white-space: pre-wrap;
+  field-sizing: content;
 }
 .edit-form-wide { grid-column: 1 / -1; }
 .dialog-actions {
