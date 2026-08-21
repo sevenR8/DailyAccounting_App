@@ -25,6 +25,40 @@ test('帳本連線以 Window 作為瀏覽器 fetch 的呼叫端', async () => {
   assert.deepEqual(await connection.getUser(), { id: 'user-1' });
 });
 
+test('帳本財務設定可讀取與儲存各國生活費基準，尚未升級時安全回退', async () => {
+  const calls = [];
+  const connection = new SupabaseConnection({
+    supabaseUrl: 'https://example.supabase.co', supabaseAnonKey: 'public-key', accessToken: 'token',
+    fetchImpl: async (url, options = {}) => {
+      calls.push({ url, options });
+      if (calls.length === 1) return { ok: false, json: async () => ({ message: 'column does not exist' }) };
+      if (options.method === 'POST') return response([{
+        ledger_id: 'ledger-1', cycle_start_day: 5, default_salary_amount: 45_000,
+        country_living_cost_baselines: { TW: 37000, JP: 38370, KR: 41553, CN: 19000, US: 128000 },
+      }]);
+      return response([{
+        ledger_id: 'ledger-1', cycle_start_day: 5, default_salary_amount: 45_000,
+      }]);
+    },
+  });
+  const adapter = new SupabaseLedgerAdapter(connection);
+
+  const legacySettings = await adapter.getFinancialSettings('ledger-1');
+  const savedSettings = await adapter.updateFinancialSettings({
+    ledgerId: 'ledger-1', cycleStartDay: 5, defaultSalaryAmount: 45_000,
+    countryLivingCostBaselines: { TW: 37000, JP: 38370, KR: 41553, CN: 19000, US: 128000 },
+  });
+
+  assert.equal(legacySettings.countryBaselinesSupported, false);
+  assert.match(calls[0].url, /country_living_cost_baselines/);
+  assert.doesNotMatch(calls[1].url, /country_living_cost_baselines/);
+  assert.equal(calls[2].options.method, 'POST');
+  assert.deepEqual(JSON.parse(calls[2].options.body).country_living_cost_baselines, {
+    TW: 37000, JP: 38370, KR: 41553, CN: 19000, US: 128000,
+  });
+  assert.equal(savedSettings.country_living_cost_baselines.US, 128000);
+});
+
 test('閒置後憑證失效時會刷新登入憑證並安全重試原本的開銷寫入', async () => {
   const authorizationHeaders = [];
   const tokenRequests = [];

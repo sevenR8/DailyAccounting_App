@@ -26,6 +26,10 @@ const editExpenseAdvancesMigration = await readFile(
   new URL('./supabase-0006-edit-expense-advances.sql', import.meta.url),
   'utf8',
 );
+const countryLivingCostMigration = await readFile(
+  new URL('./supabase-0007-country-living-cost-baselines.sql', import.meta.url),
+  'utf8',
+);
 
 test('資料模型保留開銷的記錄者、可選付款者與同帳本外鍵', () => {
   assert.match(migration, /create table public\.expense_entries/i);
@@ -103,4 +107,13 @@ test('修改代墊時不得低於已收回金額或超過原開銷', () => {
   assert.match(editExpenseAdvancesMigration, /advance_below_repaid/i);
   assert.match(editExpenseAdvancesMigration, /advance_exceeds_expense/i);
   assert.match(editExpenseAdvancesMigration, /grant execute on function public\.update_expense_advance/i);
+});
+
+test('各國生活費基準保存於帳本財務設定並預填使用者指定的五國數值', () => {
+  assert.match(countryLivingCostMigration, /country_living_cost_baselines jsonb not null/i);
+  assert.match(countryLivingCostMigration, /'TW', 37000/i);
+  assert.match(countryLivingCostMigration, /'JP', 38370/i);
+  assert.match(countryLivingCostMigration, /'KR', 41553/i);
+  assert.match(countryLivingCostMigration, /'CN', 19000/i);
+  assert.match(countryLivingCostMigration, /'US', 128000/i);
 });

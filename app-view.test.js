@@ -247,6 +247,17 @@ test('帳本建立者可設定分類分析性質與店家別名', () => {
   assert.match(appSource, /規則只改變分析分組，不會修改原始記帳名稱/);
 });
 
+test('帳本建立者可在設定內同步管理各國每月生活費基準', () => {
+  assert.match(appSource, /id="country-baseline-settings-form"/);
+  assert.match(appSource, /countryLivingCostBaselines/);
+  assert.match(appSource, /country_living_cost_baselines/);
+  assert.match(appSource, /各國生活費基準/);
+  assert.match(appSource, /帳本可設定・單身租房族每月平均/);
+  assert.match(appSource, /你的消費水平為/);
+  assert.match(appSource, /本期完整生活開銷/);
+  assert.match(stylesSource, /\.country-baseline-inputs/);
+});
+
 test('手機所有內頁可向右滑動關閉或返回上一頁', () => {
   assert.match(appSource, /const installSwipeBackGesture = \(\{/);
   assert.match(appSource, /gestureTarget\.addEventListener\('touchstart'/);

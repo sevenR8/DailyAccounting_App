@@ -1,11 +1,25 @@
 const TAIPEI_TIME_ZONE = 'Asia/Taipei';
 
 export const COUNTRY_LIVING_COST_BASELINES = Object.freeze([
-  { code: 'TW', name: '台灣', amount: 30_000 },
-  { code: 'CN', name: '中國', amount: 20_000 },
-  { code: 'JP', name: '日本', amount: 58_000 },
-  { code: 'US', name: '美國', amount: 90_000 },
+  { code: 'TW', name: '台灣', amount: 37_000, sourceLabel: '單身租房族平均花費' },
+  { code: 'JP', name: '日本', amount: 38_370, sourceLabel: '單身租房族平均花費' },
+  { code: 'KR', name: '韓國', amount: 41_553, sourceLabel: '單身租房族平均花費' },
+  { code: 'CN', name: '中國', amount: 19_000, sourceLabel: '單身租房族平均花費' },
+  { code: 'US', name: '美國', amount: 128_000, sourceLabel: '單身租房族平均花費' },
 ]);
+
+export function countryBaselinesFromSettings(storedBaselines) {
+  const values = storedBaselines && typeof storedBaselines === 'object' && !Array.isArray(storedBaselines)
+    ? storedBaselines
+    : {};
+  return COUNTRY_LIVING_COST_BASELINES.map((baseline) => {
+    const amount = Number(values[baseline.code]);
+    return {
+      ...baseline,
+      amount: Number.isInteger(amount) && amount > 0 ? amount : baseline.amount,
+    };
+  });
+}
 
 export const DEFAULT_MERCHANT_GROUPS = Object.freeze([
   { name: '麥當勞', groupType: 'fast_food', aliases: ['麥當勞'] },
@@ -226,6 +240,25 @@ export function buildExpenseAnalysis({
   const projectedCompleteLivingSpend = completed
     ? completeLivingSpend
     : roundAmount((dailyAverageRaw * totalDays) + fixedExpenseTotal);
+  const resolvedCountryBaselines = Array.isArray(countryBaselines) && countryBaselines.length
+    ? countryBaselines
+      .map((country) => ({
+        ...country,
+        amount: Number.isInteger(Number(country.amount)) && Number(country.amount) > 0
+          ? Number(country.amount)
+          : 0,
+      }))
+      .filter((country) => country.code && country.name && country.amount > 0)
+    : COUNTRY_LIVING_COST_BASELINES;
+  const taiwanLivingCostBaseline = resolvedCountryBaselines.find((country) => country.code === 'TW');
+  const taiwanLivingCostRatio = taiwanLivingCostBaseline?.amount
+    ? completeLivingSpend / taiwanLivingCostBaseline.amount
+    : 1;
+  const spendingLevel = taiwanLivingCostRatio <= 0.8
+    ? '節省型'
+    : taiwanLivingCostRatio <= 1.2
+      ? '平均型'
+      : '奢侈型';
 
   const weekdayTotals = new Map(WEEKDAYS.map((weekday) => [weekday.index, 0]));
   nonFixedEntries.forEach((entry) => {
@@ -357,10 +390,11 @@ export function buildExpenseAnalysis({
     },
     weekdayDistribution,
     topItems,
-    countryComparisons: countryBaselines.map((country) => ({
+    countryComparisons: resolvedCountryBaselines.map((country) => ({
       ...country,
-      ratio: country.amount ? (projectedCompleteLivingSpend / country.amount) * 100 : 0,
+      ratio: country.amount ? (completeLivingSpend / country.amount) * 100 : 0,
     })),
+    spendingLevel,
     merchantAnalysis: {
       fastFood,
       convenience,

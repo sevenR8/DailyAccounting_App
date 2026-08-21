@@ -492,26 +492,44 @@ export class SupabaseLedgerAdapter {
   }
 
   async getFinancialSettings(ledgerId) {
-    const parameters = new URLSearchParams({
-      select: 'ledger_id,cycle_start_day,default_salary_amount,quick_entry_enabled',
+    const parametersFor = (select) => new URLSearchParams({
+      select,
       ledger_id: `eq.${ledgerId}`,
       limit: '1',
     });
-    const response = await this.connection.request(`/rest/v1/ledger_financial_settings?${parameters}`);
+    let response = await this.connection.request(`/rest/v1/ledger_financial_settings?${parametersFor(
+      'ledger_id,cycle_start_day,default_salary_amount,quick_entry_enabled,country_living_cost_baselines',
+    )}`);
+    let countryBaselinesSupported = true;
+    if (!response.ok) {
+      response = await this.connection.request(`/rest/v1/ledger_financial_settings?${parametersFor(
+        'ledger_id,cycle_start_day,default_salary_amount,quick_entry_enabled',
+      )}`);
+      countryBaselinesSupported = false;
+    }
     if (!response.ok) throw new Error('無法讀取帳務設定。');
     const [settings] = await response.json();
-    return settings;
+    return settings ? { ...settings, countryBaselinesSupported } : settings;
   }
 
-  async updateFinancialSettings({ ledgerId, cycleStartDay, defaultSalaryAmount }) {
+  async updateFinancialSettings({
+    ledgerId,
+    cycleStartDay,
+    defaultSalaryAmount,
+    countryLivingCostBaselines,
+  }) {
+    const payload = {
+      ledger_id: ledgerId,
+      cycle_start_day: cycleStartDay,
+      default_salary_amount: defaultSalaryAmount,
+    };
+    if (countryLivingCostBaselines !== undefined) {
+      payload.country_living_cost_baselines = countryLivingCostBaselines;
+    }
     const response = await this.connection.request('/rest/v1/ledger_financial_settings', {
       method: 'POST',
       headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
-      body: JSON.stringify({
-        ledger_id: ledgerId,
-        cycle_start_day: cycleStartDay,
-        default_salary_amount: defaultSalaryAmount,
-      }),
+      body: JSON.stringify(payload),
     });
     if (!response.ok) throw new Error('無法儲存帳務設定。');
     const [settings] = await response.json();

@@ -109,7 +109,7 @@ test('店家辨識忽略常見符號與英文大小寫，短英文別名不誤�
   assert.equal(identifyMerchant('book store'), null);
 });
 
-test('各國比例使用推估的完整生活開銷並固定比較四國', () => {
+test('各國比例使用本期已發生的完整生活開銷與帳本可設定的五國基準', () => {
   const analysis = buildExpenseAnalysis({
     period,
     previousPeriod,
@@ -119,13 +119,35 @@ test('各國比例使用推估的完整生活開銷並固定比較四國', () =>
     fixedExpenses: [{ amount: 13_361 }],
   });
 
-  assert.deepEqual(analysis.countryComparisons.map(({ name, amount }) => ({ name, amount })), [
-    { name: '台灣', amount: 30_000 },
-    { name: '中國', amount: 20_000 },
-    { name: '日本', amount: 58_000 },
-    { name: '美國', amount: 90_000 },
+  assert.deepEqual(analysis.countryComparisons.map(({ code, name, amount, sourceLabel }) => ({
+    code, name, amount, sourceLabel,
+  })), [
+    { code: 'TW', name: '台灣', amount: 37_000, sourceLabel: '單身租房族平均花費' },
+    { code: 'JP', name: '日本', amount: 38_370, sourceLabel: '單身租房族平均花費' },
+    { code: 'KR', name: '韓國', amount: 41_553, sourceLabel: '單身租房族平均花費' },
+    { code: 'CN', name: '中國', amount: 19_000, sourceLabel: '單身租房族平均花費' },
+    { code: 'US', name: '美國', amount: 128_000, sourceLabel: '單身租房族平均花費' },
   ]);
-  assert.equal(Math.round(analysis.countryComparisons[0].ratio), 96);
+  assert.equal(Math.round(analysis.countryComparisons[0].ratio), 43);
+  assert.equal(analysis.spendingLevel, '節省型');
+
+  const customized = buildExpenseAnalysis({
+    period,
+    previousPeriod,
+    now: '2026-08-09T12:00:00+08:00',
+    categories,
+    currentEntries: [entry({ amount: 2_510 })],
+    fixedExpenses: [{ amount: 13_361 }],
+    countryBaselines: [
+      { code: 'TW', name: '台灣', amount: 30_000, sourceLabel: '自行輸入' },
+      { code: 'CN', name: '中國', amount: 10_000, sourceLabel: '自行輸入' },
+    ],
+  });
+  assert.deepEqual(customized.countryComparisons.map(({ code, amount }) => ({ code, amount })), [
+    { code: 'TW', amount: 30_000 },
+    { code: 'CN', amount: 10_000 },
+  ]);
+  assert.equal(Math.round(customized.countryComparisons[0].ratio), 53);
 });
 
 test('速食與超商分析輸出次數、平均金額及占日常開銷比例', () => {
