@@ -49,9 +49,11 @@ export function buildExpenseTemplates(entries) {
 
   sortedEntries.forEach((entry) => {
     const itemName = String(entry.item_name ?? '').trim();
+    const itemDetail = String(entry.item_detail ?? '').trim();
     const key = JSON.stringify([
       Number(entry.amount),
       itemName.toLocaleLowerCase('zh-TW'),
+      itemDetail.toLocaleLowerCase('zh-TW'),
       entry.category_id,
       entry.payment_method,
     ]);
@@ -60,6 +62,7 @@ export function buildExpenseTemplates(entries) {
         key,
         amount: Number(entry.amount),
         itemName,
+        itemDetail,
         categoryId: entry.category_id,
         paymentMethod: entry.payment_method,
         usageCount: 0,

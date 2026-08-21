@@ -7,7 +7,7 @@ import {
   findExpenseTemplates,
   groupExpenseEntriesByDay,
   inferFrequentPaymentMethod,
-} from './daily-history.js?v=44';
+} from './daily-history.js?v=45';
 import {
   accountingPeriodFromStart,
   canRebaseEmptyCurrentPeriod,
@@ -33,7 +33,7 @@ import {
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=75';
+} from './supabase-adapter.js?v=76';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -1058,7 +1058,10 @@ async function renderLedger(
                 : `data-action="open-expense-edit" data-dialog-id="expense-edit-${escapeHtml(entry.id)}"`}
               aria-label="${entry.is_fixed ? '複製' : '編輯'}開銷：${escapeHtml(entry.item_name)}"
             >
-              <span class="entry-date"><time datetime="${escapeHtml(entry.occurred_at)}">${escapeHtml(formatEntryTime(entry.occurred_at))}</time></span>
+              <span class="entry-date">
+                <time datetime="${escapeHtml(entry.occurred_at)}">${escapeHtml(formatEntryTime(entry.occurred_at))}</time>
+                ${entry.item_detail ? `<small class="entry-extra-detail">${escapeHtml(entry.item_detail)}</small>` : ''}
+              </span>
               <span class="entry-detail">
                 <strong>$${formatAmount(entry.amount)}・${escapeHtml(entry.item_name)}</strong>
                 <small>${escapeHtml(categoryNames.get(entry.category_id) || '未分類')}・${entry.payment_method === 'cash' ? '現金' : '信用卡'}${advancesByExpense.has(entry.id) ? `・代墊 $${formatAmount(advancesByExpense.get(entry.id).reduce((total, advance) => total + advance.amount, 0))}` : ''}</small>
@@ -1090,6 +1093,9 @@ async function renderLedger(
           <form class="expense-edit-form" data-entry-id="${escapeHtml(entry.id)}">
             <label>項目名稱
               <input name="itemName" type="text" maxlength="100" value="${escapeHtml(entry.item_name)}" required />
+            </label>
+            <label>細項
+              <input name="itemDetail" type="text" maxlength="200" value="${escapeHtml(entry.item_detail ?? '')}" placeholder="例如：大杯拿鐵" />
             </label>
             <label>金額（TWD）
               <input name="amount" type="number" min="1" step="1" inputmode="numeric" value="${entry.amount}" required />
@@ -1598,9 +1604,14 @@ async function renderLedger(
             </div>
             <div class="smart-suggestion-list" id="smart-suggestion-list"></div>
           </section>
-          <label>項目名稱
-            <input id="expense-item-name" name="itemName" type="text" maxlength="100" placeholder="例如 晚餐" required />
-          </label>
+          <div class="expense-item-detail-row">
+            <label>項目名稱
+              <input id="expense-item-name" name="itemName" type="text" maxlength="100" placeholder="例如 晚餐" required />
+            </label>
+            <label>細項
+              <input id="expense-item-detail" name="itemDetail" type="text" maxlength="200" placeholder="例如：大杯拿鐵" />
+            </label>
+          </div>
           <label>分類
             <select id="expense-category" name="categoryId" required>${categoryOptions}</select>
           </label>
@@ -1724,7 +1735,7 @@ async function renderLedger(
       return `
         <button type="button" data-quick-template-index="${templateIndex}">
           <span>
-            <strong>$${formatAmount(template.amount)}・${escapeHtml(template.itemName)}</strong>
+            <strong>$${formatAmount(template.amount)}・${escapeHtml(template.itemName)}${template.itemDetail ? `・${escapeHtml(template.itemDetail)}` : ''}</strong>
             <small>${escapeHtml(categoryNames.get(template.categoryId) || '未分類')}・${paymentLabel}</small>
           </span>
           <em>${usageLabel}</em>
@@ -1750,6 +1761,7 @@ async function renderLedger(
     const template = quickEntryTemplates[Number(button.dataset.quickTemplateIndex)];
     document.querySelector('#expense-amount').value = template.amount;
     document.querySelector('#expense-item-name').value = template.itemName;
+    document.querySelector('#expense-item-detail').value = template.itemDetail ?? '';
     document.querySelector('#expense-category').value = template.categoryId;
     document.querySelector(`input[name="paymentMethod"][value="${template.paymentMethod}"]`).checked = true;
     paymentMethodManuallyEdited = false;
@@ -2111,6 +2123,7 @@ async function renderLedger(
         ledgerId: ledger.id,
         categoryId: formData.get('categoryId'),
         itemName,
+        itemDetail: String(formData.get('itemDetail') ?? '').trim(),
         amount,
         paymentMethod: formData.get('paymentMethod'),
         occurredAt: new Date(formData.get('occurredAt')).toISOString(),
@@ -2551,6 +2564,7 @@ async function renderLedger(
           entryId: form.dataset.entryId,
           categoryId: formData.get('categoryId'),
           itemName,
+          itemDetail: String(formData.get('itemDetail') ?? '').trim(),
           amount,
           paymentMethod: formData.get('paymentMethod'),
           occurredAt: new Date(formData.get('occurredAt')).toISOString(),
@@ -2977,6 +2991,7 @@ async function renderLedger(
       const entry = suggestions[Number(button.dataset.suggestionIndex)];
       document.querySelector('#expense-amount').value = entry.amount;
       document.querySelector('#expense-item-name').value = entry.item_name;
+      document.querySelector('#expense-item-detail').value = entry.item_detail ?? '';
       document.querySelector('#expense-category').value = entry.category_id;
       document.querySelector(`input[name="paymentMethod"][value="${entry.payment_method}"]`).checked = true;
       expenseOccurredAtManuallyEdited = false;

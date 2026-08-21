@@ -365,10 +365,13 @@ test('快速記帳會以目前帳本與分類新增一筆開銷', async () => {
     },
   });
 
-  const entry = await new SupabaseLedgerAdapter(connection).createExpenseEntry({
+  const adapter = new SupabaseLedgerAdapter(connection);
+  adapter.expenseDetailsSupported = true;
+  const entry = await adapter.createExpenseEntry({
     ledgerId: 'ledger-1',
     categoryId: 'category-1',
     itemName: '晚餐',
+    itemDetail: '大杯拿鐵',
     amount: 100,
     paymentMethod: 'cash',
     occurredAt: '2026-08-18T12:00:00.000Z',
@@ -381,6 +384,7 @@ test('快速記帳會以目前帳本與分類新增一筆開銷', async () => {
     ledger_id: 'ledger-1',
     category_id: 'category-1',
     item_name: '晚餐',
+    item_detail: '大杯拿鐵',
     amount: 100,
     payment_method: 'cash',
     occurred_at: '2026-08-18T12:00:00.000Z',
@@ -423,11 +427,14 @@ test('可修改指定的一筆每日開銷', async () => {
     },
   });
 
-  await new SupabaseLedgerAdapter(connection).updateExpenseEntry({
+  const adapter = new SupabaseLedgerAdapter(connection);
+  adapter.expenseDetailsSupported = true;
+  await adapter.updateExpenseEntry({
     ledgerId: 'ledger-1',
     entryId: 'expense-1',
     categoryId: 'category-2',
     itemName: '午餐',
+    itemDetail: '便當加蛋',
     amount: 150,
     paymentMethod: 'credit_card',
     occurredAt: '2026-08-19T04:00:00.000Z',
@@ -437,6 +444,7 @@ test('可修改指定的一筆每日開銷', async () => {
   assert.deepEqual(JSON.parse(calls[0].options.body), {
     category_id: 'category-2',
     item_name: '午餐',
+    item_detail: '便當加蛋',
     amount: 150,
     payment_method: 'credit_card',
     occurred_at: '2026-08-19T04:00:00.000Z',

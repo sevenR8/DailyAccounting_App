@@ -96,6 +96,7 @@ export class SupabaseLedgerAdapter {
     this.fixedExpenseSchedulingSupported = null;
     this.expenseAnalysisSettingsSupported = null;
     this.expenseAdvancesSupported = null;
+    this.expenseDetailsSupported = null;
   }
 
   async findPersonalLedger(userId) {
@@ -212,15 +213,25 @@ export class SupabaseLedgerAdapter {
 
   async listExpenseEntries(ledgerId) {
     const parameters = new URLSearchParams({
-      select: 'id,category_id,item_name,amount,payment_method,occurred_at,is_fixed,created_at',
+      select: 'id,category_id,item_name,item_detail,amount,payment_method,occurred_at,is_fixed,created_at',
       ledger_id: `eq.${ledgerId}`,
       order: 'occurred_at.desc',
       limit: '1000',
     });
-    const response = await this.connection.request(`/rest/v1/expense_entries?${parameters}`);
+    let response = await this.connection.request(`/rest/v1/expense_entries?${parameters}`);
     if (!response.ok) {
-      throw new Error('無法讀取開銷紀錄，請稍後再試一次。');
+      this.expenseDetailsSupported = false;
+      const legacyParameters = new URLSearchParams({
+        select: 'id,category_id,item_name,amount,payment_method,occurred_at,is_fixed,created_at',
+        ledger_id: `eq.${ledgerId}`,
+        order: 'occurred_at.desc',
+        limit: '1000',
+      });
+      response = await this.connection.request(`/rest/v1/expense_entries?${legacyParameters}`);
+    } else {
+      this.expenseDetailsSupported = true;
     }
+    if (!response.ok) throw new Error('無法讀取開銷紀錄，請稍後再試一次。');
     return response.json();
   }
 
@@ -228,7 +239,7 @@ export class SupabaseLedgerAdapter {
     const endExclusive = new Date(`${endsOn}T00:00:00Z`);
     endExclusive.setUTCDate(endExclusive.getUTCDate() + 1);
     const parameters = new URLSearchParams({
-      select: 'id,category_id,item_name,amount,payment_method,occurred_at,is_fixed,created_at',
+      select: 'id,category_id,item_name,item_detail,amount,payment_method,occurred_at,is_fixed,created_at',
       ledger_id: `eq.${ledgerId}`,
       order: 'occurred_at.desc',
     });
@@ -237,7 +248,23 @@ export class SupabaseLedgerAdapter {
       'occurred_at',
       `lt.${endExclusive.toISOString().slice(0, 10)}T00:00:00+08:00`,
     );
-    const response = await this.connection.request(`/rest/v1/expense_entries?${parameters}`);
+    let response = await this.connection.request(`/rest/v1/expense_entries?${parameters}`);
+    if (!response.ok) {
+      this.expenseDetailsSupported = false;
+      const legacyParameters = new URLSearchParams({
+        select: 'id,category_id,item_name,amount,payment_method,occurred_at,is_fixed,created_at',
+        ledger_id: `eq.${ledgerId}`,
+        order: 'occurred_at.desc',
+      });
+      legacyParameters.append('occurred_at', `gte.${startsOn}T00:00:00+08:00`);
+      legacyParameters.append(
+        'occurred_at',
+        `lt.${endExclusive.toISOString().slice(0, 10)}T00:00:00+08:00`,
+      );
+      response = await this.connection.request(`/rest/v1/expense_entries?${legacyParameters}`);
+    } else {
+      this.expenseDetailsSupported = true;
+    }
     if (!response.ok) throw new Error('無法讀取分析期間的開銷紀錄。');
     return response.json();
   }
@@ -246,21 +273,24 @@ export class SupabaseLedgerAdapter {
     ledgerId,
     categoryId,
     itemName,
+    itemDetail = '',
     amount,
     paymentMethod,
     occurredAt,
   }) {
+    const body = {
+      ledger_id: ledgerId,
+      category_id: categoryId,
+      item_name: itemName,
+      amount,
+      payment_method: paymentMethod,
+      occurred_at: occurredAt,
+    };
+    if (this.expenseDetailsSupported === true) body.item_detail = itemDetail || null;
     const response = await this.connection.request('/rest/v1/expense_entries', {
       method: 'POST',
       headers: { Prefer: 'return=representation' },
-      body: JSON.stringify({
-        ledger_id: ledgerId,
-        category_id: categoryId,
-        item_name: itemName,
-        amount,
-        payment_method: paymentMethod,
-        occurred_at: occurredAt,
-      }),
+      body: JSON.stringify(body),
     });
     if (!response.ok) {
       throw new Error('無法儲存這筆開銷，請確認網路後再試一次。');
@@ -274,6 +304,7 @@ export class SupabaseLedgerAdapter {
     entryId,
     categoryId,
     itemName,
+    itemDetail = '',
     amount,
     paymentMethod,
     occurredAt,
@@ -283,16 +314,18 @@ export class SupabaseLedgerAdapter {
       ledger_id: `eq.${ledgerId}`,
       is_fixed: 'eq.false',
     });
+    const body = {
+      category_id: categoryId,
+      item_name: itemName,
+      amount,
+      payment_method: paymentMethod,
+      occurred_at: occurredAt,
+    };
+    if (this.expenseDetailsSupported === true) body.item_detail = itemDetail || null;
     const response = await this.connection.request(`/rest/v1/expense_entries?${parameters}`, {
       method: 'PATCH',
       headers: { Prefer: 'return=representation' },
-      body: JSON.stringify({
-        category_id: categoryId,
-        item_name: itemName,
-        amount,
-        payment_method: paymentMethod,
-        occurred_at: occurredAt,
-      }),
+      body: JSON.stringify(body),
     });
     if (!response.ok) {
       throw new Error('無法更新這筆開銷，請確認網路後再試一次。');

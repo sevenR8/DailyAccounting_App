@@ -79,9 +79,10 @@ test('重複歷史帳目會合併成常用範本並依使用次數與最近使�
 
   assert.equal(templates.length, 2);
   assert.deepEqual(templates[0], {
-    key: '[39,"早餐","food","credit_card"]',
+    key: '[39,"早餐","","food","credit_card"]',
     amount: 39,
     itemName: '早餐',
+    itemDetail: '',
     categoryId: 'food',
     paymentMethod: 'credit_card',
     usageCount: 2,
