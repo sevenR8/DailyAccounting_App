@@ -32,7 +32,7 @@ import {
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=74';
+} from './supabase-adapter.js?v=75';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -2753,6 +2753,7 @@ async function renderLedger(
           expenseAdapter.updateAccountingPeriod({
             ledgerId: ledger.id,
             startsOn: financialOverview.period.starts_on,
+            endsOn: financialOverview.period.ends_on,
             salaryAmount: updatedSalaryAmount,
             previousCardBillAmount: zeroConfirmed || billValue === '' ? null : Number(billValue),
             previousCardBillZeroConfirmed: zeroConfirmed,

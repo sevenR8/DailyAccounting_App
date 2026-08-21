@@ -296,6 +296,38 @@ test('可讀取指定月份既有的帳務週期資料', async () => {
   assert.equal(period.salary_amount, 45000);
 });
 
+test('儲存本期收入與帳單時會帶上帳務週期結束日', async () => {
+  let request;
+  const connection = new SupabaseConnection({
+    supabaseUrl: 'https://example.supabase.co',
+    supabaseAnonKey: 'public-key',
+    accessToken: 'access-token',
+    fetchImpl: async (url, options) => {
+      request = { url, options };
+      return response([{
+        ledger_id: 'ledger-1',
+        starts_on: '2026-08-05',
+        ends_on: '2026-09-04',
+        salary_amount: 45088,
+        previous_card_bill_amount: 6371,
+        previous_card_bill_zero_confirmed: false,
+      }]);
+    },
+  });
+
+  await new SupabaseLedgerAdapter(connection).updateAccountingPeriod({
+    ledgerId: 'ledger-1',
+    startsOn: '2026-08-05',
+    endsOn: '2026-09-04',
+    salaryAmount: 45088,
+    previousCardBillAmount: 6371,
+    previousCardBillZeroConfirmed: false,
+  });
+
+  assert.equal(request.url, 'https://example.supabase.co/rest/v1/accounting_periods');
+  assert.equal(JSON.parse(request.options.body).ends_on, '2026-09-04');
+});
+
 test('Email 登入連結會使用公開匿名金鑰並回到目前網站', async () => {
   const calls = [];
   await sendMagicLink({

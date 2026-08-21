@@ -539,6 +539,7 @@ export class SupabaseLedgerAdapter {
   async updateAccountingPeriod({
     ledgerId,
     startsOn,
+    endsOn,
     salaryAmount,
     previousCardBillAmount,
     previousCardBillZeroConfirmed,
@@ -549,6 +550,7 @@ export class SupabaseLedgerAdapter {
       body: JSON.stringify({
         ledger_id: ledgerId,
         starts_on: startsOn,
+        ends_on: endsOn,
         salary_amount: salaryAmount,
         previous_card_bill_amount: previousCardBillAmount,
         previous_card_bill_zero_confirmed: previousCardBillZeroConfirmed,
