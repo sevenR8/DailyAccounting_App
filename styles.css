@@ -268,12 +268,12 @@ button { font: inherit; cursor: pointer; }
 .chart-legend .empty-chart { display: block; color: #657066; line-height: 1.6; }
 
 .summary-panel { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding: 14px; }
-.summary-panel div { display: grid; gap: 6px; }
+.summary-panel div { display: grid; align-content: start; gap: 6px; }
 .summary-panel span { color: #657066; font-size: 0.8rem; }
 .summary-panel strong { font-size: 1rem; }
 .savings-summary { padding: 10px; border-radius: 14px; background: #e9f4df; }
-.savings-summary-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-width: 0; white-space: nowrap; }
-.savings-rate { position: relative; top: 5px; flex: 0 0 auto; color: #78c98e; font-size: 0.82rem; font-weight: 800; letter-spacing: 0.01em; line-height: 1.1; white-space: nowrap; }
+.savings-summary-label { display: flex; align-items: center; justify-content: flex-start; gap: 10px; min-width: 0; white-space: nowrap; }
+.savings-rate { position: relative; top: 3px; flex: 0 0 auto; color: #78c98e; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.01em; line-height: 1.1; white-space: nowrap; }
 .savings-rate-negative { color: #e87870; }
 
 .quick-entry-panel { display: grid; gap: 16px; }
