@@ -31,7 +31,7 @@ import {
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=68';
+} from './supabase-adapter.js?v=69';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -1929,17 +1929,16 @@ async function renderLedger(
     pullRefreshIndicator.classList.add('is-refreshing');
     pullRefreshIndicator.style.removeProperty('--pull-distance');
     pullRefreshText.textContent = '正在更新最新資料…';
-    const updatePromise = navigator.serviceWorker?.getRegistration
-      ? navigator.serviceWorker.getRegistration().then((registration) => registration?.update())
-      : Promise.resolve();
-    updatePromise.catch(() => null);
     try {
       await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
     } catch (error) {
+      window.alert(`更新失敗：${error.message}`);
+    } finally {
+      // renderLedger replaces the view (and its indicator), so clear the
+      // gesture state explicitly for both the success and failure paths.
       pullRefreshStarted = false;
       pullRefreshIndicator.classList.remove('is-refreshing');
       resetPullRefresh();
-      window.alert(`更新失敗：${error.message}`);
     }
   };
   const cancelPullRefresh = () => {

@@ -1,9 +1,9 @@
-const CACHE_NAME = 'daily-ledger-shell-v68';
+const CACHE_NAME = 'daily-ledger-shell-v69';
 const APP_SHELL = [
   './',
   './index.html',
-  './styles.css?v=68',
-  './app.js?v=68',
+  './styles.css?v=69',
+  './app.js?v=69',
   './amount-expression.js',
   './expense-analysis.js?v=59',
   './expense-advance.js?v=56',
@@ -11,32 +11,31 @@ const APP_SHELL = [
   './financial-summary.js',
   './daily-history.js',
   './accounting-period.js',
-  './supabase-adapter.js?v=68',
+  './supabase-adapter.js?v=69',
   './config.js',
   './manifest.webmanifest',
   './icon.svg',
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
-  self.skipWaiting();
+  // Do not activate until the complete shell is cached. Activating while the
+  // app is still installing can leave the first page load with half the shell.
+  event.waitUntil(
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(APP_SHELL))
+      .then(() => self.skipWaiting()),
+  );
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
     const cacheNames = await caches.keys();
-    const hadPreviousShell = cacheNames.some(
-      (cacheName) => cacheName.startsWith('daily-ledger-shell-') && cacheName !== CACHE_NAME,
-    );
     await Promise.all(
       cacheNames
         .filter((cacheName) => cacheName.startsWith('daily-ledger-shell-') && cacheName !== CACHE_NAME)
         .map((cacheName) => caches.delete(cacheName)),
     );
     await self.clients.claim();
-    if (!hadPreviousShell) return;
-    const openClients = await self.clients.matchAll({ type: 'window' });
-    await Promise.all(openClients.map((client) => client.navigate(client.url).catch(() => null)));
   })());
 });
 
