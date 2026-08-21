@@ -31,7 +31,7 @@ import {
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=71';
+} from './supabase-adapter.js?v=72';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -1848,10 +1848,8 @@ async function renderLedger(
     chartCategoryPopover.hidden = false;
     chartCategoryPopoverOpen = true;
     item.setAttribute('aria-expanded', 'true');
-    const bounds = item.getBoundingClientRect();
-    const popupWidth = Math.min(280, window.innerWidth - 24);
-    chartCategoryPopover.style.left = `${Math.max(12, Math.min(bounds.left, window.innerWidth - popupWidth - 12))}px`;
-    chartCategoryPopover.style.top = `${Math.max(12, Math.min(bounds.bottom + 8, window.innerHeight - 240))}px`;
+    chartCategoryPopover.style.removeProperty('left');
+    chartCategoryPopover.style.removeProperty('top');
   };
   document.querySelectorAll('.chart-legend-item').forEach((item) => {
     item.setAttribute('aria-expanded', 'false');
