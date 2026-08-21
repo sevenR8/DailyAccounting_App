@@ -150,7 +150,7 @@ test('本期摘要以乾淨文字顯示收入、現金、信用卡、總開銷�
   assert.doesNotMatch(summarySource, /非固定/);
   assert.match(summarySource, /本期固定開銷/);
   assert.match(summarySource, /本期可存額/);
-  assert.match(summarySource, /未輸入，按 NT\$ 0 計入本期可存額/);
+  assert.doesNotMatch(summarySource, /待輸入帳單/);
 });
 
 test('本期摘要保留代墊淨額計算但不加入註解小字或特殊金額顏色', () => {
@@ -247,15 +247,11 @@ test('帳本建立者可設定分類分析性質與店家別名', () => {
   assert.match(appSource, /規則只改變分析分組，不會修改原始記帳名稱/);
 });
 
-test('帳本建立者可在設定內同步管理各國每月生活費基準', () => {
-  assert.match(appSource, /id="country-baseline-settings-form"/);
-  assert.match(appSource, /countryLivingCostBaselines/);
-  assert.match(appSource, /country_living_cost_baselines/);
-  assert.match(appSource, /各國生活費基準/);
-  assert.match(appSource, /帳本可設定・單身租房族每月平均/);
-  assert.match(appSource, /你的消費水平為/);
-  assert.match(appSource, /本期完整生活開銷/);
-  assert.match(stylesSource, /\.country-baseline-inputs/);
+test('各國生活費基準不提供帳本設定介面', () => {
+  assert.match(appSource, /countryBaselinesFromSettings/);
+  assert.doesNotMatch(appSource, /id="country-baseline-settings-form"/);
+  assert.doesNotMatch(appSource, /各國生活費基準/);
+  assert.doesNotMatch(stylesSource, /\.country-baseline-inputs/);
 });
 
 test('手機所有內頁可向右滑動關閉或返回上一頁', () => {

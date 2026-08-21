@@ -863,7 +863,6 @@ async function renderLedger(
   const countryBaselines = countryBaselinesFromSettings(
     financialOverview?.settings?.country_living_cost_baselines,
   );
-  const countryBaselinesSupported = financialOverview?.settings?.countryBaselinesSupported !== false;
   const defaultCategoryTags = ledger.categories
     .filter((category) => category.isDefault !== false)
     .map((category) => `<span>${escapeHtml(category.name)}</span>`)
@@ -917,21 +916,6 @@ async function renderLedger(
         <p class="form-status" aria-live="polite"></p>
       </form>
     </li>`).join('');
-  const countryBaselineRows = countryBaselines.map((country) => `
-    <label>
-      <span>${escapeHtml(country.name)}<small>${escapeHtml(country.sourceLabel)}</small></span>
-      <input
-        name="country-${escapeHtml(country.code)}"
-        type="number"
-        min="1"
-        max="10000000"
-        step="1"
-        inputmode="numeric"
-        value="${country.amount}"
-        aria-label="${escapeHtml(country.name)}每月生活費基準"
-        required
-      />
-    </label>`).join('');
   const settingsDialog = `
     <dialog class="finance-dialog settings-dialog" id="ledger-settings-dialog">
       <div class="dialog-content">
@@ -996,19 +980,7 @@ async function renderLedger(
                 <button class="small-primary-button" type="submit">新增店家規則</button>
                 <p class="form-status" aria-live="polite"></p>
               </form>` : '<p class="settings-unavailable">目前先使用內建店家規則；完成資料庫升級後即可自行管理。</p>'}
-          </section>
-          <section class="settings-section">
-            <div>
-              <h3>各國生活費基準</h3>
-              <p>用於七項消費分析的「我的比例」。以新台幣填寫每月數字，所有帳本成員會共用此設定。</p>
-            </div>
-            ${financialOverview && countryBaselinesSupported ? `
-              <form class="country-baseline-settings-form" id="country-baseline-settings-form">
-                <div class="country-baseline-inputs">${countryBaselineRows}</div>
-                <button class="small-primary-button" type="submit">儲存生活費基準</button>
-                <p class="form-status" aria-live="polite"></p>
-              </form>` : '<p class="settings-unavailable">執行 supabase-0007-country-living-cost-baselines.sql 後即可同步管理各國生活費基準。</p>'}
-          </section>` : '<p class="settings-unavailable">只有帳本建立者可以修改分類、店家規則、週期與生活費基準。</p>'}
+          </section>` : '<p class="settings-unavailable">只有帳本建立者可以修改分類、店家規則與週期。</p>'}
       </div>
     </dialog>`;
   const scheduledMonthOptionsFor = (selectedMonth = 1) => Array.from(
@@ -2291,43 +2263,6 @@ async function renderLedger(
     } catch (error) {
       status.textContent = error.message;
     } finally {
-      button.disabled = false;
-    }
-  });
-
-  document.querySelector('#country-baseline-settings-form')?.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    const form = event.currentTarget;
-    const formData = new FormData(form);
-    const countryLivingCostBaselines = countryBaselines.reduce((values, country) => {
-      values[country.code] = Number(formData.get(`country-${country.code}`));
-      return values;
-    }, {});
-    const button = form.querySelector('button[type="submit"]');
-    const status = form.querySelector('.form-status');
-    const invalidCountry = countryBaselines.find((country) => {
-      const amount = countryLivingCostBaselines[country.code];
-      return !Number.isInteger(amount) || amount < 1 || amount > 10_000_000;
-    });
-    if (invalidCountry) {
-      status.textContent = `請為${invalidCountry.name}輸入 1 到 10,000,000 的整數金額。`;
-      return;
-    }
-    button.disabled = true;
-    status.textContent = '正在儲存…';
-    try {
-      const settings = await expenseAdapter.updateFinancialSettings({
-        ledgerId: ledger.id,
-        cycleStartDay: financialOverview.settings.cycle_start_day,
-        defaultSalaryAmount: financialOverview.settings.default_salary_amount,
-        countryLivingCostBaselines,
-      });
-      financialOverview.settings = { ...settings, countryBaselinesSupported: true };
-      await renderLedger(ledger, user, expenseAdapter, activeStartsOn, {
-        viewData: resolvedViewData,
-      });
-    } catch (error) {
-      status.textContent = error.message;
       button.disabled = false;
     }
   });
