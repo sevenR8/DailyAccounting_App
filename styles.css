@@ -255,7 +255,10 @@ button { font: inherit; cursor: pointer; }
   color: #eef5ec;
   box-shadow: 0 14px 36px rgb(0 0 0 / 28%);
 }
-.chart-category-popover > strong { display: block; margin-bottom: 8px; color: #a8dbb5; }
+.chart-category-popover-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; margin-bottom: 12px; }
+.chart-category-popover-heading strong { min-width: 0; color: #a8dbb5; font-size: 1rem; }
+.chart-category-popover-heading strong span { margin-left: 5px; }
+.chart-category-popover-heading > b { flex: 0 0 auto; font-size: 1.08rem; font-weight: 900; white-space: nowrap; }
 .chart-category-popover ul { display: grid; gap: 6px; padding: 0; margin: 0; list-style: none; }
 .chart-category-popover li { display: flex; justify-content: space-between; gap: 14px; font-size: 0.82rem; }
 .chart-category-popover li span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

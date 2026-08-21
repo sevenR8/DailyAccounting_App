@@ -31,7 +31,7 @@ import {
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=72';
+} from './supabase-adapter.js?v=73';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -1842,7 +1842,10 @@ async function renderLedger(
       .filter((entry) => entry.category_id === category.id)
       .sort((left, right) => new Date(right.occurred_at) - new Date(left.occurred_at));
     chartCategoryPopover.innerHTML = `
-      <strong>${escapeHtml(category.name)}</strong>
+      <div class="chart-category-popover-heading">
+        <strong>${escapeHtml(category.name)} <span>${Math.round((category.amount / personalGeneratedExpenseTotal) * 100)}%</span></strong>
+        <b>$${formatAmount(category.amount)}</b>
+      </div>
       <ul>${entries.map((entry) => `
         <li><span>${escapeHtml(entry.item_name)}</span><b>$${formatAmount(entry.amount)}</b></li>`).join('') || '<li class="chart-category-popover-empty">尚無細項</li>'}</ul>`;
     chartCategoryPopover.hidden = false;
