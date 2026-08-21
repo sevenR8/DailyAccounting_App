@@ -672,7 +672,8 @@ input[type="datetime-local"] {
   justify-self: start;
   width: 50%;
   min-width: 170px;
-  gap: 8px;
+  margin-top: -8px;
+  gap: 12px;
   padding: 5px 8px;
   border-color: #aeb9ae;
   border-radius: 9px;
