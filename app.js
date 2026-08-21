@@ -31,7 +31,7 @@ import {
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=67';
+} from './supabase-adapter.js?v=68';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -1574,6 +1574,10 @@ async function renderLedger(
             </span>
             <small class="expense-amount-result" id="expense-amount-result" aria-live="polite"></small>
           </label>
+          <fieldset class="payment-method-fieldset" aria-label="付款方式">
+            <label><input type="radio" name="paymentMethod" value="cash" checked /> 現金</label>
+            <label><input type="radio" name="paymentMethod" value="credit_card" /> 信用卡</label>
+          </fieldset>
           <section class="smart-suggestions" id="smart-suggestions" ${quickEntryTemplates.length ? '' : 'hidden'} aria-label="常用記帳紀錄">
             <div class="smart-suggestions-heading">
               <strong id="smart-suggestions-title">常用紀錄</strong>
@@ -1587,10 +1591,6 @@ async function renderLedger(
           <label>分類
             <select id="expense-category" name="categoryId" required>${categoryOptions}</select>
           </label>
-          <fieldset class="payment-method-fieldset" aria-label="付款方式">
-            <label><input type="radio" name="paymentMethod" value="cash" checked /> 現金</label>
-            <label><input type="radio" name="paymentMethod" value="credit_card" /> 信用卡</label>
-          </fieldset>
           <label class="expense-datetime-field">日期與時間
             <span class="expense-datetime-control">
               <input id="expense-occurred-at" name="occurredAt" type="datetime-local" value="${toDateTimeLocalValue()}" required />
