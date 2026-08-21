@@ -11,7 +11,7 @@ const APP_SHELL = [
   './financial-summary.js',
   './daily-history.js',
   './accounting-period.js',
-  './supabase-adapter.js?v=59',
+  './supabase-adapter.js?v=66',
   './config.js',
   './manifest.webmanifest',
   './icon.svg',
