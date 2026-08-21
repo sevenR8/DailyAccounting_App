@@ -272,6 +272,9 @@ button { font: inherit; cursor: pointer; }
 .summary-panel span { color: #657066; font-size: 0.8rem; }
 .summary-panel strong { font-size: 1rem; }
 .savings-summary { padding: 10px; border-radius: 14px; background: #e9f4df; }
+.savings-summary-label { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; min-width: 0; }
+.savings-rate { flex: 0 0 auto; color: #78c98e; font-size: 0.68rem; font-weight: 800; letter-spacing: 0.01em; white-space: nowrap; }
+.savings-rate-negative { color: #e87870; }
 
 .quick-entry-panel { display: grid; gap: 16px; }
 .history-panel {
@@ -902,6 +905,8 @@ input[type="datetime-local"] {
   .history-limit-control { color: #aeb9af; }
   .history-limit-control select { border-color: #425146; background: #202c22; color: #dce5dd; }
   .summary-panel span, .chart-heading > span, .expense-pie span, .chart-legend li small, .chart-legend .empty-chart, .entry-date small, .entry-detail small { color: #aeb9af; }
+  .savings-rate { color: #9fe8b0; }
+  .savings-rate-negative { color: #f28b82; }
   .savings-summary { background: #263b29; }
   .compact-form, .money-list li { background: #202c22; }
   .finance-overview-heading p, .income-total-row span, .income-breakdown small, .fixed-rule-name small, .fixed-empty-state, .dialog-note, .fixed-detail-list dt { color: #aeb9af; }

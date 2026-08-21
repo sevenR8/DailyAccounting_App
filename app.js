@@ -772,6 +772,11 @@ async function renderLedger(
   const fixedExpenseTotal = calculatedSummary?.fixedExpenseTotal ?? null;
   const totalIncome = calculatedSummary?.totalIncome ?? null;
   const savingsAmount = calculatedSummary?.savingsAmount ?? null;
+  const savingsRate = Number.isFinite(totalIncome) && totalIncome > 0 && Number.isFinite(savingsAmount)
+    ? (savingsAmount / totalIncome) * 100
+    : null;
+  const savingsRateLabel = savingsRate === null ? '' : `儲蓄率 ${savingsRate.toFixed(1)}%`;
+  const savingsRateClass = savingsRate !== null && savingsRate < 0 ? ' savings-rate-negative' : '';
   const activeStartsOn = financialOverview?.period.starts_on;
   const previousStartsOn = activeStartsOn
     ? shiftAccountingPeriodStart(activeStartsOn, -1)
@@ -1545,7 +1550,7 @@ async function renderLedger(
         <div><span>信用卡</span><strong>$${formatAmount(creditCardTotal)}</strong></div>
         <div><span>總開銷</span><strong>$${formatAmount(personalNonFixedExpenseTotal)}</strong></div>
         <div><span>本期固定開銷</span><strong>${fixedExpenseTotal === null ? '—' : `$${formatAmount(fixedExpenseTotal)}`}</strong></div>
-        <div class="savings-summary"><span>本期可存額</span><strong>${savingsAmount === null ? '—' : `$${formatAmount(savingsAmount)}`}</strong></div>
+        <div class="savings-summary"><span class="savings-summary-label">本期可存額${savingsRateLabel ? ` <small class="savings-rate${savingsRateClass}">${savingsRateLabel}</small>` : ''}</span><strong>${savingsAmount === null ? '—' : `$${formatAmount(savingsAmount)}`}</strong></div>
       </section>
       ${analysisPage}
       ${advanceExpenseDialogs}
