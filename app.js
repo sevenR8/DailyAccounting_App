@@ -2488,78 +2488,110 @@ async function renderLedger(
       fixedRuleList.addEventListener('dragstart', (event) => {
         if (event.target.closest('.fixed-rule-sortable')) event.preventDefault();
       });
-      document.querySelectorAll('[data-action="drag-fixed-expense"]').forEach((grip) => {
-        grip.addEventListener('pointerdown', (event) => {
-          if (event.button !== 0 || grip.disabled) return;
-          const draggedRow = grip.closest('.fixed-rule-sortable');
-          const originalOrder = orderedRuleIds();
-          let moved = false;
-          document.getSelection()?.removeAllRanges();
-          document.documentElement.classList.add('is-reordering-fixed-expense');
-          draggedRow.classList.add('is-dragging');
-          grip.setPointerCapture(event.pointerId);
-          event.preventDefault();
+      document.querySelectorAll('.fixed-rule-sortable[data-rule-id]').forEach((draggedRow) => {
+        let startY = null;
+        let isDragging = false;
+        let suppressClick = false;
+        let originalOrder = [];
 
-          const finishDraggingState = () => {
-            draggedRow.classList.remove('is-dragging');
-            document.documentElement.classList.remove('is-reordering-fixed-expense');
-          };
+        const finishDraggingState = () => {
+          draggedRow.classList.remove('is-dragging');
+          document.documentElement.classList.remove('is-reordering-fixed-expense');
+        };
 
-          const moveRow = (moveEvent) => {
-            moved = true;
-            const siblings = Array.from(
-              fixedRuleList.querySelectorAll('.fixed-rule-sortable'),
-            ).filter((row) => row !== draggedRow);
-            const nextRow = siblings.find((row) => {
-              const bounds = row.getBoundingClientRect();
-              return moveEvent.clientY < bounds.top + (bounds.height / 2);
+        const restoreOriginalOrder = () => {
+          originalOrder.forEach((ruleId) => {
+            const row = fixedRuleList.querySelector(`[data-rule-id="${CSS.escape(ruleId)}"]`);
+            if (row) fixedRuleList.append(row);
+          });
+        };
+
+        const moveRow = (moveEvent) => {
+          if (startY === null) return;
+          const verticalDistance = moveEvent.clientY - startY;
+          if (!isDragging && Math.abs(verticalDistance) < 8) return;
+          if (!isDragging) {
+            isDragging = true;
+            suppressClick = true;
+            document.getSelection()?.removeAllRanges();
+            document.documentElement.classList.add('is-reordering-fixed-expense');
+            draggedRow.classList.add('is-dragging');
+          }
+          const siblings = Array.from(
+            fixedRuleList.querySelectorAll('.fixed-rule-sortable'),
+          ).filter((row) => row !== draggedRow);
+          const nextRow = siblings.find((row) => {
+            const bounds = row.getBoundingClientRect();
+            return moveEvent.clientY < bounds.top + (bounds.height / 2);
+          });
+          fixedRuleList.insertBefore(draggedRow, nextRow ?? null);
+          moveEvent.preventDefault();
+        };
+
+        const removePointerListeners = () => {
+          draggedRow.removeEventListener('pointermove', moveRow);
+          draggedRow.removeEventListener('pointerup', finishReorder);
+          draggedRow.removeEventListener('pointercancel', cancelReorder);
+          draggedRow.removeEventListener('lostpointercapture', cancelReorder);
+        };
+
+        const finishReorder = async (finishEvent) => {
+          removePointerListeners();
+          if (draggedRow.hasPointerCapture(finishEvent.pointerId)) {
+            draggedRow.releasePointerCapture(finishEvent.pointerId);
+          }
+          startY = null;
+          const didReorder = isDragging;
+          isDragging = false;
+          finishDraggingState();
+          if (!didReorder) return;
+          const updatedOrder = orderedRuleIds();
+          if (updatedOrder.every((id, index) => id === originalOrder[index])) return;
+
+          fixedOrderStatus.textContent = '正在儲存排列…';
+          try {
+            await expenseAdapter.reorderFixedExpenseRules({
+              ledgerId: ledger.id,
+              ruleIds: updatedOrder,
             });
-            fixedRuleList.insertBefore(draggedRow, nextRow ?? null);
-            moveEvent.preventDefault();
-          };
+            await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
+          } catch (error) {
+            fixedOrderStatus.textContent = error.message;
+            await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
+          }
+        };
 
-          const finishReorder = async (finishEvent) => {
-            grip.removeEventListener('pointermove', moveRow);
-            grip.removeEventListener('pointerup', finishReorder);
-            grip.removeEventListener('pointercancel', cancelReorder);
-            if (grip.hasPointerCapture(finishEvent.pointerId)) {
-              grip.releasePointerCapture(finishEvent.pointerId);
-            }
-            finishDraggingState();
-            const updatedOrder = orderedRuleIds();
-            if (!moved || updatedOrder.every((id, index) => id === originalOrder[index])) return;
+        const cancelReorder = (cancelEvent) => {
+          removePointerListeners();
+          if (draggedRow.hasPointerCapture(cancelEvent.pointerId)) {
+            draggedRow.releasePointerCapture(cancelEvent.pointerId);
+          }
+          startY = null;
+          const didReorder = isDragging;
+          isDragging = false;
+          finishDraggingState();
+          if (didReorder) restoreOriginalOrder();
+        };
 
-            fixedOrderStatus.textContent = '正在儲存排列…';
-            try {
-              await expenseAdapter.reorderFixedExpenseRules({
-                ledgerId: ledger.id,
-                ruleIds: updatedOrder,
-              });
-              await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
-            } catch (error) {
-              fixedOrderStatus.textContent = error.message;
-              await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
-            }
-          };
-
-          const cancelReorder = (cancelEvent) => {
-            grip.removeEventListener('pointermove', moveRow);
-            grip.removeEventListener('pointerup', finishReorder);
-            grip.removeEventListener('pointercancel', cancelReorder);
-            if (grip.hasPointerCapture(cancelEvent.pointerId)) {
-              grip.releasePointerCapture(cancelEvent.pointerId);
-            }
-            finishDraggingState();
-            originalOrder.forEach((ruleId) => {
-              const row = fixedRuleList.querySelector(`[data-rule-id="${CSS.escape(ruleId)}"]`);
-              if (row) fixedRuleList.append(row);
-            });
-          };
-
-          grip.addEventListener('pointermove', moveRow);
-          grip.addEventListener('pointerup', finishReorder);
-          grip.addEventListener('pointercancel', cancelReorder);
+        draggedRow.addEventListener('pointerdown', (event) => {
+          if (event.button !== 0 || event.isPrimary === false) return;
+          startY = event.clientY;
+          isDragging = false;
+          suppressClick = false;
+          originalOrder = orderedRuleIds();
+          draggedRow.setPointerCapture(event.pointerId);
+          draggedRow.addEventListener('pointermove', moveRow);
+          draggedRow.addEventListener('pointerup', finishReorder);
+          draggedRow.addEventListener('pointercancel', cancelReorder);
+          draggedRow.addEventListener('lostpointercapture', cancelReorder);
         });
+
+        draggedRow.addEventListener('click', (event) => {
+          if (!suppressClick) return;
+          event.preventDefault();
+          event.stopPropagation();
+          suppressClick = false;
+        }, true);
       });
     }
 
