@@ -18,6 +18,24 @@ export function accountingPeriodFromStart(startsOn) {
   };
 }
 
+export function canRebaseEmptyCurrentPeriod({ period, entries = [], otherIncomeEntries = [] }) {
+  if (!period) return false;
+  if (Number(period.salary_amount ?? 0) !== 0) return false;
+  if (period.previous_card_bill_amount !== null && period.previous_card_bill_amount !== undefined) {
+    return false;
+  }
+  if (period.previous_card_bill_zero_confirmed === true) return false;
+  if (otherIncomeEntries.length > 0) return false;
+
+  const periodStart = new Date(`${period.starts_on}T00:00:00+08:00`);
+  const periodEnd = new Date(`${period.ends_on}T00:00:00+08:00`);
+  periodEnd.setUTCDate(periodEnd.getUTCDate() + 1);
+  return !entries.some((entry) => {
+    const occurredAt = new Date(entry.occurred_at);
+    return occurredAt >= periodStart && occurredAt < periodEnd;
+  });
+}
+
 export function scheduledDateInAccountingPeriod(
   startsOn,
   endsOn,

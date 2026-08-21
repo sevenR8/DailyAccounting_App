@@ -10,10 +10,11 @@ import {
 } from './daily-history.js?v=44';
 import {
   accountingPeriodFromStart,
+  canRebaseEmptyCurrentPeriod,
   compareExpenseTotals,
   scheduledDateInAccountingPeriod,
   shiftAccountingPeriodStart,
-} from './accounting-period.js?v=44';
+} from './accounting-period.js?v=45';
 import {
   buildExpenseAnalysis,
   countryBaselinesFromSettings,
@@ -2262,7 +2263,17 @@ async function renderLedger(
         cycleStartDay,
         defaultSalaryAmount: financialOverview.settings.default_salary_amount,
       });
+      const shouldRebaseInitialPeriod = cycleStartDay !== financialOverview.settings.cycle_start_day
+        && canRebaseEmptyCurrentPeriod({
+          period: financialOverview.period,
+          entries: resolvedViewData.entries,
+          otherIncomeEntries: financialOverview.otherIncomeEntries,
+        });
       financialOverview.settings = settings;
+      if (shouldRebaseInitialPeriod) {
+        await renderLedger(ledger, user, expenseAdapter, null);
+        return;
+      }
       saveCachedLedgerView({
         ledger,
         user,

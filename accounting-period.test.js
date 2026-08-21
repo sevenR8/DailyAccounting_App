@@ -4,9 +4,38 @@ import test from 'node:test';
 import {
   accountingPeriodFromStart,
   compareExpenseTotals,
+  canRebaseEmptyCurrentPeriod,
   scheduledDateInAccountingPeriod,
   shiftAccountingPeriodStart,
 } from './accounting-period.js';
+
+test('尚未開始記帳的初始週期可以套用新的起始日', () => {
+  assert.equal(canRebaseEmptyCurrentPeriod({
+    period: {
+      starts_on: '2026-08-05',
+      ends_on: '2026-09-04',
+      salary_amount: 0,
+      previous_card_bill_amount: null,
+      previous_card_bill_zero_confirmed: false,
+    },
+    entries: [],
+    otherIncomeEntries: [],
+  }), true);
+});
+
+test('已有開銷的週期不會因修改設定而重新分組', () => {
+  assert.equal(canRebaseEmptyCurrentPeriod({
+    period: {
+      starts_on: '2026-08-05',
+      ends_on: '2026-09-04',
+      salary_amount: 0,
+      previous_card_bill_amount: null,
+      previous_card_bill_zero_confirmed: false,
+    },
+    entries: [{ occurred_at: '2026-08-22T02:00:00.000Z' }],
+    otherIncomeEntries: [],
+  }), false);
+});
 
 test('帳務週期可按月前後移動並維持自訂起始日', () => {
   assert.equal(shiftAccountingPeriodStart('2026-08-05', -1), '2026-07-05');
