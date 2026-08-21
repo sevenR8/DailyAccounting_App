@@ -53,7 +53,6 @@ const installSwipeBackGesture = ({ gestureTarget, animatedSurface, onBack }) => 
     'select',
     'button',
     'a',
-    'dialog[open]',
     '[contenteditable="true"]',
     '[data-action="drag-fixed-expense"]',
   ].join(',');
@@ -90,9 +89,11 @@ const installSwipeBackGesture = ({ gestureTarget, animatedSurface, onBack }) => 
   };
 
   const startSwipeBack = (event) => {
+    const openDialog = event.target.closest('dialog[open]');
     if (
       window.innerWidth >= 900
       || event.touches.length !== 1
+      || (openDialog && openDialog !== gestureTarget)
       || event.target.closest(ignoredStartSelector)
     ) return;
     const touch = event.touches[0];
@@ -2602,7 +2603,7 @@ async function renderLedger(
           beginInteraction(event.touches[0].clientY, 'touch');
           longPressTimer = window.setTimeout(() => {
             if (activeInput === 'touch' && startY !== null) touchDragArmed = true;
-          }, 1500);
+          }, 1000);
         }, { passive: true });
         draggedRow.addEventListener('touchmove', (event) => {
           if (activeInput !== 'touch' || event.touches.length !== 1) return;
