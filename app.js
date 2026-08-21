@@ -1061,7 +1061,6 @@ async function renderLedger(
             >
               <span class="entry-date">
                 <time datetime="${escapeHtml(entry.occurred_at)}">${escapeHtml(formatEntryTime(entry.occurred_at))}</time>
-                ${entry.item_detail ? `<small class="entry-extra-detail">${escapeHtml(entry.item_detail)}</small>` : ''}
               </span>
               <span class="entry-detail">
                 <strong>$${formatAmount(entry.amount)}・${escapeHtml(entry.item_name)}</strong>

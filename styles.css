@@ -878,7 +878,6 @@ input[type="datetime-local"] {
 .entry-date { padding-right: 12px; border-right: 1px solid #d7ded5; color: #304033; }
 .entry-date time { font-size: 0.78rem; font-weight: 800; }
 .entry-date small, .entry-detail small { color: #68736a; font-size: 0.75rem; }
-.entry-extra-detail { white-space: pre-line; overflow-wrap: anywhere; }
 .entry-detail strong { align-self: center; }
 
 @media (prefers-color-scheme: dark) {
