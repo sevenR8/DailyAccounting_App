@@ -1094,9 +1094,6 @@ async function renderLedger(
             <label>項目名稱
               <input name="itemName" type="text" maxlength="100" value="${escapeHtml(entry.item_name)}" required />
             </label>
-            <label>細項
-              <input name="itemDetail" type="text" maxlength="200" value="${escapeHtml(entry.item_detail ?? '')}" placeholder="例如：大杯拿鐵" />
-            </label>
             <label>金額（TWD）
               <input name="amount" type="number" min="1" step="1" inputmode="numeric" value="${entry.amount}" required />
             </label>
@@ -1111,6 +1108,9 @@ async function renderLedger(
             </label>
             <label class="edit-form-wide">日期與時間
               <input name="occurredAt" type="datetime-local" value="${toDateTimeLocalValue(new Date(entry.occurred_at))}" required />
+            </label>
+            <label class="edit-form-wide">細項
+              <textarea name="itemDetail" maxlength="200" rows="4" placeholder="可逐行輸入細項、金額或計算方式">${escapeHtml(entry.item_detail ?? '')}</textarea>
             </label>
             <p class="form-status edit-form-wide" aria-live="polite"></p>
             <div class="dialog-actions edit-form-wide">
@@ -1609,7 +1609,7 @@ async function renderLedger(
               <input id="expense-item-name" name="itemName" type="text" maxlength="100" placeholder="例如 晚餐" required />
             </label>
             <label>細項
-              <input id="expense-item-detail" name="itemDetail" type="text" maxlength="200" placeholder="例如：大杯拿鐵" />
+              <textarea id="expense-item-detail" name="itemDetail" maxlength="200" rows="3" placeholder="可逐行輸入細項"></textarea>
             </label>
           </div>
           <label>分類

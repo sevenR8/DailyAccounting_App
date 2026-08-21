@@ -603,7 +603,8 @@ html.is-reordering-fixed-expense .fixed-rule-sortable { -webkit-user-select: non
 .fixed-edit-form input,
 .fixed-edit-form select,
 .expense-edit-form input,
-.expense-edit-form select {
+.expense-edit-form select,
+.expense-edit-form textarea {
   width: 100%;
   min-width: 0;
   border: 1px solid #cbd4c9;
@@ -612,6 +613,11 @@ html.is-reordering-fixed-expense .fixed-rule-sortable { -webkit-user-select: non
   background: white;
   color: inherit;
   font: inherit;
+}
+.expense-edit-form textarea {
+  min-height: 96px;
+  resize: vertical;
+  line-height: 1.5;
 }
 .edit-form-wide { grid-column: 1 / -1; }
 .dialog-actions {
@@ -640,7 +646,8 @@ html.is-reordering-fixed-expense .fixed-rule-sortable { -webkit-user-select: non
 .expense-item-detail-row > label { display: grid; gap: 7px; min-width: 0; font-weight: 800; }
 .expense-form > label { display: grid; gap: 7px; min-width: 0; font-weight: 800; }
 .expense-form input:not([type="radio"]),
-.expense-form select {
+.expense-form select,
+.expense-form textarea {
   width: 100%;
   border: 1px solid #aeb9ae;
   border-radius: 13px;
@@ -648,6 +655,11 @@ html.is-reordering-fixed-expense .fixed-rule-sortable { -webkit-user-select: non
   background: white;
   color: inherit;
   font: inherit;
+}
+.expense-form textarea {
+  min-height: 76px;
+  resize: vertical;
+  line-height: 1.45;
 }
 .expense-amount-control {
   display: grid;
@@ -870,6 +882,7 @@ input[type="datetime-local"] {
 .entry-date { padding-right: 12px; border-right: 1px solid #d7ded5; color: #304033; }
 .entry-date time { font-size: 0.78rem; font-weight: 800; }
 .entry-date small, .entry-detail small { color: #68736a; font-size: 0.75rem; }
+.entry-extra-detail { white-space: pre-line; overflow-wrap: anywhere; }
 .entry-detail strong { align-self: center; }
 
 @media (prefers-color-scheme: dark) {
@@ -888,7 +901,7 @@ input[type="datetime-local"] {
   .user-menu-popover { border-color: #3b493d; background: #172119; box-shadow: 0 14px 32px rgb(0 0 0 / 30%); }
   .user-menu-popover p { color: #aeb9af; }
   .email-sign-in input { background: #172119; border-color: #526154; }
-  .expense-form input:not([type="radio"]), .expense-form select { background: #172119; border-color: #526154; }
+  .expense-form input:not([type="radio"]), .expense-form select, .expense-form textarea { background: #172119; border-color: #526154; }
   .expense-amount-control button { border-color: #526154; background: #2a412e; color: #dce5dd; }
   .expense-amount-result { color: #a8dbb5; }
   .expense-datetime-control { border-color: #526154; background: #172119; }
@@ -936,7 +949,7 @@ input[type="datetime-local"] {
   .fixed-scheduling-note, .fixed-order-status { color: #a5b0a7; }
   .dialog-close { background: #2a372d; color: #dce5dd; }
   .compact-form input, .inline-money-form input, .fixed-rule-form input, .fixed-rule-form select,
-  .fixed-edit-form input, .fixed-edit-form select, .expense-edit-form input, .expense-edit-form select { border-color: #526154; background: #172119; }
+  .fixed-edit-form input, .fixed-edit-form select, .expense-edit-form input, .expense-edit-form select, .expense-edit-form textarea { border-color: #526154; background: #172119; }
   .secondary-button { background: #2a412e; color: #dce5dd; }
   .fixed-rule-delete { border-color: #875d58; color: #f2aaa0; }
   .fixed-rule-delete:hover { background: #3b2725; }
