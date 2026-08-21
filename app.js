@@ -53,6 +53,7 @@ const installSwipeBackGesture = ({ gestureTarget, animatedSurface, onBack }) => 
     'select',
     'button',
     'a',
+    'dialog[open]',
     '[contenteditable="true"]',
     '[data-action="drag-fixed-expense"]',
   ].join(',');
@@ -2493,6 +2494,7 @@ async function renderLedger(
         let isDragging = false;
         let suppressClick = false;
         let originalOrder = [];
+        let activeInput = null;
 
         const finishDraggingState = () => {
           draggedRow.classList.remove('is-dragging');
@@ -2506,9 +2508,17 @@ async function renderLedger(
           });
         };
 
-        const moveRow = (moveEvent) => {
+        const beginInteraction = (clientY, inputType) => {
+          startY = clientY;
+          isDragging = false;
+          suppressClick = false;
+          activeInput = inputType;
+          originalOrder = orderedRuleIds();
+        };
+
+        const moveRow = (clientY, moveEvent) => {
           if (startY === null) return;
-          const verticalDistance = moveEvent.clientY - startY;
+          const verticalDistance = clientY - startY;
           if (!isDragging && Math.abs(verticalDistance) < 8) return;
           if (!isDragging) {
             isDragging = true;
@@ -2522,26 +2532,16 @@ async function renderLedger(
           ).filter((row) => row !== draggedRow);
           const nextRow = siblings.find((row) => {
             const bounds = row.getBoundingClientRect();
-            return moveEvent.clientY < bounds.top + (bounds.height / 2);
+            return clientY < bounds.top + (bounds.height / 2);
           });
           fixedRuleList.insertBefore(draggedRow, nextRow ?? null);
-          moveEvent.preventDefault();
+          if (moveEvent.cancelable) moveEvent.preventDefault();
         };
 
-        const removePointerListeners = () => {
-          draggedRow.removeEventListener('pointermove', moveRow);
-          draggedRow.removeEventListener('pointerup', finishReorder);
-          draggedRow.removeEventListener('pointercancel', cancelReorder);
-          draggedRow.removeEventListener('lostpointercapture', cancelReorder);
-        };
-
-        const finishReorder = async (finishEvent) => {
-          removePointerListeners();
-          if (draggedRow.hasPointerCapture(finishEvent.pointerId)) {
-            draggedRow.releasePointerCapture(finishEvent.pointerId);
-          }
-          startY = null;
+        const finishReorder = async () => {
           const didReorder = isDragging;
+          startY = null;
+          activeInput = null;
           isDragging = false;
           finishDraggingState();
           if (!didReorder) return;
@@ -2561,30 +2561,46 @@ async function renderLedger(
           }
         };
 
-        const cancelReorder = (cancelEvent) => {
-          removePointerListeners();
-          if (draggedRow.hasPointerCapture(cancelEvent.pointerId)) {
-            draggedRow.releasePointerCapture(cancelEvent.pointerId);
-          }
-          startY = null;
+        const cancelReorder = () => {
           const didReorder = isDragging;
+          startY = null;
+          activeInput = null;
           isDragging = false;
           finishDraggingState();
           if (didReorder) restoreOriginalOrder();
         };
 
         draggedRow.addEventListener('pointerdown', (event) => {
-          if (event.button !== 0 || event.isPrimary === false) return;
-          startY = event.clientY;
-          isDragging = false;
-          suppressClick = false;
-          originalOrder = orderedRuleIds();
-          draggedRow.setPointerCapture(event.pointerId);
-          draggedRow.addEventListener('pointermove', moveRow);
-          draggedRow.addEventListener('pointerup', finishReorder);
-          draggedRow.addEventListener('pointercancel', cancelReorder);
-          draggedRow.addEventListener('lostpointercapture', cancelReorder);
+          if (event.pointerType !== 'mouse' || event.button !== 0) return;
+          beginInteraction(event.clientY, 'mouse');
+          document.addEventListener('mousemove', onMouseMove, { passive: false });
+          document.addEventListener('mouseup', onMouseUp, { once: true });
         });
+
+        const onMouseMove = (event) => {
+          if (activeInput !== 'mouse') return;
+          moveRow(event.clientY, event);
+        };
+        const onMouseUp = () => {
+          if (activeInput !== 'mouse') return;
+          document.removeEventListener('mousemove', onMouseMove);
+          finishReorder();
+        };
+
+        draggedRow.addEventListener('touchstart', (event) => {
+          if (event.touches.length !== 1) return;
+          beginInteraction(event.touches[0].clientY, 'touch');
+        }, { passive: true });
+        draggedRow.addEventListener('touchmove', (event) => {
+          if (activeInput !== 'touch' || event.touches.length !== 1) return;
+          moveRow(event.touches[0].clientY, event);
+        }, { passive: false });
+        draggedRow.addEventListener('touchend', () => {
+          if (activeInput === 'touch') finishReorder();
+        }, { passive: true });
+        draggedRow.addEventListener('touchcancel', () => {
+          if (activeInput === 'touch') cancelReorder();
+        }, { passive: true });
 
         draggedRow.addEventListener('click', (event) => {
           if (!suppressClick) return;
