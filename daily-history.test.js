@@ -6,6 +6,7 @@ import {
   dailyExpenseTotalTone,
   findExpenseTemplates,
   groupExpenseEntriesByDay,
+  inferFrequentPaymentMethod,
 } from './daily-history.js';
 
 test('每日紀錄以台灣日期合併並分別加總現金與信用卡', () => {
@@ -99,4 +100,22 @@ test('輸入金額後只顯示相同金額的多筆常用與最近範本', () =>
     findExpenseTemplates(templates, '39', 5).map((template) => template.itemName),
     ['茶葉蛋', '早餐'],
   );
+});
+
+test('依相同項目或店家歷史習慣推斷主要付款方式', () => {
+  const templates = buildExpenseTemplates([
+    { amount: 39, item_name: '711 早餐', category_id: 'food', payment_method: 'credit_card', occurred_at: '2026-08-17T01:00:00Z' },
+    { amount: 45, item_name: '7-11 午餐', category_id: 'food', payment_method: 'credit_card', occurred_at: '2026-08-18T01:00:00Z' },
+    { amount: 100, item_name: '麥當勞', category_id: 'food', payment_method: 'credit_card', occurred_at: '2026-08-18T02:00:00Z' },
+    { amount: 100, item_name: '麥當勞', category_id: 'food', payment_method: 'cash', occurred_at: '2026-08-19T02:00:00Z' },
+  ]);
+  const identifyMerchant = (itemName) => /7-11|711/.test(itemName)
+    ? { name: '7-11' }
+    : /麥當勞/.test(itemName)
+      ? { name: '麥當勞' }
+      : null;
+
+  assert.equal(inferFrequentPaymentMethod('711', templates, identifyMerchant), 'credit_card');
+  assert.equal(inferFrequentPaymentMethod('麥當勞', templates, identifyMerchant), null);
+  assert.equal(inferFrequentPaymentMethod('沒有歷史的項目', templates, identifyMerchant), null);
 });

@@ -83,6 +83,37 @@ export function findExpenseTemplates(templates, amount, limit = 5) {
   return matchingTemplates.slice(0, limit);
 }
 
+export function inferFrequentPaymentMethod(
+  itemName,
+  templates,
+  identifyMerchant = null,
+) {
+  const normalizedItemName = String(itemName ?? '').trim().toLocaleLowerCase('zh-TW');
+  if (!normalizedItemName) return null;
+
+  const currentMerchant = identifyMerchant?.(itemName) ?? null;
+  const matchingTemplates = templates.filter((template) => {
+    const templateMerchant = identifyMerchant?.(template.itemName) ?? null;
+    if (currentMerchant && templateMerchant) {
+      return currentMerchant.name === templateMerchant.name;
+    }
+    return template.itemName.trim().toLocaleLowerCase('zh-TW') === normalizedItemName;
+  });
+  if (!matchingTemplates.length) return null;
+
+  const methodTotals = matchingTemplates.reduce((totals, template) => {
+    totals[template.paymentMethod] = (totals[template.paymentMethod] ?? 0) + template.usageCount;
+    return totals;
+  }, {});
+  const paymentMethods = Object.entries(methodTotals)
+    .sort((left, right) => right[1] - left[1]);
+  if (!paymentMethods.length || paymentMethods[0][0] === undefined) return null;
+  if (paymentMethods.length > 1 && paymentMethods[0][1] === paymentMethods[1][1]) {
+    return null;
+  }
+  return paymentMethods[0][0];
+}
+
 export function dailyExpenseTotalTone(total) {
   const amount = Number(total);
   if (amount >= 1000) return 'red';

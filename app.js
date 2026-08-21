@@ -6,6 +6,7 @@ import {
   dailyExpenseTotalTone,
   findExpenseTemplates,
   groupExpenseEntriesByDay,
+  inferFrequentPaymentMethod,
 } from './daily-history.js?v=44';
 import {
   accountingPeriodFromStart,
@@ -17,7 +18,8 @@ import {
   buildExpenseAnalysis,
   countryBaselinesFromSettings,
   DEFAULT_MERCHANT_GROUPS,
-} from './expense-analysis.js?v=59';
+  identifyMerchant,
+} from './expense-analysis.js?v=60';
 import {
   advanceRepaymentsInPeriod,
   advancesVisibleInPeriod,
@@ -29,7 +31,7 @@ import {
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=59';
+} from './supabase-adapter.js?v=60';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -1634,12 +1636,47 @@ async function renderLedger(
   const appendAmountPlusButton = document.querySelector('[data-action="append-amount-plus"]');
   const expenseOccurredAtInput = document.querySelector('#expense-occurred-at');
   let expenseOccurredAtManuallyEdited = false;
+  let paymentMethodManuallyEdited = false;
+  let paymentMethodWasAutoSelected = false;
   const syncExpenseOccurredAt = () => {
     if (expenseOccurredAtManuallyEdited) return;
     expenseOccurredAtInput.value = toDateTimeLocalValue();
   };
   expenseOccurredAtInput.addEventListener('input', () => {
     expenseOccurredAtManuallyEdited = true;
+  });
+  const applyFrequentPaymentMethod = () => {
+    if (paymentMethodManuallyEdited && !paymentMethodWasAutoSelected) return;
+    const wasAutoSelected = paymentMethodWasAutoSelected;
+    const inferredPaymentMethod = inferFrequentPaymentMethod(
+      document.querySelector('#expense-item-name').value,
+      quickEntryTemplates,
+      (itemName) => identifyMerchant(itemName, merchantGroupsForAnalysis),
+    );
+    paymentMethodWasAutoSelected = false;
+    if (!inferredPaymentMethod) {
+      if (wasAutoSelected) {
+        document.querySelector('input[name="paymentMethod"][value="cash"]').checked = true;
+      }
+      return;
+    }
+    const paymentMethodInput = document.querySelector(
+      `input[name="paymentMethod"][value="${inferredPaymentMethod}"]`,
+    );
+    if (!paymentMethodInput || paymentMethodInput.checked) return;
+    paymentMethodInput.checked = true;
+    paymentMethodWasAutoSelected = true;
+    document.querySelector('#expense-status').textContent = inferredPaymentMethod === 'credit_card'
+      ? '已依過往習慣選擇信用卡，仍可手動修改。'
+      : '已依過往習慣選擇現金，仍可手動修改。';
+  };
+  const expenseItemNameInput = document.querySelector('#expense-item-name');
+  expenseItemNameInput.addEventListener('input', applyFrequentPaymentMethod);
+  document.querySelectorAll('input[name="paymentMethod"]').forEach((input) => {
+    input.addEventListener('change', () => {
+      paymentMethodManuallyEdited = true;
+      paymentMethodWasAutoSelected = false;
+    });
   });
   const renderSmartSuggestions = () => {
     const calculatedAmount = parseAmountExpression(expenseAmountInput.value);
@@ -1693,6 +1730,8 @@ async function renderLedger(
     document.querySelector('#expense-item-name').value = template.itemName;
     document.querySelector('#expense-category').value = template.categoryId;
     document.querySelector(`input[name="paymentMethod"][value="${template.paymentMethod}"]`).checked = true;
+    paymentMethodManuallyEdited = false;
+    paymentMethodWasAutoSelected = true;
     expenseOccurredAtManuallyEdited = false;
     syncExpenseOccurredAt();
     document.querySelector('#expense-status').textContent = `已帶入「${template.itemName}」，可直接儲存或修改。`;
