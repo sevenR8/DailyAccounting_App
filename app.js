@@ -736,6 +736,7 @@ async function renderLedger(
   const isCurrentPeriod = financialOverview?.isCurrentPeriod ?? true;
   const isFuturePeriod = financialOverview?.isFuturePeriod ?? false;
   const isHistoricalPeriod = Boolean(financialOverview && !isCurrentPeriod && !isFuturePeriod);
+  const canEditPeriodFinance = Boolean(financialOverview && !isFuturePeriod);
   const fixedExpensesForSummary = !isHistoricalPeriod
     ? (financialOverview?.fixedExpenseRules ?? []).filter((rule) => scheduledDateInAccountingPeriod(
       financialOverview.period.starts_on,
@@ -1419,7 +1420,7 @@ async function renderLedger(
         </div>
         <div
           class="income-overview-card"
-          ${!isHistoricalPeriod
+          ${canEditPeriodFinance
             ? 'data-action="open-income-dialog" role="button" tabindex="0" aria-label="編輯本期收入與帳單"'
             : ''}
         >
@@ -1434,7 +1435,7 @@ async function renderLedger(
         <button
           class="credit-card-payment-card"
           type="button"
-          ${!isHistoricalPeriod ? 'data-action="open-income-dialog"' : 'disabled'}
+          ${canEditPeriodFinance ? 'data-action="open-income-dialog"' : 'disabled'}
           aria-label="更新本月信用卡繳納"
         >
           <span class="credit-card-payment-copy">
@@ -2983,6 +2984,74 @@ async function renderLedger(
           window.alert(error.message);
         }
       });
+    });
+  }
+
+  // 歷史週期仍可補登當期收入與上期信用卡帳單；只不允許改動未來預設值。
+  if (financialOverview && isHistoricalPeriod) {
+    document.querySelectorAll('[data-action="open-income-dialog"]').forEach((button) => {
+      button.addEventListener('click', () => openDialog('income-dialog'));
+      button.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' && event.key !== ' ') return;
+        event.preventDefault();
+        openDialog('income-dialog');
+      });
+    });
+
+    const zeroCardBill = document.querySelector('#zero-card-bill');
+    const previousCardBill = document.querySelector('#previous-card-bill');
+    zeroCardBill.addEventListener('change', () => {
+      previousCardBill.disabled = zeroCardBill.checked;
+      if (zeroCardBill.checked) previousCardBill.value = '';
+    });
+
+    document.querySelector('#period-finance-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const formData = new FormData(form);
+      const button = form.querySelector('button[type="submit"]');
+      const status = document.querySelector('#period-finance-status');
+      const zeroConfirmed = formData.get('zeroCardBill') === 'on';
+      const billValue = formData.get('previousCardBillAmount');
+      const updatedSalaryAmount = Number(formData.get('salaryAmount'));
+      button.disabled = true;
+      status.textContent = '正在儲存…';
+      try {
+        await expenseAdapter.updateAccountingPeriod({
+          ledgerId: ledger.id,
+          startsOn: financialOverview.period.starts_on,
+          endsOn: financialOverview.period.ends_on,
+          salaryAmount: updatedSalaryAmount,
+          previousCardBillAmount: zeroConfirmed || billValue === '' ? null : Number(billValue),
+          previousCardBillZeroConfirmed: zeroConfirmed,
+        });
+        await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
+      } catch (error) {
+        status.textContent = error.message;
+        button.disabled = false;
+      }
+    });
+
+    document.querySelector('#other-income-form').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const formData = new FormData(form);
+      const button = form.querySelector('button[type="submit"]');
+      const status = document.querySelector('#other-income-status');
+      button.disabled = true;
+      status.textContent = '正在新增…';
+      try {
+        await expenseAdapter.createOtherIncomeEntry({
+          ledgerId: ledger.id,
+          name: formData.get('name').trim(),
+          amount: Number(formData.get('amount')),
+          receivedAt: new Date().toISOString(),
+        });
+        await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
+      } catch (error) {
+        status.textContent = error.message;
+        button.disabled = false;
+      }
     });
   }
 
