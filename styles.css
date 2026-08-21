@@ -438,10 +438,10 @@ button { font: inherit; cursor: pointer; }
 .credit-card-payment-amount { flex: 0 0 auto; color: #403276; white-space: nowrap; }
 .fixed-overview-list { overflow: hidden; padding: 0 14px; margin: 0; border: 1px solid #e1e5df; border-radius: 20px; background: #fff; list-style: none; }
 .fixed-rule-row + .fixed-rule-row { border-top: 1px solid #edf0eb; }
-.fixed-rule-sortable { display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: center; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: none; transition: opacity 120ms ease, background 120ms ease, box-shadow 120ms ease; }
+.fixed-rule-sortable { display: grid; grid-template-columns: 44px minmax(0, 1fr); align-items: center; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; touch-action: pan-y; transition: opacity 120ms ease, background 120ms ease, box-shadow 120ms ease; }
 .fixed-rule-open { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 9px; align-items: center; width: 100%; border: 0; padding: 13px 0; background: transparent; color: inherit; text-align: left; cursor: pointer; -webkit-user-select: none; user-select: none; }
 .fixed-rule-open:hover .fixed-rule-name strong { color: #29603d; }
-.fixed-rule-grip { display: grid; place-items: center; width: 100%; min-width: 40px; min-height: 52px; border: 0; padding: 0; background: transparent; color: #7d9f96; font: inherit; font-size: 1.08rem; font-weight: 900; cursor: grab; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.fixed-rule-grip { display: grid; place-items: center; width: 100%; min-width: 40px; min-height: 52px; border: 0; padding: 0; background: transparent; color: #7d9f96; font: inherit; font-size: 1.08rem; font-weight: 900; cursor: grab; touch-action: pan-y; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
 .fixed-rule-grip:disabled { color: #bdc9c4; cursor: not-allowed; }
 .fixed-rule-row.is-dragging { z-index: 1; border-radius: 12px; background: #edf7ef; opacity: 0.72; box-shadow: 0 10px 24px rgb(31 70 44 / 18%); }
 .fixed-rule-row.is-dragging .fixed-rule-grip { cursor: grabbing; }
@@ -456,7 +456,7 @@ html.is-reordering-fixed-expense .fixed-rule-sortable { -webkit-user-select: non
 .fixed-rule-amount { font-size: 0.9rem; white-space: nowrap; }
 .historical-fixed-row { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 9px; align-items: center; padding: 13px 0; }
 .fixed-empty-state { padding: 18px 0; color: #6d776f; font-size: 0.82rem; line-height: 1.5; }
-.finance-dialog { width: min(92vw, 560px); max-height: 88vh; border: 0; border-radius: 22px; padding: 0; background: white; color: #253229; box-shadow: 0 24px 70px rgb(15 29 19 / 28%); }
+.finance-dialog { width: min(92vw, 560px); max-height: 88vh; border: 0; border-radius: 22px; padding: 0; background: white; color: #253229; box-shadow: 0 24px 70px rgb(15 29 19 / 28%); touch-action: pan-y; }
 .finance-dialog::backdrop { background: rgb(15 28 18 / 55%); backdrop-filter: blur(3px); }
 .dialog-content { display: grid; gap: 16px; overflow-y: auto; max-height: 88vh; padding: 20px; }
 .dialog-heading { display: flex; justify-content: space-between; align-items: start; gap: 12px; }

@@ -2408,7 +2408,7 @@ async function renderLedger(
       if (event.target === dialog) dialog.close();
     });
     installSwipeBackGesture({
-      gestureTarget: dialog.querySelector('.dialog-content'),
+      gestureTarget: dialog,
       animatedSurface: dialog,
       onBack: () => dialog.close(),
     });
@@ -2495,6 +2495,14 @@ async function renderLedger(
         let suppressClick = false;
         let originalOrder = [];
         let activeInput = null;
+        let longPressTimer = null;
+        let touchDragArmed = false;
+
+        const clearLongPressTimer = () => {
+          if (longPressTimer !== null) window.clearTimeout(longPressTimer);
+          longPressTimer = null;
+          touchDragArmed = false;
+        };
 
         const finishDraggingState = () => {
           draggedRow.classList.remove('is-dragging');
@@ -2539,6 +2547,7 @@ async function renderLedger(
         };
 
         const finishReorder = async () => {
+          clearLongPressTimer();
           const didReorder = isDragging;
           startY = null;
           activeInput = null;
@@ -2562,6 +2571,7 @@ async function renderLedger(
         };
 
         const cancelReorder = () => {
+          clearLongPressTimer();
           const didReorder = isDragging;
           startY = null;
           activeInput = null;
@@ -2590,9 +2600,16 @@ async function renderLedger(
         draggedRow.addEventListener('touchstart', (event) => {
           if (event.touches.length !== 1) return;
           beginInteraction(event.touches[0].clientY, 'touch');
+          longPressTimer = window.setTimeout(() => {
+            if (activeInput === 'touch' && startY !== null) touchDragArmed = true;
+          }, 1500);
         }, { passive: true });
         draggedRow.addEventListener('touchmove', (event) => {
           if (activeInput !== 'touch' || event.touches.length !== 1) return;
+          if (!touchDragArmed) {
+            if (Math.abs(event.touches[0].clientY - startY) >= 8) cancelReorder();
+            return;
+          }
           moveRow(event.touches[0].clientY, event);
         }, { passive: false });
         draggedRow.addEventListener('touchend', () => {
