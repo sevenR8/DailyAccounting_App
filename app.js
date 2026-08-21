@@ -31,7 +31,7 @@ import {
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=70';
+} from './supabase-adapter.js?v=71';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -833,7 +833,7 @@ async function renderLedger(
     ? `conic-gradient(${chartSegments.join(', ')})`
     : 'conic-gradient(#dfe5dc 0 100%)';
   const chartLegend = categoryBreakdown.map((category) => `
-    <li>
+    <li class="chart-legend-item" data-category-id="${escapeHtml(category.id)}" tabindex="0" aria-label="${escapeHtml(category.name)}，$${formatAmount(category.amount)}，長按查看細項">
       <span class="legend-color" style="background:${category.color}"></span>
       <span>${escapeHtml(category.name)}</span>
       <strong>${Math.round((category.amount / personalGeneratedExpenseTotal) * 100)}%</strong>
@@ -1546,7 +1546,10 @@ async function renderLedger(
           <div class="expense-pie" role="img" aria-label="本期分類圓餅圖" style="background:${pieBackground}">
             <div><span>個人開銷</span><strong>$${formatAmount(personalGeneratedExpenseTotal)}</strong></div>
           </div>
-          <ul class="chart-legend">${chartLegend || '<li class="empty-chart">新增開銷後會顯示分類占比</li>'}</ul>
+          <div class="chart-legend-wrap">
+            <ul class="chart-legend">${chartLegend || '<li class="empty-chart">新增開銷後會顯示分類占比</li>'}</ul>
+            <div class="chart-category-popover" id="chart-category-popover" role="dialog" aria-label="分類開銷細項" hidden></div>
+          </div>
         </div>
         <span class="chart-enter-hint">查看七項消費分析 <span aria-hidden="true">›</span></span>
       </section>
@@ -1812,8 +1815,90 @@ async function renderLedger(
   const closeExpenseAnalysis = () => {
     showMobileMainSection('overview', 'period-overview-section');
   };
+  const chartCategoryPopover = document.querySelector('#chart-category-popover');
+  let chartCategoryPopoverOpen = false;
+  let chartCategoryLongPressTimer = null;
+  let chartCategoryLongPressTriggered = false;
+  const closeChartCategoryPopover = () => {
+    if (!chartCategoryPopover) return;
+    chartCategoryPopover.hidden = true;
+    chartCategoryPopover.innerHTML = '';
+    chartCategoryPopoverOpen = false;
+    document.querySelectorAll('.chart-legend-item[aria-expanded="true"]').forEach((item) => {
+      item.setAttribute('aria-expanded', 'false');
+    });
+  };
+  const cancelChartCategoryLongPress = () => {
+    if (chartCategoryLongPressTimer !== null) {
+      window.clearTimeout(chartCategoryLongPressTimer);
+      chartCategoryLongPressTimer = null;
+    }
+  };
+  const openChartCategoryPopover = (item) => {
+    if (!chartCategoryPopover) return;
+    const category = categoryBreakdown.find(({ id }) => id === item.dataset.categoryId);
+    if (!category) return;
+    const entries = personalPeriodEntries
+      .filter((entry) => entry.category_id === category.id)
+      .sort((left, right) => new Date(right.occurred_at) - new Date(left.occurred_at));
+    chartCategoryPopover.innerHTML = `
+      <strong>${escapeHtml(category.name)}</strong>
+      <ul>${entries.map((entry) => `
+        <li><span>${escapeHtml(entry.item_name)}</span><b>$${formatAmount(entry.amount)}</b></li>`).join('') || '<li class="chart-category-popover-empty">尚無細項</li>'}</ul>`;
+    chartCategoryPopover.hidden = false;
+    chartCategoryPopoverOpen = true;
+    item.setAttribute('aria-expanded', 'true');
+    const bounds = item.getBoundingClientRect();
+    const popupWidth = Math.min(280, window.innerWidth - 24);
+    chartCategoryPopover.style.left = `${Math.max(12, Math.min(bounds.left, window.innerWidth - popupWidth - 12))}px`;
+    chartCategoryPopover.style.top = `${Math.max(12, Math.min(bounds.bottom + 8, window.innerHeight - 240))}px`;
+  };
+  document.querySelectorAll('.chart-legend-item').forEach((item) => {
+    item.setAttribute('aria-expanded', 'false');
+    item.addEventListener('pointerdown', (event) => {
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      cancelChartCategoryLongPress();
+      chartCategoryLongPressTriggered = false;
+      chartCategoryLongPressTimer = window.setTimeout(() => {
+        chartCategoryLongPressTriggered = true;
+        openChartCategoryPopover(item);
+      }, 1000);
+    });
+    item.addEventListener('pointermove', (event) => {
+      if (Math.abs(event.movementX) > 8 || Math.abs(event.movementY) > 8) {
+        cancelChartCategoryLongPress();
+      }
+    });
+    item.addEventListener('pointerup', cancelChartCategoryLongPress);
+    item.addEventListener('pointercancel', cancelChartCategoryLongPress);
+    item.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (chartCategoryLongPressTriggered) chartCategoryLongPressTriggered = false;
+    });
+    item.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
+      event.preventDefault();
+      event.stopPropagation();
+      openChartCategoryPopover(item);
+    });
+  });
+  chartCategoryPopover?.addEventListener('click', (event) => event.stopPropagation());
+  const dismissChartCategoryPopover = (event) => {
+    if (!chartCategoryPopoverOpen || chartCategoryPopover?.contains(event.target)) return;
+    if (event.target.closest('.chart-legend-item')) return;
+    closeChartCategoryPopover();
+  };
+  document.addEventListener('click', dismissChartCategoryPopover);
   const chartPanelAction = document.querySelector('[data-action="open-analysis"]');
-  chartPanelAction?.addEventListener('click', showExpenseAnalysis);
+  chartPanelAction?.addEventListener('click', (event) => {
+    if (chartCategoryPopoverOpen) {
+      closeChartCategoryPopover();
+      event.stopPropagation();
+      return;
+    }
+    showExpenseAnalysis();
+  });
   chartPanelAction?.addEventListener('keydown', (event) => {
     if (event.key !== 'Enter' && event.key !== ' ') return;
     event.preventDefault();
@@ -1957,6 +2042,9 @@ async function renderLedger(
     document.removeEventListener('touchcancel', cancelPullRefresh);
     document.removeEventListener('visibilitychange', syncExpenseTimeWhenVisible);
     window.clearInterval(expenseTimeRefreshTimer);
+    cancelChartCategoryLongPress();
+    closeChartCategoryPopover();
+    document.removeEventListener('click', dismissChartCategoryPopover);
     if (mobileNavigationFrame !== null) window.cancelAnimationFrame(mobileNavigationFrame);
     mobileNavigationFrame = null;
   };
