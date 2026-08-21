@@ -22,11 +22,12 @@ export function calculateFinancialSummary({
   const advanceRepaymentTotal = sumAmounts(advanceRepaymentEntries);
   const netCashOutflowTotal = cashTotal - advanceRepaymentTotal;
   const totalIncome = salaryAmount + otherIncomeTotal;
-  const previousCardBillReady = previousCardBillAmount !== null || previousCardBillZeroConfirmed;
-  const savingsAmount = previousCardBillReady
-    ? totalIncome - (previousCardBillAmount ?? 0)
-      - netCashOutflowTotal - cashFixedExpenseTotal
-    : null;
+  // A blank previous bill is intentionally treated as NT$0. Users can still
+  // enter the actual amount later, but the savings summary never gets blocked
+  // behind a separate “confirmed zero” checkbox.
+  const previousCardBillReady = true;
+  const savingsAmount = totalIncome - (previousCardBillAmount ?? 0)
+    - netCashOutflowTotal - cashFixedExpenseTotal;
 
   return {
     cashTotal,

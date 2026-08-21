@@ -30,7 +30,7 @@ test('可存額扣除上期帳單、非固定現金與現金固定開銷，不�
   assert.equal(summary.savingsAmount, 36000);
 });
 
-test('上期信用卡帳單尚未輸入時不顯示可存額', () => {
+test('上期信用卡帳單尚未輸入時按 0 元計算可存額', () => {
   const summary = calculateFinancialSummary({
     periodEntries: [],
     fixedExpenseRules: [],
@@ -40,8 +40,8 @@ test('上期信用卡帳單尚未輸入時不顯示可存額', () => {
     previousCardBillZeroConfirmed: false,
   });
 
-  assert.equal(summary.previousCardBillReady, false);
-  assert.equal(summary.savingsAmount, null);
+  assert.equal(summary.previousCardBillReady, true);
+  assert.equal(summary.savingsAmount, 50000);
 });
 
 test('現金代墊收回後顯示淨現金流出並只扣自己的負擔', () => {

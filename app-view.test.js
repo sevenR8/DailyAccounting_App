@@ -150,7 +150,7 @@ test('本期摘要以乾淨文字顯示收入、現金、信用卡、總開銷�
   assert.doesNotMatch(summarySource, /非固定/);
   assert.match(summarySource, /本期固定開銷/);
   assert.match(summarySource, /本期可存額/);
-  assert.match(summarySource, /待輸入帳單/);
+  assert.match(summarySource, /未輸入，按 NT\$ 0 計入本期可存額/);
 });
 
 test('本期摘要保留代墊淨額計算但不加入註解小字或特殊金額顏色', () => {
@@ -453,7 +453,7 @@ test('本月信用卡繳納顯示在收入與固定開銷之間，並使用上�
   assert.match(appSource, /本月信用卡繳納/);
   assert.match(appSource, /previous_card_bill_amount/);
   assert.match(appSource, /上期實際帳單/);
-  assert.match(appSource, /待輸入上期實際帳單/);
+  assert.match(appSource, /未輸入，按 NT\$ 0 計入本期可存額/);
   assert.match(stylesSource, /\.credit-card-payment-card/);
 });
 

@@ -557,8 +557,6 @@ html.is-reordering-fixed-expense .fixed-rule-sortable { -webkit-user-select: non
   color: inherit;
   font: inherit;
 }
-.compact-form .inline-check { display: flex; grid-column: 1 / -1; align-items: center; gap: 7px; font-weight: 500; }
-.compact-form .inline-check input { width: auto; }
 .compact-form .form-helper { grid-column: 1 / -1; margin: 0; color: #68736a; font-size: 0.75rem; line-height: 1.5; }
 .compact-form .form-status { grid-column: 1 / -1; }
 .small-primary-button,

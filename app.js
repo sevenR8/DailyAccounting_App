@@ -771,7 +771,6 @@ async function renderLedger(
     .reduce((total, entry) => total + entry.amount, 0);
   const fixedExpenseTotal = calculatedSummary?.fixedExpenseTotal ?? null;
   const totalIncome = calculatedSummary?.totalIncome ?? null;
-  const previousCardBillReady = calculatedSummary?.previousCardBillReady ?? false;
   const savingsAmount = calculatedSummary?.savingsAmount ?? null;
   const activeStartsOn = financialOverview?.period.starts_on;
   const previousStartsOn = activeStartsOn
@@ -1211,11 +1210,10 @@ async function renderLedger(
   const previousCardBillAmount = financialOverview?.period.previous_card_bill_zero_confirmed
     ? 0
     : financialOverview?.period.previous_card_bill_amount;
-  const previousCardBillNote = previousCardBillReady
-    ? '上期實際帳單・已納入本期可存額'
-    : isCurrentPeriod
-      ? '待輸入上期實際帳單，點此更新'
-      : '該期未記錄上期實際帳單';
+  const previousCardBillNote = financialOverview?.period.previous_card_bill_amount === null
+    && !financialOverview?.period.previous_card_bill_zero_confirmed
+    ? '未輸入，按 NT$ 0 計入本期可存額'
+    : '上期實際帳單・已納入本期可存額';
   const supportsFixedExpenseScheduling = financialOverview?.fixedExpenseSchedulingSupported === true;
   const otherIncomeList = financialOverview?.otherIncomeEntries.map((income) => `
     <li><span>${escapeHtml(income.name)}</span><strong>+$${formatAmount(income.amount)}</strong></li>`).join('') || '';
@@ -1441,7 +1439,7 @@ async function renderLedger(
             <strong>本月信用卡繳納</strong>
             <small>${escapeHtml(previousCardBillNote)}</small>
           </span>
-          <strong class="credit-card-payment-amount">${previousCardBillReady ? `NT$ ${formatAmount(previousCardBillAmount ?? 0)}` : '待輸入'}</strong>
+          <strong class="credit-card-payment-amount">NT$ ${formatAmount(previousCardBillAmount ?? 0)}</strong>
         </button>
       </section>
       <section class="fixed-overview-section">
@@ -1471,9 +1469,8 @@ async function renderLedger(
               <input name="salaryAmount" type="number" min="0" step="1" inputmode="numeric" value="${financialOverview.period.salary_amount}" required />
             </label>
             <label>上期信用卡帳單
-              <input id="previous-card-bill" name="previousCardBillAmount" type="number" min="0" step="1" inputmode="numeric" value="${financialOverview.period.previous_card_bill_amount ?? ''}" placeholder="尚未輸入" ${financialOverview.period.previous_card_bill_zero_confirmed ? 'disabled' : ''} />
+              <input id="previous-card-bill" name="previousCardBillAmount" type="number" min="0" step="1" inputmode="numeric" value="${financialOverview.period.previous_card_bill_amount ?? ''}" placeholder="未輸入視為 0" />
             </label>
-            <label class="inline-check"><input id="zero-card-bill" name="zeroCardBill" type="checkbox" ${financialOverview.period.previous_card_bill_zero_confirmed ? 'checked' : ''} /> 上期帳單確實為 0 元</label>
             <p class="form-helper">儲存後，本期薪水會自動作為後續週期的預設薪水。</p>
             <button class="small-primary-button" type="submit">儲存本期資料</button>
             <p class="form-status" id="period-finance-status" aria-live="polite"></p>
@@ -1576,7 +1573,7 @@ async function renderLedger(
         <div><span>信用卡</span><strong>$${formatAmount(creditCardTotal)}</strong></div>
         <div><span>總開銷</span><strong>$${formatAmount(personalNonFixedExpenseTotal)}</strong></div>
         <div><span>本期固定開銷</span><strong>${fixedExpenseTotal === null ? '—' : `$${formatAmount(fixedExpenseTotal)}`}</strong></div>
-        <div class="savings-summary"><span>本期可存額</span><strong>${financialOverview && !previousCardBillReady ? '待輸入帳單' : savingsAmount === null ? '—' : `$${formatAmount(savingsAmount)}`}</strong></div>
+        <div class="savings-summary"><span>本期可存額</span><strong>${savingsAmount === null ? '—' : `$${formatAmount(savingsAmount)}`}</strong></div>
       </section>
       ${analysisPage}
       ${advanceExpenseDialogs}
@@ -2757,21 +2754,14 @@ async function renderLedger(
       });
     }
 
-    const zeroCardBill = document.querySelector('#zero-card-bill');
-    const previousCardBill = document.querySelector('#previous-card-bill');
-    zeroCardBill.addEventListener('change', () => {
-      previousCardBill.disabled = zeroCardBill.checked;
-      if (zeroCardBill.checked) previousCardBill.value = '';
-    });
-
     document.querySelector('#period-finance-form').addEventListener('submit', async (event) => {
       event.preventDefault();
       const form = event.currentTarget;
       const formData = new FormData(form);
       const button = form.querySelector('button[type="submit"]');
       const status = document.querySelector('#period-finance-status');
-      const zeroConfirmed = formData.get('zeroCardBill') === 'on';
-      const billValue = formData.get('previousCardBillAmount');
+      const billValue = String(formData.get('previousCardBillAmount') ?? '').trim();
+      const parsedBillValue = billValue === '' ? 0 : Number(billValue);
       const updatedSalaryAmount = Number(formData.get('salaryAmount'));
       button.disabled = true;
       status.textContent = '正在儲存…';
@@ -2782,8 +2772,8 @@ async function renderLedger(
             startsOn: financialOverview.period.starts_on,
             endsOn: financialOverview.period.ends_on,
             salaryAmount: updatedSalaryAmount,
-            previousCardBillAmount: zeroConfirmed || billValue === '' ? null : Number(billValue),
-            previousCardBillZeroConfirmed: zeroConfirmed,
+            previousCardBillAmount: parsedBillValue,
+            previousCardBillZeroConfirmed: parsedBillValue === 0,
           }),
           expenseAdapter.updateFinancialSettings({
             ledgerId: ledger.id,
@@ -2991,21 +2981,14 @@ async function renderLedger(
       });
     });
 
-    const zeroCardBill = document.querySelector('#zero-card-bill');
-    const previousCardBill = document.querySelector('#previous-card-bill');
-    zeroCardBill.addEventListener('change', () => {
-      previousCardBill.disabled = zeroCardBill.checked;
-      if (zeroCardBill.checked) previousCardBill.value = '';
-    });
-
     document.querySelector('#period-finance-form').addEventListener('submit', async (event) => {
       event.preventDefault();
       const form = event.currentTarget;
       const formData = new FormData(form);
       const button = form.querySelector('button[type="submit"]');
       const status = document.querySelector('#period-finance-status');
-      const zeroConfirmed = formData.get('zeroCardBill') === 'on';
-      const billValue = formData.get('previousCardBillAmount');
+      const billValue = String(formData.get('previousCardBillAmount') ?? '').trim();
+      const parsedBillValue = billValue === '' ? 0 : Number(billValue);
       const updatedSalaryAmount = Number(formData.get('salaryAmount'));
       button.disabled = true;
       status.textContent = '正在儲存…';
@@ -3015,8 +2998,8 @@ async function renderLedger(
           startsOn: financialOverview.period.starts_on,
           endsOn: financialOverview.period.ends_on,
           salaryAmount: updatedSalaryAmount,
-          previousCardBillAmount: zeroConfirmed || billValue === '' ? null : Number(billValue),
-          previousCardBillZeroConfirmed: zeroConfirmed,
+          previousCardBillAmount: parsedBillValue,
+          previousCardBillZeroConfirmed: parsedBillValue === 0,
         });
         await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
       } catch (error) {
