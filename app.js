@@ -608,7 +608,17 @@ async function loadLedgerViewData(ledger, expenseAdapter, selectedStartsOn = nul
       expenseAdapter.getFinancialSettings(ledger.id),
       expenseAdapter.listFixedExpenseRules(ledger.id),
     ]);
-    const targetStartsOn = selectedStartsOn ?? currentPeriod.starts_on;
+    const selectedDay = selectedStartsOn ? Number(String(selectedStartsOn).slice(-2)) : null;
+    const selectedPeriodIsStaleCurrent = Boolean(
+      selectedStartsOn
+      && selectedStartsOn !== currentPeriod.starts_on
+      && selectedDay !== settings.cycle_start_day
+      && selectedStartsOn >= currentPeriod.starts_on
+      && selectedStartsOn <= currentPeriod.ends_on,
+    );
+    const targetStartsOn = selectedPeriodIsStaleCurrent
+      ? currentPeriod.starts_on
+      : (selectedStartsOn ?? currentPeriod.starts_on);
     const isCurrentPeriod = targetStartsOn === currentPeriod.starts_on;
     const isFuturePeriod = targetStartsOn > currentPeriod.starts_on;
     const storedPeriod = isCurrentPeriod

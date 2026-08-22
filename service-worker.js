@@ -1,9 +1,9 @@
-const CACHE_NAME = 'daily-ledger-shell-v96';
+const CACHE_NAME = 'daily-ledger-shell-v97';
 const APP_SHELL = [
   './',
   './index.html',
-  './styles.css?v=96',
-  './app.js?v=96',
+  './styles.css?v=97',
+  './app.js?v=97',
   './amount-expression.js?v=45',
   './expense-analysis.js?v=59',
   './expense-advance.js?v=57',
