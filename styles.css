@@ -585,6 +585,7 @@ html.is-reordering-fixed-expense .fixed-rule-sortable { -webkit-user-select: non
 .fixed-rule-form label input { width: 64px; }
 [data-annual-month][hidden] { display: none; }
 .fixed-scheduling-note, .fixed-order-status { min-height: 1.1em; margin: 8px 3px 0; color: #667268; font-size: 0.72rem; }
+.fixed-credit-card-total { margin: 10px 3px 0; color: #6f8977; font-size: 0.78rem; font-weight: 800; }
 .fixed-edit-form,
 .expense-edit-form {
   display: grid;
@@ -937,6 +938,7 @@ input[type="datetime-local"] {
   .fixed-rule-open:hover .fixed-rule-name strong { color: #a8dbb5; }
   .fixed-rule-row.is-dragging { background: #243628; box-shadow: 0 10px 24px rgb(0 0 0 / 28%); }
   .fixed-scheduling-note, .fixed-order-status { color: #a5b0a7; }
+  .fixed-credit-card-total { color: #a8dbb5; }
   .dialog-close { background: #2a372d; color: #dce5dd; }
   .compact-form input, .inline-money-form input, .fixed-rule-form input, .fixed-rule-form select,
   .fixed-edit-form input, .fixed-edit-form select, .expense-edit-form input, .expense-edit-form select, .expense-edit-form textarea { border-color: #526154; background: #172119; }

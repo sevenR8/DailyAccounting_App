@@ -772,6 +772,9 @@ async function renderLedger(
   const personalGeneratedExpenseTotal = personalPeriodEntries
     .reduce((total, entry) => total + entry.amount, 0);
   const fixedExpenseTotal = calculatedSummary?.fixedExpenseTotal ?? null;
+  const fixedCreditCardExpenseTotal = fixedExpensesForSummary
+    .filter((entry) => entry.payment_method === 'credit_card')
+    .reduce((total, entry) => total + Number(entry.amount || 0), 0);
   const totalIncome = calculatedSummary?.totalIncome ?? null;
   const savingsAmount = calculatedSummary?.savingsAmount ?? null;
   const savingsRate = Number.isFinite(totalIncome) && totalIncome > 0 && Number.isFinite(savingsAmount)
@@ -1432,6 +1435,7 @@ async function renderLedger(
             : '<span class="period-read-only">實際產生</span>'}
         </div>
         <ul class="fixed-overview-list" data-reorderable="${!isHistoricalPeriod && supportsFixedExpenseScheduling ? 'true' : 'false'}">${displayedFixedExpenseList || `<li class="fixed-empty-state">${isHistoricalPeriod ? '這個週期沒有已產生的固定開銷。' : '尚未設定固定開銷，點「＋新增」開始設定。'}</li>`}</ul>
+        <p class="fixed-credit-card-total">本期固定開銷信用卡消費：NT$ ${formatAmount(fixedCreditCardExpenseTotal)}</p>
         ${!isHistoricalPeriod && !supportsFixedExpenseScheduling
           ? '<p class="fixed-scheduling-note">執行資料庫升級後，即可拖曳排序並新增每年固定開銷。</p>'
           : '<p class="form-status fixed-order-status" id="fixed-order-status" aria-live="polite"></p>'}
