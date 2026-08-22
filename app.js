@@ -2766,7 +2766,7 @@ async function renderLedger(
             startsOn: financialOverview.period.starts_on,
             endsOn: financialOverview.period.ends_on,
             salaryAmount: updatedSalaryAmount,
-            previousCardBillAmount: parsedBillValue,
+            previousCardBillAmount: parsedBillValue === 0 ? null : parsedBillValue,
             previousCardBillZeroConfirmed: parsedBillValue === 0,
           }),
           expenseAdapter.updateFinancialSettings({
@@ -3003,7 +3003,7 @@ async function renderLedger(
           startsOn: financialOverview.period.starts_on,
           endsOn: financialOverview.period.ends_on,
           salaryAmount: updatedSalaryAmount,
-          previousCardBillAmount: parsedBillValue,
+          previousCardBillAmount: parsedBillValue === 0 ? null : parsedBillValue,
           previousCardBillZeroConfirmed: parsedBillValue === 0,
         });
         await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
