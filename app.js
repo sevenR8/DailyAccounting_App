@@ -10,7 +10,6 @@ import {
 } from './daily-history.js?v=45';
 import {
   accountingPeriodFromStart,
-  canRebaseEmptyCurrentPeriod,
   compareExpenseTotals,
   scheduledDateInAccountingPeriod,
   shiftAccountingPeriodStart,
@@ -33,7 +32,7 @@ import {
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=76';
+} from './supabase-adapter.js?v=77';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -2261,20 +2260,40 @@ async function renderLedger(
     button.disabled = true;
     status.textContent = '正在儲存…';
     try {
+      const previousCycleStartDay = financialOverview.settings.cycle_start_day;
       const settings = await expenseAdapter.updateFinancialSettings({
         ledgerId: ledger.id,
         cycleStartDay,
         defaultSalaryAmount: financialOverview.settings.default_salary_amount,
       });
-      const shouldRebaseInitialPeriod = cycleStartDay !== financialOverview.settings.cycle_start_day
-        && canRebaseEmptyCurrentPeriod({
-          period: financialOverview.period,
-          entries: resolvedViewData.entries,
-          otherIncomeEntries: financialOverview.otherIncomeEntries,
-        });
       financialOverview.settings = settings;
-      if (shouldRebaseInitialPeriod) {
-        await renderLedger(ledger, user, expenseAdapter, null);
+      const shouldRebaseCurrentPeriod = financialOverview.isCurrentPeriod
+        && cycleStartDay !== previousCycleStartDay;
+      if (shouldRebaseCurrentPeriod) {
+        const nextPeriod = currentAccountingPeriod(new Date(), cycleStartDay);
+        const nextStartsOn = taiwanDateISO(nextPeriod.start);
+        const nextEndsOn = taiwanDateISO(new Date(nextPeriod.end.getTime() - 86_400_000));
+        if (nextStartsOn !== financialOverview.period.starts_on) {
+          await expenseAdapter.updateAccountingPeriod({
+            ledgerId: ledger.id,
+            startsOn: nextStartsOn,
+            endsOn: nextEndsOn,
+            salaryAmount: financialOverview.period.salary_amount,
+            previousCardBillAmount: financialOverview.period.previous_card_bill_amount,
+            previousCardBillZeroConfirmed: financialOverview.period.previous_card_bill_zero_confirmed,
+          });
+          await expenseAdapter.reassignFixedExpensePeriod({
+            ledgerId: ledger.id,
+            fromStartsOn: financialOverview.period.starts_on,
+            toStartsOn: nextStartsOn,
+            toEndsOn: nextEndsOn,
+          });
+          await expenseAdapter.deleteAccountingPeriod({
+            ledgerId: ledger.id,
+            startsOn: financialOverview.period.starts_on,
+          });
+        }
+        await renderLedger(ledger, user, expenseAdapter, nextStartsOn);
         return;
       }
       saveCachedLedgerView({

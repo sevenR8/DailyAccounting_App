@@ -594,6 +594,36 @@ export class SupabaseLedgerAdapter {
     return period;
   }
 
+  async deleteAccountingPeriod({ ledgerId, startsOn }) {
+    const parameters = new URLSearchParams({
+      ledger_id: `eq.${ledgerId}`,
+      starts_on: `eq.${startsOn}`,
+    });
+    const response = await this.connection.request(`/rest/v1/accounting_periods?${parameters}`, {
+      method: 'DELETE',
+      headers: { Prefer: 'return=minimal' },
+    });
+    if (!response.ok) throw new Error('無法更新帳務週期，請稍後再試一次。');
+  }
+
+  async reassignFixedExpensePeriod({ ledgerId, fromStartsOn, toStartsOn, toEndsOn }) {
+    const endExclusive = new Date(`${toEndsOn}T00:00:00Z`);
+    endExclusive.setUTCDate(endExclusive.getUTCDate() + 1);
+    const parameters = new URLSearchParams({
+      ledger_id: `eq.${ledgerId}`,
+      fixed_expense_rule_id: 'not.is.null',
+      accounting_period_start: `eq.${fromStartsOn}`,
+      occurred_at: `gte.${toStartsOn}T00:00:00+08:00`,
+    });
+    parameters.append('occurred_at', `lt.${endExclusive.toISOString().slice(0, 10)}T00:00:00+08:00`);
+    const response = await this.connection.request(`/rest/v1/expense_entries?${parameters}`, {
+      method: 'PATCH',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({ accounting_period_start: toStartsOn }),
+    });
+    if (!response.ok) throw new Error('無法整理固定開銷週期，請稍後再試一次。');
+  }
+
   async listOtherIncomeEntries({ ledgerId, startsOn, endsOn }) {
     const endExclusive = new Date(`${endsOn}T00:00:00Z`);
     endExclusive.setUTCDate(endExclusive.getUTCDate() + 1);
