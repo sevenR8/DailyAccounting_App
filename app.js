@@ -57,6 +57,8 @@ const installSwipeBackGesture = ({ gestureTarget, animatedSurface, onBack }) => 
     'a',
     '[contenteditable="true"]',
     '[data-action="drag-fixed-expense"]',
+    '.analysis-table-scroll',
+    '[data-horizontal-scroll]',
   ].join(',');
   let startX = null;
   let startY = null;
