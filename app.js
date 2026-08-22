@@ -1,6 +1,6 @@
 import { LedgerModule } from './ledger-module.js?v=44';
 import { calculateFinancialSummary } from './financial-summary.js?v=44';
-import { parseAmountExpression } from './amount-expression.js?v=44';
+import { parseAmountExpression, parseSignedAmountExpression } from './amount-expression.js?v=45';
 import {
   buildExpenseTemplates,
   dailyExpenseTotalTone,
@@ -1445,10 +1445,10 @@ async function renderLedger(
           </div>
           <form class="compact-form period-finance-form" id="period-finance-form">
             <label>本期薪水
-              <input name="salaryAmount" type="number" min="0" step="1" inputmode="numeric" value="${financialOverview.period.salary_amount}" required />
+              <input name="salaryAmount" type="text" inputmode="text" pattern="[0-9+＋\\-－\\s]+" value="${financialOverview.period.salary_amount}" required />
             </label>
             <label>上期信用卡帳單
-              <input id="previous-card-bill" name="previousCardBillAmount" type="number" min="0" step="1" inputmode="numeric" value="${financialOverview.period.previous_card_bill_amount ?? ''}" placeholder="未輸入視為 0" />
+              <input id="previous-card-bill" name="previousCardBillAmount" type="text" inputmode="text" pattern="[0-9+＋\\-－\\s]+" value="${financialOverview.period.previous_card_bill_amount ?? ''}" placeholder="未輸入視為 0" />
             </label>
             <p class="form-helper">儲存後，本期薪水會自動作為後續週期的預設薪水。</p>
             <button class="small-primary-button" type="submit">儲存本期資料</button>
@@ -1459,7 +1459,7 @@ async function renderLedger(
             <ul class="money-list">${otherIncomeList || '<li class="empty-money-list">本期尚無其他收入</li>'}</ul>
             <form class="inline-money-form" id="other-income-form">
               <input name="name" type="text" maxlength="100" placeholder="收入名稱" aria-label="其他收入名稱" required />
-              <input name="amount" type="number" min="1" step="1" inputmode="numeric" placeholder="金額" aria-label="其他收入金額" required />
+              <input name="amount" type="text" inputmode="text" pattern="[0-9+＋\\-－\\s]+" placeholder="金額或算式" aria-label="其他收入金額" required />
               <button class="secondary-button" type="submit">新增</button>
               <p class="form-status" id="other-income-status" aria-live="polite"></p>
             </form>
@@ -2703,8 +2703,14 @@ async function renderLedger(
       const button = form.querySelector('button[type="submit"]');
       const status = document.querySelector('#period-finance-status');
       const billValue = String(formData.get('previousCardBillAmount') ?? '').trim();
-      const parsedBillValue = billValue === '' ? 0 : Number(billValue);
-      const updatedSalaryAmount = Number(formData.get('salaryAmount'));
+      const parsedBillValue = billValue === ''
+        ? 0
+        : parseSignedAmountExpression(billValue, { allowZero: true });
+      const updatedSalaryAmount = parseSignedAmountExpression(formData.get('salaryAmount'), { allowZero: true });
+      if (parsedBillValue === null || updatedSalaryAmount === null) {
+        status.textContent = '請輸入有效的數字或加減算式。';
+        return;
+      }
       button.disabled = true;
       status.textContent = '正在儲存…';
       try {
@@ -2736,13 +2742,18 @@ async function renderLedger(
       const formData = new FormData(form);
       const button = form.querySelector('button[type="submit"]');
       const status = document.querySelector('#other-income-status');
+      const amount = parseSignedAmountExpression(formData.get('amount'));
+      if (amount === null) {
+        status.textContent = '請輸入有效的數字或加減算式。';
+        return;
+      }
       button.disabled = true;
       status.textContent = '正在新增…';
       try {
         await expenseAdapter.createOtherIncomeEntry({
           ledgerId: ledger.id,
           name: formData.get('name').trim(),
-          amount: Number(formData.get('amount')),
+          amount,
           receivedAt: new Date().toISOString(),
         });
         await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
@@ -2930,8 +2941,14 @@ async function renderLedger(
       const button = form.querySelector('button[type="submit"]');
       const status = document.querySelector('#period-finance-status');
       const billValue = String(formData.get('previousCardBillAmount') ?? '').trim();
-      const parsedBillValue = billValue === '' ? 0 : Number(billValue);
-      const updatedSalaryAmount = Number(formData.get('salaryAmount'));
+      const parsedBillValue = billValue === ''
+        ? 0
+        : parseSignedAmountExpression(billValue, { allowZero: true });
+      const updatedSalaryAmount = parseSignedAmountExpression(formData.get('salaryAmount'), { allowZero: true });
+      if (parsedBillValue === null || updatedSalaryAmount === null) {
+        status.textContent = '請輸入有效的數字或加減算式。';
+        return;
+      }
       button.disabled = true;
       status.textContent = '正在儲存…';
       try {
@@ -2956,13 +2973,18 @@ async function renderLedger(
       const formData = new FormData(form);
       const button = form.querySelector('button[type="submit"]');
       const status = document.querySelector('#other-income-status');
+      const amount = parseSignedAmountExpression(formData.get('amount'));
+      if (amount === null) {
+        status.textContent = '請輸入有效的數字或加減算式。';
+        return;
+      }
       button.disabled = true;
       status.textContent = '正在新增…';
       try {
         await expenseAdapter.createOtherIncomeEntry({
           ledgerId: ledger.id,
           name: formData.get('name').trim(),
-          amount: Number(formData.get('amount')),
+          amount,
           receivedAt: new Date().toISOString(),
         });
         await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
