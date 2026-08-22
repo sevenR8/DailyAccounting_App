@@ -445,6 +445,8 @@ function renderExpenseAnalysis({
   periodLabel,
   canGoNext,
   chartColors,
+  savingsAmount,
+  savingsRate,
 }) {
   const maximumWeekdayAverage = Math.max(
     1,
@@ -498,6 +500,14 @@ function renderExpenseAnalysis({
       <td>$${formatAmount(row.previousAmount)}</td>
       <td class="comparison-${row.status}">${escapeHtml(comparisonValue(row))}</td>
     </tr>`).join('');
+  const analysisSavingsAmount = Number.isFinite(savingsAmount) ? savingsAmount : null;
+  const analysisSavingsRate = Number.isFinite(savingsRate) ? savingsRate : null;
+  const analysisSavingsRateLabel = analysisSavingsRate === null
+    ? '儲蓄率 —'
+    : `儲蓄率 ${analysisSavingsRate.toFixed(1)}%`;
+  const analysisSavingsRateClass = analysisSavingsRate !== null && analysisSavingsRate < 0
+    ? 'analysis-rate-negative'
+    : 'analysis-rate-positive';
 
   return `
     <section class="analysis-page" id="expense-analysis-page" aria-label="${escapeHtml(periodMonthLabel)}消費分析">
@@ -514,9 +524,10 @@ function renderExpenseAnalysis({
       <section class="analysis-section analysis-totals-section">
         <div class="analysis-section-heading"><p class="eyebrow">01・生活全貌</p><h2>本期生活成本</h2></div>
         <div class="analysis-total-grid">
-          <article class="analysis-total-primary"><span>完整生活開銷</span><strong>NT$ ${formatAmount(analysis.totals.completeLivingSpend)}</strong><small>非固定開銷＋本期全部固定開銷</small></article>
+          <article class="analysis-total-primary"><span>完整生活開銷（不包含代墊）</span><strong>NT$ ${formatAmount(analysis.totals.completeLivingSpend)}</strong><small>非固定開銷＋本期全部固定開銷</small></article>
           <article><span>日常開銷每日平均</span><strong>NT$ ${formatAmount(analysis.totals.dailyAverage)}</strong><small>非固定開銷・${analysis.period.elapsedDays} 天</small></article>
           <article><span>完整生活成本每日平均</span><strong>NT$ ${formatAmount(analysis.totals.completeDailyAverage)}</strong><small>包含固定成本</small></article>
+          <article class="analysis-total-savings"><span>本期可存額</span><strong>NT$ ${analysisSavingsAmount === null ? '—' : formatAmount(analysisSavingsAmount)}</strong><small class="${analysisSavingsRateClass}">${analysisSavingsRateLabel}</small></article>
         </div>
       </section>
 
@@ -1186,6 +1197,8 @@ async function renderLedger(
     periodLabel,
     canGoNext,
     chartColors,
+    savingsAmount,
+    savingsRate,
   }) : '';
   const salaryAmount = financialOverview?.period.salary_amount ?? 0;
   const otherIncomeTotal = calculatedSummary?.otherIncomeTotal ?? 0;
