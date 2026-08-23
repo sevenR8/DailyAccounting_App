@@ -748,6 +748,10 @@ async function renderLedger(
     const occurredAt = new Date(entry.occurred_at);
     return occurredAt >= periodStart && occurredAt < periodEnd;
   });
+  const analysisPeriodEntries = analysisPersonalEntries.filter((entry) => {
+    const occurredAt = new Date(entry.occurred_at);
+    return occurredAt >= periodStart && occurredAt < periodEnd;
+  });
   const periodAdvanceRepayments = financialOverview
     ? advanceRepaymentsInPeriod(
       expenseAdvances,
@@ -790,6 +794,9 @@ async function renderLedger(
   const generatedExpenseTotal = calculatedSummary?.generatedExpenseTotal
     ?? periodEntries.reduce((total, entry) => total + entry.amount, 0);
   const personalGeneratedExpenseTotal = personalPeriodEntries
+    .reduce((total, entry) => total + entry.amount, 0);
+  // 圓餅圖與消費分析只呈現本人實際負擔；全額代墊會排除，部分代墊只保留自己的部分。
+  const analysisExpenseTotal = analysisPeriodEntries
     .reduce((total, entry) => total + entry.amount, 0);
   const fixedExpenseTotal = calculatedSummary?.fixedExpenseTotal ?? null;
   const fixedCreditCardExpenseTotal = fixedExpensesForSummary
@@ -854,7 +861,7 @@ async function renderLedger(
       id: category.id,
       name: category.name,
       color: chartColors[index % chartColors.length],
-      amount: personalPeriodEntries
+      amount: analysisPeriodEntries
         .filter((entry) => entry.category_id === category.id)
         .reduce((total, entry) => total + entry.amount, 0),
     }))
@@ -863,7 +870,7 @@ async function renderLedger(
   let chartCursor = 0;
   const chartSegments = categoryBreakdown.map((category) => {
     const startPercent = chartCursor;
-    chartCursor += (category.amount / personalGeneratedExpenseTotal) * 100;
+    chartCursor += (category.amount / analysisExpenseTotal) * 100;
     return `${category.color} ${startPercent}% ${chartCursor}%`;
   });
   const pieBackground = chartSegments.length
@@ -873,7 +880,7 @@ async function renderLedger(
     <li class="chart-legend-item" data-category-id="${escapeHtml(category.id)}" tabindex="0" aria-label="${escapeHtml(category.name)}，$${formatAmount(category.amount)}，長按查看細項">
       <span class="legend-color" style="background:${category.color}"></span>
       <span>${escapeHtml(category.name)}</span>
-      <strong>${Math.round((category.amount / personalGeneratedExpenseTotal) * 100)}%</strong>
+      <strong>${Math.round((category.amount / analysisExpenseTotal) * 100)}%</strong>
       <small>$${formatAmount(category.amount)}</small>
     </li>`).join('');
   const suggestions = periodEntries;
@@ -1562,7 +1569,7 @@ async function renderLedger(
         </div>
         <div class="chart-body">
           <div class="expense-pie" role="img" aria-label="本期分類圓餅圖" style="background:${pieBackground}">
-            <div><span>個人開銷</span><strong>$${formatAmount(personalGeneratedExpenseTotal)}</strong></div>
+            <div><span>個人開銷</span><strong>$${formatAmount(analysisExpenseTotal)}</strong></div>
           </div>
           <div class="chart-legend-wrap">
             <ul class="chart-legend">${chartLegend || '<li class="empty-chart">新增開銷後會顯示分類占比</li>'}</ul>
@@ -1856,12 +1863,12 @@ async function renderLedger(
     if (!chartCategoryPopover) return;
     const category = categoryBreakdown.find(({ id }) => id === item.dataset.categoryId);
     if (!category) return;
-    const entries = personalPeriodEntries
+    const entries = analysisPeriodEntries
       .filter((entry) => entry.category_id === category.id)
       .sort((left, right) => new Date(right.occurred_at) - new Date(left.occurred_at));
     chartCategoryPopover.innerHTML = `
       <div class="chart-category-popover-heading">
-        <strong>${escapeHtml(category.name)} <span>${Math.round((category.amount / personalGeneratedExpenseTotal) * 100)}%</span></strong>
+        <strong>${escapeHtml(category.name)} <span>${Math.round((category.amount / analysisExpenseTotal) * 100)}%</span></strong>
         <b>$${formatAmount(category.amount)}</b>
       </div>
       <ul>${entries.map((entry) => `
