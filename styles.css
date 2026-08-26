@@ -1296,8 +1296,9 @@ input[type="datetime-local"] {
   background: #fafbf8;
 }
 .category-analysis-form > span { font-weight: 850; }
-.pleasure-toggle { display: flex; align-items: center; gap: 7px; color: #365b42; font-size: 0.82rem; font-weight: 800; }
-.pleasure-toggle input { width: auto; accent-color: #267247; }
+.category-analysis-form { grid-template-columns: minmax(120px, auto) minmax(0, 1fr) auto; }
+.category-analysis-form label { color: #365b42; font-weight: 850; }
+.category-analysis-form select { min-height: 104px; }
 .category-analysis-form select,
 .merchant-settings-form input,
 .merchant-settings-form select,

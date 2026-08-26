@@ -924,15 +924,10 @@ async function renderLedger(
         </form>
       </li>`)
     .join('');
-  const categoryAnalysisRows = ledger.categories.map((category) => `
-    <li>
-      <form class="category-analysis-form" data-category-id="${escapeHtml(category.id)}">
-        <span>${escapeHtml(category.name)}</span>
-        <label class="pleasure-toggle"><input name="isPleasure" type="checkbox" ${category.analysisNature === 'pleasure' ? 'checked' : ''} /> 快樂支出</label>
-        <button class="secondary-button" type="submit">儲存</button>
-        <p class="form-status" aria-live="polite"></p>
-      </form>
-    </li>`).join('');
+  const pleasureCategoryOptions = ledger.categories
+    .filter((category) => !category.retiredAt)
+    .map((category) => `<option value="${escapeHtml(category.id)}" ${category.analysisNature === 'pleasure' ? 'selected' : ''}>${escapeHtml(category.name)}</option>`)
+    .join('');
   const merchantSettingsRows = merchantGroups.map((group) => `
     <li>
       <form class="merchant-settings-form" data-merchant-group-id="${escapeHtml(group.id)}">
@@ -994,7 +989,12 @@ async function renderLedger(
               <p>只需勾選快樂支出；未勾選的分類會自動歸為維持生活，重新命名後仍會保留。</p>
             </div>
             ${analysisSettingsSupported
-              ? `<ul class="category-analysis-list">${categoryAnalysisRows}</ul>`
+              ? `<form class="category-analysis-form" id="category-analysis-form">
+                  <label for="pleasure-category-select">快樂支出分類</label>
+                  <select id="pleasure-category-select" name="pleasureCategories" multiple size="4" aria-label="選擇快樂支出分類">${pleasureCategoryOptions}</select>
+                  <button class="secondary-button" type="submit">儲存</button>
+                  <p class="form-status" aria-live="polite">按住 Ctrl／⌘ 可複選；未選分類自動歸為維持生活。</p>
+                </form>`
               : '<p class="settings-unavailable">執行 supabase-0004-expense-analysis.sql 後即可同步分析分類。</p>'}
           </section>
           <section class="settings-section">
@@ -2438,30 +2438,32 @@ async function renderLedger(
     });
   });
 
-  document.querySelectorAll('.category-analysis-form').forEach((form) => {
-    form.addEventListener('submit', async (event) => {
+  document.querySelector('#category-analysis-form')?.addEventListener('submit', async (event) => {
       event.preventDefault();
-      const category = ledger.categories.find((item) => item.id === form.dataset.categoryId);
-      const analysisNature = new FormData(form).get('isPleasure') === 'on' ? 'pleasure' : 'maintenance';
+      const form = event.currentTarget;
+      const selectedIds = new Set(Array.from(form.elements.pleasureCategories.selectedOptions).map((option) => option.value));
       const button = form.querySelector('button[type="submit"]');
       const status = form.querySelector('.form-status');
       button.disabled = true;
       status.textContent = '正在儲存…';
       try {
-        const updatedCategory = await expenseAdapter.updateCategory({
-          ledgerId: ledger.id,
-          categoryId: category.id,
-          name: category.name,
-          retiredAt: category.retiredAt,
-          analysisNature,
-        });
-        Object.assign(category, updatedCategory);
+        await Promise.all(ledger.categories
+          .filter((category) => !category.retiredAt)
+          .map(async (category) => {
+            const updatedCategory = await expenseAdapter.updateCategory({
+              ledgerId: ledger.id,
+              categoryId: category.id,
+              name: category.name,
+              retiredAt: category.retiredAt,
+              analysisNature: selectedIds.has(category.id) ? 'pleasure' : 'maintenance',
+            });
+            Object.assign(category, updatedCategory);
+          }));
         await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
       } catch (error) {
         status.textContent = error.message;
         button.disabled = false;
       }
-    });
   });
 
   const merchantAliasesFrom = (formData) => String(formData.get('aliases') ?? '')
