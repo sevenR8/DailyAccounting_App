@@ -928,10 +928,7 @@ async function renderLedger(
     <li>
       <form class="category-analysis-form" data-category-id="${escapeHtml(category.id)}">
         <span>${escapeHtml(category.name)}</span>
-        <select name="analysisNature" aria-label="${escapeHtml(category.name)}的分析性質">
-          <option value="maintenance" ${category.analysisNature !== 'pleasure' ? 'selected' : ''}>維持生活</option>
-          <option value="pleasure" ${category.analysisNature === 'pleasure' ? 'selected' : ''}>快樂支出</option>
-        </select>
+        <label class="pleasure-toggle"><input name="isPleasure" type="checkbox" ${category.analysisNature === 'pleasure' ? 'checked' : ''} /> 快樂支出</label>
         <button class="secondary-button" type="submit">儲存</button>
         <p class="form-status" aria-live="polite"></p>
       </form>
@@ -994,7 +991,7 @@ async function renderLedger(
           <section class="settings-section">
             <div>
               <h3>消費分析分類</h3>
-              <p>設定各分類屬於「維持生活」或「快樂支出」；重新命名後仍會保留。</p>
+              <p>只需勾選快樂支出；未勾選的分類會自動歸為維持生活，重新命名後仍會保留。</p>
             </div>
             ${analysisSettingsSupported
               ? `<ul class="category-analysis-list">${categoryAnalysisRows}</ul>`
@@ -2445,7 +2442,7 @@ async function renderLedger(
     form.addEventListener('submit', async (event) => {
       event.preventDefault();
       const category = ledger.categories.find((item) => item.id === form.dataset.categoryId);
-      const analysisNature = new FormData(form).get('analysisNature');
+      const analysisNature = new FormData(form).get('isPleasure') === 'on' ? 'pleasure' : 'maintenance';
       const button = form.querySelector('button[type="submit"]');
       const status = form.querySelector('.form-status');
       button.disabled = true;
