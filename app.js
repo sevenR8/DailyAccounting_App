@@ -32,7 +32,7 @@ import {
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=77';
+} from './supabase-adapter.js?v=78';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -945,6 +945,7 @@ async function renderLedger(
           <option value="convenience" ${group.groupType === 'convenience' ? 'selected' : ''}>便利商店</option>
           <option value="other" ${group.groupType === 'other' ? 'selected' : ''}>其他分析店家</option>
         </select>
+        <label class="merchant-credit-toggle"><input name="autoCreditCard" type="checkbox" ${group.autoCreditCard ? 'checked' : ''} /> 自動使用信用卡</label>
         <textarea name="aliases" rows="2" aria-label="店家別名，每行一個" placeholder="每行輸入一個別名">${escapeHtml(group.aliases.join('\n'))}</textarea>
         <div class="merchant-settings-actions">
           <button class="merchant-retire" type="button" data-action="retire-merchant-group">停用</button>
@@ -1002,7 +1003,7 @@ async function renderLedger(
           <section class="settings-section">
             <div>
               <h3>速食店、超商與別名</h3>
-              <p>每行一個別名。規則只改變分析分組，不會修改原始記帳名稱。</p>
+              <p>每行一個別名。可指定輸入這些店家時自動使用信用卡；規則只改變分析分組，不會修改原始記帳名稱。</p>
             </div>
             ${analysisSettingsSupported ? `
               <ul class="merchant-settings-list">${merchantSettingsRows}</ul>
@@ -1013,6 +1014,7 @@ async function renderLedger(
                   <option value="fast_food">速食店</option>
                   <option value="other">其他分析店家</option>
                 </select>
+                <label class="merchant-credit-toggle"><input name="autoCreditCard" type="checkbox" /> 自動使用信用卡</label>
                 <textarea name="aliases" rows="2" placeholder="別名，每行一個"></textarea>
                 <button class="small-primary-button" type="submit">新增店家規則</button>
                 <p class="form-status" aria-live="polite"></p>
@@ -1685,11 +1687,19 @@ async function renderLedger(
   const applyFrequentPaymentMethod = () => {
     if (paymentMethodManuallyEdited && !paymentMethodWasAutoSelected) return;
     const wasAutoSelected = paymentMethodWasAutoSelected;
-    const inferredPaymentMethod = inferFrequentPaymentMethod(
-      document.querySelector('#expense-item-name').value,
-      quickEntryTemplates,
-      (itemName) => identifyMerchant(itemName, merchantGroupsForAnalysis),
-    );
+    const itemName = document.querySelector('#expense-item-name').value;
+    const identifiedMerchant = identifyMerchant(itemName, merchantGroupsForAnalysis);
+    const configuredMerchant = identifiedMerchant
+      ? merchantGroupsForAnalysis.find((group) => group.name === identifiedMerchant.name
+        && Object.prototype.hasOwnProperty.call(group, 'autoCreditCard'))
+      : null;
+    const inferredPaymentMethod = configuredMerchant
+      ? (configuredMerchant.autoCreditCard ? 'credit_card' : 'cash')
+      : inferFrequentPaymentMethod(
+        itemName,
+        quickEntryTemplates,
+        (value) => identifyMerchant(value, merchantGroupsForAnalysis),
+      );
     paymentMethodWasAutoSelected = false;
     if (!inferredPaymentMethod) {
       if (wasAutoSelected) {
@@ -1703,9 +1713,13 @@ async function renderLedger(
     if (!paymentMethodInput || paymentMethodInput.checked) return;
     paymentMethodInput.checked = true;
     paymentMethodWasAutoSelected = true;
-    document.querySelector('#expense-status').textContent = inferredPaymentMethod === 'credit_card'
-      ? '已依過往習慣選擇信用卡，仍可手動修改。'
-      : '已依過往習慣選擇現金，仍可手動修改。';
+    document.querySelector('#expense-status').textContent = configuredMerchant
+      ? (inferredPaymentMethod === 'credit_card'
+        ? '已依店家規則選擇信用卡，仍可手動修改。'
+        : '已依店家規則選擇現金，仍可手動修改。')
+      : (inferredPaymentMethod === 'credit_card'
+        ? '已依過往習慣選擇信用卡，仍可手動修改。'
+        : '已依過往習慣選擇現金，仍可手動修改。');
   };
   const expenseItemNameInput = document.querySelector('#expense-item-name');
   expenseItemNameInput.addEventListener('input', applyFrequentPaymentMethod);
@@ -2474,6 +2488,7 @@ async function renderLedger(
         groupId,
         name,
         groupType: formData.get('merchantType'),
+        autoCreditCard: formData.get('autoCreditCard') === 'on',
         aliases: merchantAliasesFrom(formData),
       });
       await renderLedger(ledger, user, expenseAdapter, activeStartsOn);

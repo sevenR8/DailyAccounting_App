@@ -1323,6 +1323,8 @@ input[type="datetime-local"] {
 .merchant-retire { border: 1px solid #d9aaa2; border-radius: 10px; padding: 9px 12px; background: transparent; color: #9b453a; font-weight: 800; }
 .merchant-create-form { margin-top: 10px; }
 .merchant-create-form .small-primary-button { justify-self: end; }
+.merchant-credit-toggle { display: flex; align-items: center; gap: 7px; color: #365b42; font-size: 0.82rem; font-weight: 800; }
+.merchant-credit-toggle input { width: auto; accent-color: #267247; }
 
 .analysis-page { display: none; }
 .ledger-home[data-mobile-view="analysis"] { grid-template-columns: minmax(0, 1fr); grid-template-areas: "header" "analysis"; }

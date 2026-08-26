@@ -474,7 +474,7 @@ export class SupabaseLedgerAdapter {
 
   async listMerchantGroups(ledgerId) {
     const parameters = new URLSearchParams({
-      select: 'id,name,group_type,retired_at,created_at,merchant_aliases(id,alias,created_at)',
+      select: 'id,name,group_type,auto_credit_card,retired_at,created_at,merchant_aliases(id,alias,created_at)',
       ledger_id: `eq.${ledgerId}`,
       retired_at: 'is.null',
       order: 'group_type.asc,created_at.asc',
@@ -490,6 +490,7 @@ export class SupabaseLedgerAdapter {
       id: group.id,
       name: group.name,
       groupType: group.group_type,
+      autoCreditCard: group.auto_credit_card === true,
       retiredAt: group.retired_at,
       aliases: (group.merchant_aliases ?? [])
         .sort((left, right) => left.created_at.localeCompare(right.created_at))
@@ -497,7 +498,7 @@ export class SupabaseLedgerAdapter {
     }));
   }
 
-  async saveMerchantGroup({ ledgerId, groupId = null, name, groupType, aliases }) {
+  async saveMerchantGroup({ ledgerId, groupId = null, name, groupType, autoCreditCard = false, aliases }) {
     const response = await this.connection.request('/rest/v1/rpc/save_merchant_group', {
       method: 'POST',
       body: JSON.stringify({
@@ -505,6 +506,7 @@ export class SupabaseLedgerAdapter {
         p_group_id: groupId,
         p_name: name,
         p_group_type: groupType,
+        p_auto_credit_card: autoCreditCard,
         p_aliases: aliases,
       }),
     });
