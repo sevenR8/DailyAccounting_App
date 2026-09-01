@@ -764,6 +764,39 @@ export class SupabaseLedgerAdapter {
     return rule;
   }
 
+  async listFixedExpensePeriodOverrides({ ledgerId, accountingPeriodStart }) {
+    const parameters = new URLSearchParams({
+      select: 'fixed_expense_rule_id,accounting_period_start,amount',
+      ledger_id: `eq.${ledgerId}`,
+      accounting_period_start: `eq.${accountingPeriodStart}`,
+    });
+    const response = await this.connection.request(`/rest/v1/fixed_expense_period_overrides?${parameters}`);
+    if (!response.ok) {
+      this.fixedExpensePeriodOverridesSupported = false;
+      return [];
+    }
+    this.fixedExpensePeriodOverridesSupported = true;
+    return response.json();
+  }
+
+  async saveFixedExpensePeriodOverride({ ledgerId, ruleId, accountingPeriodStart, amount }) {
+    const response = await this.connection.request(
+      '/rest/v1/fixed_expense_period_overrides?on_conflict=fixed_expense_rule_id,accounting_period_start',
+      {
+        method: 'POST',
+        headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
+        body: JSON.stringify({
+          ledger_id: ledgerId,
+          fixed_expense_rule_id: ruleId,
+          accounting_period_start: accountingPeriodStart,
+          amount,
+        }),
+      },
+    );
+    if (!response.ok) throw new Error('固定開銷已更新，但本期金額儲存失敗。');
+    return response.json();
+  }
+
   async reorderFixedExpenseRules({ ledgerId, ruleIds }) {
     const response = await this.connection.request(
       '/rest/v1/rpc/reorder_fixed_expense_rules',

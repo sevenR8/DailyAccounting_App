@@ -650,7 +650,7 @@ async function loadLedgerViewData(ledger, expenseAdapter, selectedStartsOn = nul
       starts_on: previousBounds.startsOn,
       ends_on: previousBounds.endsOn,
     };
-    const [otherIncomeEntries, analysisEntries, merchantGroups, expenseAdvances] = await Promise.all([
+    const [otherIncomeEntries, analysisEntries, merchantGroups, expenseAdvances, fixedExpenseOverrides] = await Promise.all([
       expenseAdapter.listOtherIncomeEntries({
         ledgerId: ledger.id,
         startsOn: period.starts_on,
@@ -663,13 +663,25 @@ async function loadLedgerViewData(ledger, expenseAdapter, selectedStartsOn = nul
       }),
       expenseAdapter.listMerchantGroups(ledger.id),
       expenseAdapter.listExpenseAdvances(ledger.id),
+      expenseAdapter.listFixedExpensePeriodOverrides({
+        ledgerId: ledger.id,
+        accountingPeriodStart: period.starts_on,
+      }),
     ]);
+    const fixedExpenseOverrideByRuleId = new Map(
+      fixedExpenseOverrides.map((override) => [override.fixed_expense_rule_id, override.amount]),
+    );
+    const effectiveFixedExpenseRules = fixedExpenseRules.map((rule) => ({
+      ...rule,
+      base_amount: rule.amount,
+      amount: fixedExpenseOverrideByRuleId.get(rule.id) ?? rule.amount,
+    }));
     financialOverview = {
       period,
       previousPeriod,
       settings,
       otherIncomeEntries,
-      fixedExpenseRules,
+      fixedExpenseRules: effectiveFixedExpenseRules,
       fixedExpenseSchedulingSupported: expenseAdapter.fixedExpenseSchedulingSupported === true,
       expenseAdvances,
       expenseAdvancesSupported: expenseAdapter.expenseAdvancesSupported === true,
@@ -1376,7 +1388,7 @@ async function renderLedger(
               <option value="credit_card" ${rule.payment_method === 'credit_card' ? 'selected' : ''}>信用卡</option>
             </select>
           </label>
-          <p class="dialog-note edit-form-wide">儲存後會同步本期與未來週期；已結束週期的歷史紀錄不會變動。</p>
+          <p class="dialog-note edit-form-wide">項目、日期與付款方式會沿用到未來週期；金額可只套用本期，其他月份不會被改寫。</p>
           <p class="form-status edit-form-wide" aria-live="polite"></p>
           <div class="dialog-actions edit-form-wide">
             <button
@@ -2926,12 +2938,14 @@ async function renderLedger(
         button.disabled = true;
         status.textContent = '正在儲存…';
         try {
+          const editedRule = financialOverview.fixedExpenseRules.find((rule) => rule.id === form.dataset.ruleId);
+          const periodOverridesSupported = expenseAdapter.fixedExpensePeriodOverridesSupported === true;
           await expenseAdapter.updateFixedExpenseRule({
             ledgerId: ledger.id,
             ruleId: form.dataset.ruleId,
             categoryId,
             itemName,
-            amount,
+            amount: periodOverridesSupported ? (editedRule?.base_amount ?? editedRule?.amount ?? amount) : amount,
             paymentMethod,
             scheduledDay,
             ...(supportsFixedExpenseScheduling ? {
@@ -2939,6 +2953,14 @@ async function renderLedger(
               scheduledMonth,
             } : {}),
           });
+          if (periodOverridesSupported) {
+            await expenseAdapter.saveFixedExpensePeriodOverride({
+              ledgerId: ledger.id,
+              ruleId: form.dataset.ruleId,
+              accountingPeriodStart: financialOverview.period.starts_on,
+              amount,
+            });
+          }
           await expenseAdapter.syncFixedExpenseEntry({
             ledgerId: ledger.id,
             ruleId: form.dataset.ruleId,
