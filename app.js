@@ -774,7 +774,7 @@ async function renderLedger(
   const isCurrentPeriod = financialOverview?.isCurrentPeriod ?? true;
   const isFuturePeriod = financialOverview?.isFuturePeriod ?? false;
   const isHistoricalPeriod = Boolean(financialOverview && !isCurrentPeriod && !isFuturePeriod);
-  const canEditPeriodFinance = Boolean(financialOverview && !isFuturePeriod);
+  const canEditPeriodFinance = Boolean(financialOverview);
   const fixedExpensesForSummary = !isHistoricalPeriod
     ? (financialOverview?.fixedExpenseRules ?? []).filter((rule) => scheduledDateInAccountingPeriod(
       financialOverview.period.starts_on,
