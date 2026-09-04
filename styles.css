@@ -9,7 +9,28 @@
 
 body { margin: 0; min-width: 320px; }
 
-#app { min-height: 100dvh; }
+#app {
+  min-height: 100dvh;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+#app button,
+#app a,
+#app [role="button"] {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#app input,
+#app textarea,
+#app select,
+#app [contenteditable="true"] {
+  user-select: text;
+  -webkit-user-select: text;
+  -webkit-touch-callout: default;
+}
 
 button { font: inherit; cursor: pointer; }
 
