@@ -67,6 +67,7 @@ test('開銷紀錄旁可開啟歷史名稱搜尋，從新到舊查看相符開�
   assert.match(stylesSource, /\.history-search-button/);
   assert.match(stylesSource, /\.expense-search-page/);
   assert.match(stylesSource, /\.expense-search-form/);
+  assert.match(stylesSource, /:not\(\.search-expense-edit-dialog\)/);
 });
 
 test('登入後頂部只保留使用者縮寫與可展開的帳號選單', () => {

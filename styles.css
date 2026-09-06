@@ -1325,7 +1325,7 @@ input[type="datetime-local"] {
 /* 歷史開銷搜尋 */
 .expense-search-page { display: none; }
 .ledger-home[data-mobile-view="search"] { grid-template-columns: minmax(0, 1fr); grid-template-areas: "header" "search"; }
-.ledger-home[data-mobile-view="search"] > :not(.top-bar):not(.expense-search-page):not(.mobile-bottom-nav):not(.search-expense-dialog) { display: none !important; }
+.ledger-home[data-mobile-view="search"] > :not(.top-bar):not(.expense-search-page):not(.mobile-bottom-nav):not(.search-expense-dialog):not(.search-expense-edit-dialog) { display: none !important; }
 .ledger-home[data-mobile-view="search"] > .expense-search-page {
   grid-area: search;
   display: grid;
