@@ -48,6 +48,22 @@ test('開銷紀錄移除大型標題，並可記住顯示最近 5、10、15 天�
   assert.match(stylesSource, /\.history-list/);
 });
 
+test('開銷紀錄旁可開啟歷史名稱搜尋，從新到舊查看相符開銷內容', () => {
+  assert.match(appSource, /data-action="open-expense-search"/);
+  assert.match(appSource, /id="expense-search-page"/);
+  assert.match(appSource, /id="expense-search-input"/);
+  assert.match(appSource, /expenseAdapter\.searchExpenseEntries/);
+  assert.match(appSource, /new Date\(right\.occurred_at\) - new Date\(left\.occurred_at\)/);
+  assert.match(appSource, /data-search-result-index/);
+  assert.match(appSource, /id="search-expense-dialog"/);
+  assert.match(appSource, /openSearchExpenseDetail/);
+  assert.match(appSource, /ledgerHome\.dataset\.mobileView = 'search'/);
+  assert.match(appSource, /onBack: closeExpenseSearch/);
+  assert.match(stylesSource, /\.history-search-button/);
+  assert.match(stylesSource, /\.expense-search-page/);
+  assert.match(stylesSource, /\.expense-search-form/);
+});
+
 test('登入後頂部只保留使用者縮寫與可展開的帳號選單', () => {
   assert.match(appSource, /class="user-avatar"/);
   assert.match(appSource, /<details class="user-menu">/);

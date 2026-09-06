@@ -25,6 +25,28 @@ test('帳本連線以 Window 作為瀏覽器 fetch 的呼叫端', async () => {
   assert.deepEqual(await connection.getUser(), { id: 'user-1' });
 });
 
+test('可依項目名稱搜尋歷史開銷並依日期由新到舊取得結果', async () => {
+  const calls = [];
+  const connection = new SupabaseConnection({
+    supabaseUrl: 'https://example.supabase.co', supabaseAnonKey: 'public-key', accessToken: 'token',
+    fetchImpl: async (url) => {
+      calls.push(url);
+      return response([{ id: 'expense-2', item_name: '晚餐', occurred_at: '2026-09-06T12:00:00+08:00' }]);
+    },
+  });
+
+  const entries = await new SupabaseLedgerAdapter(connection).searchExpenseEntries({
+    ledgerId: 'ledger-1', keyword: '晚餐',
+  });
+  const request = new URL(calls[0]);
+
+  assert.equal(request.searchParams.get('ledger_id'), 'eq.ledger-1');
+  assert.equal(request.searchParams.get('item_name'), 'ilike.*晚餐*');
+  assert.equal(request.searchParams.get('order'), 'occurred_at.desc');
+  assert.equal(request.searchParams.get('limit'), '100');
+  assert.deepEqual(entries, [{ id: 'expense-2', item_name: '晚餐', occurred_at: '2026-09-06T12:00:00+08:00' }]);
+});
+
 test('帳本財務設定可讀取與儲存各國生活費基準，尚未升級時安全回退', async () => {
   const calls = [];
   const connection = new SupabaseConnection({

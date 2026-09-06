@@ -32,7 +32,7 @@ import {
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=78';
+} from './supabase-adapter.js?v=79';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -717,7 +717,7 @@ async function renderLedger(
   { viewData = null, persistViewData = true } = {},
 ) {
   const existingLedgerView = app.querySelector('.ledger-home')?.dataset.mobileView;
-  const preferredMobileView = ['finance', 'analysis'].includes(existingLedgerView)
+  const preferredMobileView = ['finance', 'analysis', 'search'].includes(existingLedgerView)
     ? existingLedgerView
     : 'main';
   const resolvedViewData = viewData
@@ -1599,6 +1599,29 @@ async function renderLedger(
         <div class="savings-summary"><span class="savings-summary-label">本期可存額${savingsRateLabel ? ` <small class="savings-rate${savingsRateClass}">${savingsRateLabel}</small>` : ''}</span><strong>${savingsAmount === null ? '—' : `$${formatAmount(savingsAmount)}`}</strong></div>
       </section>
       ${analysisPage}
+      <section class="expense-search-page" id="expense-search-page" aria-label="搜尋歷史開銷">
+        <header class="expense-search-heading">
+          <button class="expense-search-back" type="button" data-action="close-expense-search" aria-label="返回開銷紀錄">‹</button>
+          <div>
+            <p class="eyebrow">歷史記帳</p>
+            <h1>搜尋開銷</h1>
+            <p>輸入項目名稱，找出所有以往記帳。</p>
+          </div>
+        </header>
+        <section class="expense-search-results-section" aria-labelledby="expense-search-results-title">
+          <p class="expense-search-results-title" id="expense-search-results-title">結果</p>
+          <div class="expense-search-results" id="expense-search-results" aria-live="polite">
+            <p class="expense-search-empty">輸入關鍵字開始搜尋，例如「晚餐」。</p>
+          </div>
+        </section>
+        <form class="expense-search-form" id="expense-search-form" role="search">
+          <label class="sr-only" for="expense-search-input">搜尋歷史開銷</label>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.5" /><path d="m16 16 4.2 4.2" /></svg>
+          <input id="expense-search-input" type="search" name="keyword" autocomplete="off" enterkeyhint="search" placeholder="搜尋項目名稱" />
+          <button class="expense-search-clear" type="button" data-action="clear-expense-search" aria-label="清除搜尋關鍵字" hidden>×</button>
+          <button class="expense-search-close" type="button" data-action="close-expense-search" aria-label="關閉搜尋">×</button>
+        </form>
+      </section>
       ${advanceExpenseDialogs}
       ${financialPanel}
       <section class="quick-entry-panel" id="quick-entry-section" data-mobile-section="record">
@@ -1639,9 +1662,13 @@ async function renderLedger(
           <p class="form-status" id="expense-status" aria-live="polite"></p>
         </form>
       </section>
-      <section class="history-panel" data-mobile-section="record">
+      <section class="history-panel" id="expense-history-section" data-mobile-section="record">
         <div class="history-heading">
           <p class="eyebrow">開銷紀錄</p>
+          <button class="history-search-button" type="button" data-action="open-expense-search" aria-label="搜尋歷史開銷">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.5" /><path d="m16 16 4.2 4.2" /></svg>
+            <span>搜尋</span>
+          </button>
           <label class="history-limit-control">顯示
             <select id="history-display-limit" aria-label="顯示最近幾天的開銷紀錄">
               <option value="5" ${historyDisplayLimit === '5' ? 'selected' : ''}>最近 5 天</option>
@@ -1656,6 +1683,21 @@ async function renderLedger(
         </div>
       </section>
       ${expenseEditDialogs}
+      <dialog class="finance-dialog search-expense-dialog" id="search-expense-dialog">
+        <div class="dialog-content">
+          <div class="dialog-heading">
+            <div><p class="eyebrow">歷史開銷</p><h2 id="search-expense-detail-title">開銷內容</h2></div>
+            <button class="dialog-close" type="button" data-action="close-dialog" aria-label="關閉">×</button>
+          </div>
+          <dl class="search-expense-detail-list">
+            <div><dt>金額</dt><dd id="search-expense-detail-amount"></dd></div>
+            <div><dt>分類</dt><dd id="search-expense-detail-category"></dd></div>
+            <div><dt>付款方式</dt><dd id="search-expense-detail-payment-method"></dd></div>
+            <div><dt>日期與時間</dt><dd id="search-expense-detail-occurred-at"></dd></div>
+            <div id="search-expense-detail-item-detail-row" hidden><dt>細項</dt><dd id="search-expense-detail-item-detail"></dd></div>
+          </dl>
+        </div>
+      </dialog>
       <div class="mobile-pull-refresh" role="status" aria-live="polite">
         <span aria-hidden="true">↻</span>
         <strong>下拉更新</strong>
@@ -1863,6 +1905,14 @@ async function renderLedger(
   const closeExpenseAnalysis = () => {
     showMobileMainSection('overview', 'period-overview-section');
   };
+  const showExpenseSearch = () => {
+    ledgerHome.dataset.mobileView = 'search';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    window.requestAnimationFrame(() => document.querySelector('#expense-search-input')?.focus());
+  };
+  const closeExpenseSearch = () => {
+    showMobileMainSection('record', 'expense-history-section');
+  };
   const chartCategoryPopover = document.querySelector('#chart-category-popover');
   let chartCategoryPopoverOpen = false;
   let chartCategoryLongPressTimer = null;
@@ -1954,6 +2004,10 @@ async function renderLedger(
     showExpenseAnalysis();
   });
   document.querySelector('[data-action="close-analysis"]')?.addEventListener('click', closeExpenseAnalysis);
+  document.querySelector('[data-action="open-expense-search"]')?.addEventListener('click', showExpenseSearch);
+  document.querySelectorAll('[data-action="close-expense-search"]').forEach((button) => {
+    button.addEventListener('click', closeExpenseSearch);
+  });
   document.querySelector('[data-action="open-mobile-finance"]')?.addEventListener('click', showMobileFinance);
   document.querySelector('[data-action="close-mobile-finance"]')?.addEventListener('click', closeMobileFinance);
   const financePanel = document.querySelector('.finance-panel');
@@ -1967,6 +2021,12 @@ async function renderLedger(
     gestureTarget: analysisPanel,
     animatedSurface: analysisPanel,
     onBack: closeExpenseAnalysis,
+  });
+  const expenseSearchPanel = document.querySelector('.expense-search-page');
+  installSwipeBackGesture({
+    gestureTarget: expenseSearchPanel,
+    animatedSurface: expenseSearchPanel,
+    onBack: closeExpenseSearch,
   });
   mobileNavigationButtons.forEach((button) => {
     button.addEventListener('click', () => {
@@ -2166,6 +2226,122 @@ async function renderLedger(
     const dialog = document.getElementById(dialogId);
     if (dialog && !dialog.open) dialog.showModal();
   };
+
+  const expenseSearchForm = document.querySelector('#expense-search-form');
+  const expenseSearchInput = document.querySelector('#expense-search-input');
+  const expenseSearchResults = document.querySelector('#expense-search-results');
+  const expenseSearchResultsTitle = document.querySelector('#expense-search-results-title');
+  const expenseSearchClearButton = document.querySelector('[data-action="clear-expense-search"]');
+  const searchExpenseDetailTitle = document.querySelector('#search-expense-detail-title');
+  const searchExpenseDetailAmount = document.querySelector('#search-expense-detail-amount');
+  const searchExpenseDetailCategory = document.querySelector('#search-expense-detail-category');
+  const searchExpenseDetailPaymentMethod = document.querySelector('#search-expense-detail-payment-method');
+  const searchExpenseDetailOccurredAt = document.querySelector('#search-expense-detail-occurred-at');
+  const searchExpenseDetailItemDetail = document.querySelector('#search-expense-detail-item-detail');
+  const searchExpenseDetailItemDetailRow = document.querySelector('#search-expense-detail-item-detail-row');
+  let expenseSearchRequestVersion = 0;
+  let expenseSearchInputTimer = null;
+  let matchingSearchEntries = [];
+
+  const searchEntriesFromLoadedHistory = (keyword) => {
+    const normalizedKeyword = keyword.toLocaleLowerCase('zh-TW');
+    return entries.filter((entry) => String(entry.item_name ?? '')
+      .toLocaleLowerCase('zh-TW')
+      .includes(normalizedKeyword));
+  };
+  const newestFirstSearchEntries = (searchEntries) => [...searchEntries].sort(
+    (left, right) => new Date(right.occurred_at) - new Date(left.occurred_at),
+  );
+  const renderExpenseSearchResults = (searchEntries, keyword, { offlineFallback = false } = {}) => {
+    matchingSearchEntries = newestFirstSearchEntries(searchEntries);
+    expenseSearchResultsTitle.textContent = matchingSearchEntries.length
+      ? `結果・${matchingSearchEntries.length} 筆`
+      : '結果';
+    if (!matchingSearchEntries.length) {
+      expenseSearchResults.innerHTML = `<p class="expense-search-empty">找不到包含「${escapeHtml(keyword)}」的開銷。</p>`;
+      return;
+    }
+    const offlineNote = offlineFallback
+      ? '<p class="expense-search-offline-note">目前離線，顯示已載入的歷史結果。</p>'
+      : '';
+    expenseSearchResults.innerHTML = `${offlineNote}${matchingSearchEntries.map((entry, index) => {
+      const categoryName = categoryNames.get(entry.category_id) || '未分類';
+      const paymentMethod = entry.payment_method === 'cash' ? '現金' : '信用卡';
+      return `
+        <button class="expense-search-result" type="button" data-search-result-index="${index}">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6zM15 3v4h4M9 12h6M9 16h6" /></svg>
+          <span>
+            <strong>${escapeHtml(entry.item_name)}</strong>
+            <small>${escapeHtml(formatEntryDate(entry.occurred_at))}・$${formatAmount(entry.amount)}・${escapeHtml(categoryName)}・${paymentMethod}</small>
+          </span>
+          <b aria-hidden="true">›</b>
+        </button>`;
+    }).join('')}`;
+  };
+  const resetExpenseSearchResults = () => {
+    matchingSearchEntries = [];
+    expenseSearchResultsTitle.textContent = '結果';
+    expenseSearchResults.innerHTML = '<p class="expense-search-empty">輸入關鍵字開始搜尋，例如「晚餐」。</p>';
+  };
+  const runExpenseSearch = async () => {
+    const keyword = expenseSearchInput.value.trim();
+    expenseSearchClearButton.hidden = !keyword;
+    const requestVersion = ++expenseSearchRequestVersion;
+    if (!keyword) {
+      resetExpenseSearchResults();
+      return;
+    }
+    expenseSearchResultsTitle.textContent = '結果';
+    expenseSearchResults.innerHTML = `<p class="expense-search-empty">正在搜尋「${escapeHtml(keyword)}」…</p>`;
+    try {
+      const searchEntries = await expenseAdapter.searchExpenseEntries({
+        ledgerId: ledger.id,
+        keyword,
+        limit: 1000,
+      });
+      if (requestVersion !== expenseSearchRequestVersion) return;
+      renderExpenseSearchResults(searchEntries, keyword);
+    } catch (error) {
+      if (requestVersion !== expenseSearchRequestVersion) return;
+      renderExpenseSearchResults(searchEntriesFromLoadedHistory(keyword), keyword, { offlineFallback: true });
+    }
+  };
+  const openSearchExpenseDetail = (entry) => {
+    if (!entry) return;
+    const categoryName = categoryNames.get(entry.category_id) || '未分類';
+    const itemDetail = String(entry.item_detail ?? '').trim();
+    searchExpenseDetailTitle.textContent = entry.item_name;
+    searchExpenseDetailAmount.textContent = `$${formatAmount(entry.amount)}`;
+    searchExpenseDetailCategory.textContent = categoryName;
+    searchExpenseDetailPaymentMethod.textContent = entry.payment_method === 'cash' ? '現金' : '信用卡';
+    searchExpenseDetailOccurredAt.textContent = `${formatEntryDate(entry.occurred_at)} ${formatEntryTime(entry.occurred_at)}`;
+    searchExpenseDetailItemDetail.textContent = itemDetail;
+    searchExpenseDetailItemDetailRow.hidden = !itemDetail;
+    openDialog('search-expense-dialog');
+  };
+  expenseSearchForm?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    if (expenseSearchInputTimer !== null) window.clearTimeout(expenseSearchInputTimer);
+    runExpenseSearch();
+  });
+  expenseSearchInput?.addEventListener('input', () => {
+    if (expenseSearchInputTimer !== null) window.clearTimeout(expenseSearchInputTimer);
+    expenseSearchClearButton.hidden = !expenseSearchInput.value.trim();
+    expenseSearchInputTimer = window.setTimeout(runExpenseSearch, 180);
+  });
+  expenseSearchClearButton?.addEventListener('click', () => {
+    if (expenseSearchInputTimer !== null) window.clearTimeout(expenseSearchInputTimer);
+    expenseSearchInput.value = '';
+    expenseSearchClearButton.hidden = true;
+    expenseSearchRequestVersion += 1;
+    resetExpenseSearchResults();
+    expenseSearchInput.focus();
+  });
+  expenseSearchResults?.addEventListener('click', (event) => {
+    const resultButton = event.target.closest('[data-search-result-index]');
+    if (!resultButton) return;
+    openSearchExpenseDetail(matchingSearchEntries[Number(resultButton.dataset.searchResultIndex)]);
+  });
 
   const switchDialog = (parentDialog, dialogId) => {
     if (!parentDialog?.open) {

@@ -235,6 +235,34 @@ export class SupabaseLedgerAdapter {
     return response.json();
   }
 
+  async searchExpenseEntries({ ledgerId, keyword, limit = 100 }) {
+    const searchTerm = String(keyword ?? '').trim();
+    if (!searchTerm) return [];
+
+    const escapedSearchTerm = searchTerm.replace(/([\\%_*])/g, '\\$1');
+    const normalizedLimit = Math.min(Math.max(Number(limit) || 100, 1), 1000);
+    const buildParameters = (select) => new URLSearchParams({
+      select,
+      ledger_id: `eq.${ledgerId}`,
+      item_name: `ilike.*${escapedSearchTerm}*`,
+      order: 'occurred_at.desc',
+      limit: String(normalizedLimit),
+    });
+    let response = await this.connection.request(
+      `/rest/v1/expense_entries?${buildParameters('id,category_id,item_name,item_detail,amount,payment_method,occurred_at,is_fixed,created_at')}`,
+    );
+    if (!response.ok) {
+      this.expenseDetailsSupported = false;
+      response = await this.connection.request(
+        `/rest/v1/expense_entries?${buildParameters('id,category_id,item_name,amount,payment_method,occurred_at,is_fixed,created_at')}`,
+      );
+    } else {
+      this.expenseDetailsSupported = true;
+    }
+    if (!response.ok) throw new Error('無法搜尋開銷紀錄，請稍後再試一次。');
+    return response.json();
+  }
+
   async listExpenseEntriesForRange({ ledgerId, startsOn, endsOn }) {
     const endExclusive = new Date(`${endsOn}T00:00:00Z`);
     endExclusive.setUTCDate(endExclusive.getUTCDate() + 1);
