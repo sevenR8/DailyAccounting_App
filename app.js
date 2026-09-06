@@ -1682,7 +1682,7 @@ async function renderLedger(
         </div>
       </section>
       ${expenseEditDialogs}
-      <dialog class="finance-dialog expense-edit-dialog" id="search-expense-edit-dialog">
+      <dialog class="finance-dialog expense-edit-dialog search-expense-edit-dialog" id="search-expense-edit-dialog">
         <div class="dialog-content">
           <div class="dialog-heading">
             <div><p class="eyebrow">歷史開銷</p><h2>編輯開銷</h2></div>
