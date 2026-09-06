@@ -1392,7 +1392,7 @@ input[type="datetime-local"] {
 .expense-search-result b { color: #80a286; font-size: 1.4rem; font-weight: 500; }
 .expense-search-form {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 8px;
   align-items: center;
   position: sticky;
@@ -1408,8 +1408,7 @@ input[type="datetime-local"] {
 .expense-search-form > svg { width: 22px; height: 22px; fill: none; stroke: #607066; stroke-linecap: round; stroke-width: 2; }
 .expense-search-form input { min-width: 0; border: 0; outline: 0; padding: 7px 0; background: transparent; color: inherit; font: inherit; font-size: 0.95rem; }
 .expense-search-form input::placeholder { color: #859087; }
-.expense-search-clear,
-.expense-search-close {
+.expense-search-clear {
   display: grid;
   place-items: center;
   width: 30px;
@@ -1423,11 +1422,8 @@ input[type="datetime-local"] {
   font-size: 1.25rem;
   line-height: 1;
 }
-.expense-search-close { background: #edf1eb; color: #48544b; }
 .expense-search-clear:hover,
-.expense-search-clear:focus-visible,
-.expense-search-close:hover,
-.expense-search-close:focus-visible { background: #d9e6d7; }
+.expense-search-clear:focus-visible { background: #d9e6d7; }
 
 /* 消費分析內頁與帳本分析設定 */
 .chart-panel-action { position: relative; cursor: pointer; }
@@ -1718,12 +1714,9 @@ input[type="datetime-local"] {
   .expense-search-form > svg { stroke: #b7c6b9; }
   .expense-search-form input { color: #eff4ed; }
   .expense-search-form input::placeholder { color: #8f9c91; }
-  .expense-search-clear,
-  .expense-search-close { background: #2a372d; color: #dce5dd; }
+  .expense-search-clear { background: #2a372d; color: #dce5dd; }
   .expense-search-clear:hover,
-  .expense-search-clear:focus-visible,
-  .expense-search-close:hover,
-  .expense-search-close:focus-visible { background: #36483a; }
+  .expense-search-clear:focus-visible { background: #36483a; }
   .search-expense-detail-list div { border-color: #3b493d; }
   .search-expense-detail-list dt { color: #aeb9af; }
   .chart-enter-hint { color: #9bc9a7; }

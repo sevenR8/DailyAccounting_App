@@ -1619,7 +1619,6 @@ async function renderLedger(
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.5" /><path d="m16 16 4.2 4.2" /></svg>
           <input id="expense-search-input" type="search" name="keyword" autocomplete="off" enterkeyhint="search" placeholder="搜尋項目名稱" />
           <button class="expense-search-clear" type="button" data-action="clear-expense-search" aria-label="清除搜尋關鍵字" hidden>×</button>
-          <button class="expense-search-close" type="button" data-action="close-expense-search" aria-label="關閉搜尋">×</button>
         </form>
       </section>
       ${advanceExpenseDialogs}

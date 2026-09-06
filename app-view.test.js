@@ -56,6 +56,7 @@ test('開銷紀錄旁可開啟歷史名稱搜尋，從新到舊查看相符開�
   assert.match(appSource, /new Date\(right\.occurred_at\) - new Date\(left\.occurred_at\)/);
   assert.match(appSource, /data-search-result-index/);
   assert.match(appSource, /id="search-expense-dialog"/);
+  assert.doesNotMatch(appSource, /class="expense-search-close"/);
   assert.match(appSource, /openSearchExpenseDetail/);
   assert.match(appSource, /ledgerHome\.dataset\.mobileView = 'search'/);
   assert.match(appSource, /onBack: closeExpenseSearch/);
