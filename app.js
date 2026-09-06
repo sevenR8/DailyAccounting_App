@@ -1682,6 +1682,42 @@ async function renderLedger(
         </div>
       </section>
       ${expenseEditDialogs}
+      <dialog class="finance-dialog expense-edit-dialog" id="search-expense-edit-dialog">
+        <div class="dialog-content">
+          <div class="dialog-heading">
+            <div><p class="eyebrow">歷史開銷</p><h2>編輯開銷</h2></div>
+            <button class="dialog-close" type="button" data-action="close-dialog" aria-label="關閉">×</button>
+          </div>
+          <form class="expense-edit-form" id="search-expense-edit-form" data-entry-id="">
+            <label>項目名稱
+              <input name="itemName" type="text" maxlength="100" required />
+            </label>
+            <label>金額（TWD）
+              <input name="amount" type="number" min="1" step="1" inputmode="numeric" required />
+            </label>
+            <label>分類
+              <select name="categoryId" required>${categoryOptions}</select>
+            </label>
+            <label>付款方式
+              <select name="paymentMethod" required>
+                <option value="cash">現金</option>
+                <option value="credit_card">信用卡</option>
+              </select>
+            </label>
+            <label class="edit-form-wide">日期與時間
+              <input name="occurredAt" type="datetime-local" required />
+            </label>
+            <label class="edit-form-wide">細項
+              <textarea name="itemDetail" maxlength="200" rows="4" placeholder="可逐行輸入細項、金額或計算方式"></textarea>
+            </label>
+            <p class="form-status edit-form-wide" aria-live="polite"></p>
+            <div class="dialog-actions edit-form-wide">
+              <button class="fixed-rule-delete" id="search-expense-edit-delete" type="button" data-action="delete-expense" data-entry-id="" data-entry-name="" data-entry-amount="0">刪除</button>
+              <button class="small-primary-button" type="submit">儲存變更</button>
+            </div>
+          </form>
+        </div>
+      </dialog>
       <dialog class="finance-dialog search-expense-dialog" id="search-expense-dialog">
         <div class="dialog-content">
           <div class="dialog-heading">
@@ -2238,6 +2274,8 @@ async function renderLedger(
   const searchExpenseDetailOccurredAt = document.querySelector('#search-expense-detail-occurred-at');
   const searchExpenseDetailItemDetail = document.querySelector('#search-expense-detail-item-detail');
   const searchExpenseDetailItemDetailRow = document.querySelector('#search-expense-detail-item-detail-row');
+  const searchExpenseEditForm = document.querySelector('#search-expense-edit-form');
+  const searchExpenseEditDeleteButton = document.querySelector('#search-expense-edit-delete');
   let expenseSearchRequestVersion = 0;
   let expenseSearchInputTimer = null;
   let matchingSearchEntries = [];
@@ -2307,6 +2345,29 @@ async function renderLedger(
   };
   const openSearchExpenseDetail = (entry) => {
     if (!entry) return;
+    if (!entry.is_fixed) {
+      const existingEditDialog = document.getElementById(`expense-edit-${entry.id}`);
+      if (existingEditDialog) {
+        openDialog(existingEditDialog.id);
+        return;
+      }
+      const editFields = searchExpenseEditForm?.elements;
+      if (editFields) {
+        searchExpenseEditForm.dataset.entryId = entry.id;
+        editFields.itemName.value = entry.item_name ?? '';
+        editFields.amount.value = entry.amount ?? '';
+        editFields.categoryId.value = entry.category_id ?? '';
+        editFields.paymentMethod.value = entry.payment_method ?? 'cash';
+        editFields.occurredAt.value = toDateTimeLocalValue(new Date(entry.occurred_at));
+        editFields.itemDetail.value = entry.item_detail ?? '';
+        searchExpenseEditForm.querySelector('.form-status').textContent = '';
+        searchExpenseEditDeleteButton.dataset.entryId = entry.id;
+        searchExpenseEditDeleteButton.dataset.entryName = entry.item_name ?? '';
+        searchExpenseEditDeleteButton.dataset.entryAmount = entry.amount ?? 0;
+        openDialog('search-expense-edit-dialog');
+        return;
+      }
+    }
     const categoryName = categoryNames.get(entry.category_id) || '未分類';
     const itemDetail = String(entry.item_detail ?? '').trim();
     searchExpenseDetailTitle.textContent = entry.item_name;
