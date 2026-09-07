@@ -1114,7 +1114,8 @@ async function renderLedger(
   const personalAmountsByEntryId = new Map(
     personalPeriodEntries.map((entry) => [entry.id, entry.amount]),
   );
-  const dailyHistory = groupExpenseEntriesByDay(suggestions, personalAmountsByEntryId);
+  const dailyExpenseEntries = suggestions.filter((entry) => !entry.is_fixed);
+  const dailyHistory = groupExpenseEntriesByDay(dailyExpenseEntries, personalAmountsByEntryId);
   const advancesByExpense = expenseAdvances.reduce((groups, advance) => {
     const existing = groups.get(advance.expenseEntryId) ?? [];
     existing.push(advance);
