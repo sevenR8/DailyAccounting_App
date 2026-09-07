@@ -64,6 +64,9 @@ test('開銷紀錄旁可開啟歷史名稱搜尋，從新到舊查看相符開�
   assert.doesNotMatch(appSource, /class="expense-search-close"/);
   assert.match(appSource, /openSearchExpenseDetail/);
   assert.match(appSource, /ledgerHome\.dataset\.mobileView = 'search'/);
+  assert.match(appSource, /existingExpenseSearchKeyword = app\.querySelector\('#expense-search-input'\)\?\.value\.trim\(\) \|\| ''/);
+  assert.match(appSource, /expenseSearchInput\.value = existingExpenseSearchKeyword/);
+  assert.match(appSource, /runExpenseSearch\(\);/);
   assert.match(appSource, /onBack: closeExpenseSearch/);
   assert.match(stylesSource, /\.history-search-button/);
   assert.match(stylesSource, /\.expense-search-page/);

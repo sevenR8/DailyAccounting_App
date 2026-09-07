@@ -737,6 +737,7 @@ async function renderLedger(
   { viewData = null, persistViewData = true } = {},
 ) {
   const existingLedgerView = app.querySelector('.ledger-home')?.dataset.mobileView;
+  const existingExpenseSearchKeyword = app.querySelector('#expense-search-input')?.value.trim() || '';
   const preferredMobileView = ['finance', 'analysis', 'search'].includes(existingLedgerView)
     ? existingLedgerView
     : 'main';
@@ -2476,6 +2477,11 @@ async function renderLedger(
     resetExpenseSearchResults();
     expenseSearchInput.focus();
   });
+  if (existingExpenseSearchKeyword && ledgerHome.dataset.mobileView === 'search') {
+    expenseSearchInput.value = existingExpenseSearchKeyword;
+    expenseSearchClearButton.hidden = false;
+    runExpenseSearch();
+  }
   expenseSearchResults?.addEventListener('click', (event) => {
     const resultButton = event.target.closest('[data-search-result-index]');
     if (!resultButton) return;
