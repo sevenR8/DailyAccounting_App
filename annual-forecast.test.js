@@ -76,6 +76,7 @@ test('年度預估以月薪、近期日常平均、固定開銷與年終分紅�
   assert.equal(forecast.annualFixedExpense, 72_000);
   assert.equal(forecast.monthlySavings, 32_000);
   assert.equal(forecast.estimatedAnnualSavings, 468_000);
+  assert.equal(forecast.averageMonthlySavings, 39_000);
   assert.equal(Math.round(forecast.averageSavingsRate * 10) / 10, 68.4);
 });
 
@@ -86,4 +87,5 @@ test('年度收入會把年終與分紅加到月薪乘以 12', () => {
   });
 
   assert.equal(forecast.annualIncome, 731_800);
+  assert.equal(forecast.averageMonthlySavings, 60_983);
 });

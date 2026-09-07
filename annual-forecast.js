@@ -111,6 +111,7 @@ export function buildAnnualFinancialForecast({
   const annualLivingExpense = Math.round(averageMonthlyLivingExpense * 12);
   const monthlySavings = Math.round(monthlySalary - averageMonthlyLivingExpense - (annualFixedExpense / 12));
   const estimatedAnnualSavings = Math.round((monthlySavings * 12) + expectedBonus + expectedDividend);
+  const averageMonthlySavings = Math.round(estimatedAnnualSavings / 12);
 
   return {
     cycle: {
@@ -129,6 +130,7 @@ export function buildAnnualFinancialForecast({
     averageMonthlyLivingExpense,
     monthlySavings,
     estimatedAnnualSavings,
+    averageMonthlySavings,
     averageSavingsRate: annualIncome > 0 ? (estimatedAnnualSavings / annualIncome) * 100 : null,
   };
 }

@@ -8,7 +8,7 @@
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" href="./icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./icon.svg" />
-    <link rel="stylesheet" href="./styles.css?v=120" />
+    <link rel="stylesheet" href="./styles.css?v=121" />
     <title>每日帳本</title>
   </head>
   <body>
@@ -24,7 +24,7 @@
           </main>`;
       }
     </script>
-    <script type="module" src="./app.js?v=120"></script>
+    <script type="module" src="./app.js?v=121"></script>
     <script>
       if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
         let isReloadingForNewServiceWorker = false;
@@ -33,7 +33,7 @@
           isReloadingForNewServiceWorker = true;
           window.location.reload();
         });
-        navigator.serviceWorker.register('./service-worker.js?v=120', { updateViaCache: 'none' })
+        navigator.serviceWorker.register('./service-worker.js?v=121', { updateViaCache: 'none' })
           .then((registration) => registration.update());
       }
     </script>

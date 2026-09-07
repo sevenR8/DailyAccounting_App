@@ -23,7 +23,7 @@ import {
 import {
   buildAnnualFinancialForecast,
   recentVariableSpending,
-} from './annual-forecast.js?v=4';
+} from './annual-forecast.js?v=5';
 import {
   advanceRepaymentsInPeriod,
   applyAnalysisExpenseAmounts,
@@ -596,10 +596,10 @@ function renderExpenseAnalysis({
           <article><span>年度收入</span><strong>NT$ ${formatAmount(annualForecast.annualIncome)}</strong><small>月平均 NT$ ${formatAmount(Math.round(annualForecast.annualIncome / 12))}・月薪 × 12 ＋ 年終、分紅</small></article>
           <article><span>年度生活開銷</span><strong>NT$ ${formatAmount(annualForecast.annualLivingExpense)}</strong><small>月平均 NT$ ${formatAmount(annualForecast.averageMonthlyLivingExpense)}・近幾期平均日常開銷 × 12</small></article>
           <article><span>年度固定開銷</span><strong>NT$ ${formatAmount(annualForecast.annualFixedExpense)}</strong><small>月平均 NT$ ${formatAmount(Math.round(annualForecast.annualFixedExpense / 12))}・每月固定開銷 × 12 ＋ 年繳</small></article>
-          <article class="annual-overview-savings"><span>預估全年可存</span><strong>NT$ ${formatAmount(annualForecast.estimatedAnnualSavings)}</strong><small>月平均可存 NT$ ${formatAmount(annualForecast.monthlySavings)}</small><small class="${annualSavingsRateClass}">${annualSavingsRateLabel}</small></article>
+          <article class="annual-overview-savings"><span>預估全年可存</span><strong>NT$ ${formatAmount(annualForecast.estimatedAnnualSavings)}</strong><small>平均每月可存 NT$ ${formatAmount(annualForecast.averageMonthlySavings)}</small><small class="${annualSavingsRateClass}">${annualSavingsRateLabel}</small></article>
         </div>
         <div class="annual-forecast-detail">
-          <p><span>每月預估可存</span><strong>NT$ ${formatAmount(annualForecast.monthlySavings)}</strong></p>
+          <p><span>平均每月可存</span><strong>NT$ ${formatAmount(annualForecast.averageMonthlySavings)}</strong></p>
           <p><span>預估年終＋分紅</span><strong>NT$ ${formatAmount(annualForecast.inputs.expectedBonus + annualForecast.inputs.expectedDividend)}</strong></p>
         </div>
       </section>
