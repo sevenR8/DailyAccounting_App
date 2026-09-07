@@ -23,7 +23,7 @@ import {
 import {
   buildAnnualFinancialForecast,
   recentVariableSpending,
-} from './annual-forecast.js?v=2';
+} from './annual-forecast.js?v=3';
 import {
   advanceRepaymentsInPeriod,
   applyAnalysisExpenseAmounts,
