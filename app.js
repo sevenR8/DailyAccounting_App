@@ -514,26 +514,6 @@ function renderExpenseAnalysis({
   const annualSavingsRateClass = annualSavingsRate !== null && annualSavingsRate < 0
     ? 'analysis-rate-negative'
     : 'analysis-rate-positive';
-  const annualStartMonthOptions = Array.from({ length: 12 }, (_, index) => {
-    const month = index + 1;
-    return `<option value="${month}" ${annualForecast?.cycle.startMonth === month ? 'selected' : ''}>${month} 月</option>`;
-  }).join('');
-  const annualForecastSettings = annualForecastSupported ? `
-    <form class="annual-forecast-form" id="annual-forecast-form">
-      <label>年度週期從
-        <select name="annualCycleStartMonth" aria-label="年度週期起始月份">${annualStartMonthOptions}</select>
-        開始
-      </label>
-      <label>預估年終
-        <input name="expectedBonusAmount" type="text" inputmode="text" autocomplete="off" value="${annualForecast.inputs.expectedBonus || ''}" placeholder="可輸入 10000+5000" aria-label="預估年終" />
-      </label>
-      <label>預估分紅
-        <input name="expectedDividendAmount" type="text" inputmode="text" autocomplete="off" value="${annualForecast.inputs.expectedDividend || ''}" placeholder="可輸入 10000+5000" aria-label="預估分紅" />
-      </label>
-      <button class="secondary-button" type="submit">儲存年度預估</button>
-      <p class="form-status" aria-live="polite">年終與分紅只用於預估，不會計入目前收入。</p>
-    </form>` : `
-      <p class="settings-unavailable annual-forecast-unavailable">請先執行 <code>supabase-0011-annual-financial-forecast.sql</code>，即可儲存年度週期、年終與分紅預估。</p>`;
   const annualForecastBasis = annualForecast.inputs.includesCurrentPeriod
     ? '本期目前已記錄的日常開銷'
     : `近 ${annualForecast.inputs.recentPeriodCount || 1} 期平均日常開銷`;
@@ -549,22 +529,6 @@ function renderExpenseAnalysis({
           <button type="button" data-analysis-period-direction="next" aria-label="查看下一期分析" ${canGoNext ? '' : 'disabled'}>›</button>
         </div>
       </header>
-
-      <section class="analysis-section annual-overview-section">
-        <div class="analysis-section-heading"><p class="eyebrow">年度預估</p><h2>年度總覽</h2><span>${escapeHtml(annualForecast.cycle.label)}・${annualForecast.cycle.startsOn.replaceAll('-', '/')}－${annualForecast.cycle.endsOn.replaceAll('-', '/')}</span></div>
-        <p class="annual-overview-note">依目前月薪、固定開銷與${annualForecastBasis}推估。</p>
-        <div class="annual-overview-grid">
-          <article><span>年度收入</span><strong>NT$ ${formatAmount(annualForecast.annualIncome)}</strong><small>月薪 × 12 ＋ 年終、分紅</small></article>
-          <article><span>年度生活開銷</span><strong>NT$ ${formatAmount(annualForecast.annualLivingExpense)}</strong><small>近幾期平均日常開銷 × 12</small></article>
-          <article><span>年度固定開銷</span><strong>NT$ ${formatAmount(annualForecast.annualFixedExpense)}</strong><small>每月固定開銷 × 12 ＋ 年繳</small></article>
-          <article class="annual-overview-savings"><span>預估全年可存</span><strong>NT$ ${formatAmount(annualForecast.estimatedAnnualSavings)}</strong><small class="${annualSavingsRateClass}">${annualSavingsRateLabel}</small></article>
-        </div>
-        <div class="annual-forecast-detail">
-          <p><span>每月預估可存</span><strong>NT$ ${formatAmount(annualForecast.monthlySavings)}</strong></p>
-          <p><span>預估年終＋分紅</span><strong>NT$ ${formatAmount(annualForecast.inputs.expectedBonus + annualForecast.inputs.expectedDividend)}</strong></p>
-        </div>
-        ${annualForecastSettings}
-      </section>
 
       <section class="analysis-section analysis-totals-section">
         <div class="analysis-section-heading"><p class="eyebrow">生活全貌</p><h2>本期生活成本</h2></div>
@@ -614,6 +578,21 @@ function renderExpenseAnalysis({
         <blockquote>${escapeHtml(analysis.comparison.summary)}</blockquote>
         <p class="previous-full-total">完整上期總額 <strong>NT$ ${formatAmount(analysis.comparison.previousFullTotal)}</strong></p>
         <div class="analysis-table-scroll"><table class="comparison-table"><thead><tr><th>項目</th><th>本期同期</th><th>上期同期</th><th>變化</th></tr></thead><tbody>${comparisonRows}</tbody></table></div>
+      </section>
+
+      <section class="analysis-section annual-overview-section">
+        <div class="analysis-section-heading"><p class="eyebrow">年度預估</p><h2>年度總覽</h2><span>${escapeHtml(annualForecast.cycle.label)}・${annualForecast.cycle.startsOn.replaceAll('-', '/')}－${annualForecast.cycle.endsOn.replaceAll('-', '/')}</span></div>
+        <p class="annual-overview-note">依目前月薪、固定開銷與${annualForecastBasis}推估。</p>
+        <div class="annual-overview-grid">
+          <article><span>年度收入</span><strong>NT$ ${formatAmount(annualForecast.annualIncome)}</strong><small>月薪 × 12 ＋ 年終、分紅</small></article>
+          <article><span>年度生活開銷</span><strong>NT$ ${formatAmount(annualForecast.annualLivingExpense)}</strong><small>近幾期平均日常開銷 × 12</small></article>
+          <article><span>年度固定開銷</span><strong>NT$ ${formatAmount(annualForecast.annualFixedExpense)}</strong><small>每月固定開銷 × 12 ＋ 年繳</small></article>
+          <article class="annual-overview-savings"><span>預估全年可存</span><strong>NT$ ${formatAmount(annualForecast.estimatedAnnualSavings)}</strong><small class="${annualSavingsRateClass}">${annualSavingsRateLabel}</small></article>
+        </div>
+        <div class="annual-forecast-detail">
+          <p><span>每月預估可存</span><strong>NT$ ${formatAmount(annualForecast.monthlySavings)}</strong></p>
+          <p><span>預估年終＋分紅</span><strong>NT$ ${formatAmount(annualForecast.inputs.expectedBonus + annualForecast.inputs.expectedDividend)}</strong></p>
+        </div>
       </section>
     </section>`;
 }
@@ -1020,6 +999,10 @@ async function renderLedger(
         <p class="form-status" aria-live="polite"></p>
       </form>
     </li>`).join('');
+  const annualCycleStartMonthOptions = Array.from({ length: 12 }, (_, index) => {
+    const month = index + 1;
+    return `<option value="${month}" ${financialOverview?.settings.annual_cycle_start_month === month ? 'selected' : ''}>${month} 月</option>`;
+  }).join('');
   const settingsDialog = `
     <dialog class="finance-dialog settings-dialog" id="ledger-settings-dialog">
       <div class="dialog-content">
@@ -1070,6 +1053,28 @@ async function renderLedger(
                   <p class="form-status" aria-live="polite">按住 Ctrl／⌘ 可複選；未選分類自動歸為維持生活。</p>
                 </form>`
               : '<p class="settings-unavailable">執行 supabase-0004-expense-analysis.sql 後即可同步分析分類。</p>'}
+          </section>
+          <section class="settings-section">
+            <div>
+              <h3>年度預估</h3>
+              <p>設定年度週期與預估年終、分紅；這些數字只會用於生活消費誌的年度可存額。</p>
+            </div>
+            ${financialOverview?.settings.annualForecastSupported
+              ? `<form class="annual-forecast-form settings-annual-forecast-form" id="annual-forecast-form">
+                  <label>年度週期從
+                    <select name="annualCycleStartMonth" aria-label="年度週期起始月份">${annualCycleStartMonthOptions}</select>
+                    開始
+                  </label>
+                  <label>預估年終
+                    <input name="expectedBonusAmount" type="text" inputmode="text" autocomplete="off" value="${financialOverview.settings.annual_expected_bonus_amount || ''}" placeholder="例如 30000+5000" aria-label="預估年終" />
+                  </label>
+                  <label>預估分紅
+                    <input name="expectedDividendAmount" type="text" inputmode="text" autocomplete="off" value="${financialOverview.settings.annual_expected_dividend_amount || ''}" placeholder="例如 10000" aria-label="預估分紅" />
+                  </label>
+                  <button class="secondary-button" type="submit">儲存年度預估</button>
+                  <p class="form-status" aria-live="polite">可輸入數字或加減算式，例如 30000+5000。</p>
+                </form>`
+              : '<p class="settings-unavailable">請先執行 supabase-0011-annual-financial-forecast.sql 後即可設定。</p>'}
           </section>
           <section class="settings-section">
             <div>

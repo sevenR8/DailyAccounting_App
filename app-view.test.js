@@ -236,6 +236,9 @@ test('整張圓餅圖卡片可開啟含年度總覽的消費分析長頁', () =>
   assert.match(appSource, /buildAnnualFinancialForecast\(\{/);
   assert.match(appSource, /年度總覽/);
   assert.match(appSource, /年度週期從/);
+  const analysisSettingsIndex = appSource.indexOf('<h3>消費分析分類</h3>');
+  const annualSettingsIndex = appSource.indexOf('<h3>年度預估</h3>');
+  assert.ok(analysisSettingsIndex >= 0 && annualSettingsIndex > analysisSettingsIndex);
   assert.match(appSource, /預估年終/);
   assert.match(appSource, /預估分紅/);
   assert.match(appSource, /class="analysis-page"/);
