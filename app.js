@@ -584,10 +584,10 @@ function renderExpenseAnalysis({
         <div class="analysis-section-heading"><p class="eyebrow">年度預估</p><h2>年度總覽</h2><span>${escapeHtml(annualForecast.cycle.label)}・${annualForecast.cycle.startsOn.replaceAll('-', '/')}－${annualForecast.cycle.endsOn.replaceAll('-', '/')}</span></div>
         <p class="annual-overview-note">依目前月薪、固定開銷與${annualForecastBasis}推估。</p>
         <div class="annual-overview-grid">
-          <article><span>年度收入</span><strong>NT$ ${formatAmount(annualForecast.annualIncome)}</strong><small>月薪 × 12 ＋ 年終、分紅</small></article>
-          <article><span>年度生活開銷</span><strong>NT$ ${formatAmount(annualForecast.annualLivingExpense)}</strong><small>近幾期平均日常開銷 × 12</small></article>
-          <article><span>年度固定開銷</span><strong>NT$ ${formatAmount(annualForecast.annualFixedExpense)}</strong><small>每月固定開銷 × 12 ＋ 年繳</small></article>
-          <article class="annual-overview-savings"><span>預估全年可存</span><strong>NT$ ${formatAmount(annualForecast.estimatedAnnualSavings)}</strong><small class="${annualSavingsRateClass}">${annualSavingsRateLabel}</small></article>
+          <article><span>年度收入</span><strong>NT$ ${formatAmount(annualForecast.annualIncome)}</strong><small>月平均 NT$ ${formatAmount(Math.round(annualForecast.annualIncome / 12))}・月薪 × 12 ＋ 年終、分紅</small></article>
+          <article><span>年度生活開銷</span><strong>NT$ ${formatAmount(annualForecast.annualLivingExpense)}</strong><small>月平均 NT$ ${formatAmount(annualForecast.averageMonthlyLivingExpense)}・近幾期平均日常開銷 × 12</small></article>
+          <article><span>年度固定開銷</span><strong>NT$ ${formatAmount(annualForecast.annualFixedExpense)}</strong><small>月平均 NT$ ${formatAmount(Math.round(annualForecast.annualFixedExpense / 12))}・每月固定開銷 × 12 ＋ 年繳</small></article>
+          <article class="annual-overview-savings"><span>預估全年可存</span><strong>NT$ ${formatAmount(annualForecast.estimatedAnnualSavings)}</strong><small>月平均可存 NT$ ${formatAmount(annualForecast.monthlySavings)}</small><small class="${annualSavingsRateClass}">${annualSavingsRateLabel}</small></article>
         </div>
         <div class="annual-forecast-detail">
           <p><span>每月預估可存</span><strong>NT$ ${formatAmount(annualForecast.monthlySavings)}</strong></p>
