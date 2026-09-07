@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   annualCycleForDate,
+  annualForecastDisplayValues,
   buildAnnualFinancialForecast,
   recentVariableSpending,
 } from './annual-forecast.js';
@@ -88,4 +89,24 @@ test('年度收入會把年終與分紅加到月薪乘以 12', () => {
 
   assert.equal(forecast.annualIncome, 731_800);
   assert.equal(forecast.averageMonthlySavings, 60_983);
+});
+
+test('年度總覽使用畫面中的收入與開銷數字重新計算，不信任舊衍生結果', () => {
+  const display = annualForecastDisplayValues({
+    inputs: {
+      monthlySalary: 547_804 / 12,
+      expectedBonus: 184_000,
+      expectedDividend: 0,
+    },
+    annualIncome: 547_804,
+    annualLivingExpense: 191_832,
+    annualFixedExpense: 202_287,
+    estimatedAnnualSavings: 153_688,
+  });
+
+  assert.equal(display.salaryAnnualIncome, 547_804);
+  assert.equal(display.supplementalIncome, 184_000);
+  assert.equal(display.annualIncome, 731_804);
+  assert.equal(display.estimatedAnnualSavings, 337_685);
+  assert.equal(display.averageMonthlySavings, 28_140);
 });

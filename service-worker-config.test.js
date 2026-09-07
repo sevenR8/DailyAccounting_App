@@ -29,5 +29,5 @@ test('新 Service Worker 接管後會自動重新載入一次，避免保留舊�
   assert.match(indexHtml, /serviceWorker\.addEventListener\('controllerchange'/);
   assert.match(indexHtml, /window\.location\.reload\(\)/);
   assert.match(indexHtml, /updateViaCache:\s*'none'/);
-  assert.match(indexHtml, /service-worker\.js\?v=121/);
+  assert.match(indexHtml, /service-worker\.js\?v=122/);
 });

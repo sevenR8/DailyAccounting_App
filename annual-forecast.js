@@ -83,6 +83,29 @@ export function recentVariableSpending({
     : { periods: [], includesCurrentPeriod: false };
 }
 
+export function annualForecastDisplayValues(forecast = {}) {
+  const monthlySalary = positiveAmount(forecast.inputs?.monthlySalary);
+  const expectedBonus = positiveAmount(forecast.inputs?.expectedBonus);
+  const expectedDividend = positiveAmount(forecast.inputs?.expectedDividend);
+  const salaryAnnualIncome = Math.round(monthlySalary * 12);
+  const supplementalIncome = Math.round(expectedBonus + expectedDividend);
+  const annualIncome = salaryAnnualIncome + supplementalIncome;
+  const annualLivingExpense = Math.round(positiveAmount(forecast.annualLivingExpense));
+  const annualFixedExpense = Math.round(positiveAmount(forecast.annualFixedExpense));
+  const estimatedAnnualSavings = annualIncome - annualLivingExpense - annualFixedExpense;
+
+  return {
+    salaryAnnualIncome,
+    supplementalIncome,
+    annualIncome,
+    annualLivingExpense,
+    annualFixedExpense,
+    estimatedAnnualSavings,
+    averageMonthlySavings: Math.round(estimatedAnnualSavings / 12),
+    averageSavingsRate: annualIncome > 0 ? (estimatedAnnualSavings / annualIncome) * 100 : null,
+  };
+}
+
 export function buildAnnualFinancialForecast({
   now = new Date(),
   annualCycleStartMonth = 1,
@@ -110,7 +133,7 @@ export function buildAnnualFinancialForecast({
   const annualIncome = Math.round((monthlySalary * 12) + expectedBonus + expectedDividend);
   const annualLivingExpense = Math.round(averageMonthlyLivingExpense * 12);
   const monthlySavings = Math.round(monthlySalary - averageMonthlyLivingExpense - (annualFixedExpense / 12));
-  const estimatedAnnualSavings = Math.round((monthlySavings * 12) + expectedBonus + expectedDividend);
+  const estimatedAnnualSavings = annualIncome - annualLivingExpense - annualFixedExpense;
   const averageMonthlySavings = Math.round(estimatedAnnualSavings / 12);
 
   return {

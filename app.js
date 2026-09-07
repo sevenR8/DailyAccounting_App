@@ -21,9 +21,10 @@ import {
   identifyMerchant,
 } from './expense-analysis.js?v=61';
 import {
+  annualForecastDisplayValues,
   buildAnnualFinancialForecast,
   recentVariableSpending,
-} from './annual-forecast.js?v=5';
+} from './annual-forecast.js?v=6';
 import {
   advanceRepaymentsInPeriod,
   applyAnalysisExpenseAmounts,
@@ -516,7 +517,8 @@ function renderExpenseAnalysis({
         <div><span>− 本月信用卡應繳</span><strong>NT$ ${formatAmount(savingsBreakdown.previousCardBill)}</strong></div>
       </div>`
     : '';
-  const annualSavingsRate = annualForecast?.averageSavingsRate;
+  const annualDisplay = annualForecastDisplayValues(annualForecast);
+  const annualSavingsRate = annualDisplay.averageSavingsRate;
   const annualSavingsRateLabel = Number.isFinite(annualSavingsRate)
     ? `平均儲蓄率 ${formatAnalysisPercent(annualSavingsRate, 1)}`
     : '平均儲蓄率 —';
@@ -593,14 +595,14 @@ function renderExpenseAnalysis({
         <div class="analysis-section-heading"><p class="eyebrow">年度預估</p><h2>年度總覽</h2><span>${escapeHtml(annualForecast.cycle.label)}・${annualForecast.cycle.startsOn.replaceAll('-', '/')}－${annualForecast.cycle.endsOn.replaceAll('-', '/')}</span></div>
         <p class="annual-overview-note">依目前月薪、固定開銷與${annualForecastBasis}推估。</p>
         <div class="annual-overview-grid">
-          <article><span>年度收入</span><strong>NT$ ${formatAmount(annualForecast.annualIncome)}</strong><small>月平均 NT$ ${formatAmount(Math.round(annualForecast.annualIncome / 12))}・月薪 × 12 ＋ 年終、分紅</small></article>
-          <article><span>年度生活開銷</span><strong>NT$ ${formatAmount(annualForecast.annualLivingExpense)}</strong><small>月平均 NT$ ${formatAmount(annualForecast.averageMonthlyLivingExpense)}・近幾期平均日常開銷 × 12</small></article>
-          <article><span>年度固定開銷</span><strong>NT$ ${formatAmount(annualForecast.annualFixedExpense)}</strong><small>月平均 NT$ ${formatAmount(Math.round(annualForecast.annualFixedExpense / 12))}・每月固定開銷 × 12 ＋ 年繳</small></article>
-          <article class="annual-overview-savings"><span>預估全年可存</span><strong>NT$ ${formatAmount(annualForecast.estimatedAnnualSavings)}</strong><small>平均每月可存 NT$ ${formatAmount(annualForecast.averageMonthlySavings)}</small><small class="${annualSavingsRateClass}">${annualSavingsRateLabel}</small></article>
+          <article><span>年度收入</span><strong>NT$ ${formatAmount(annualDisplay.annualIncome)}</strong><small>月薪年收入 NT$ ${formatAmount(annualDisplay.salaryAnnualIncome)} ＋ 年終、分紅 NT$ ${formatAmount(annualDisplay.supplementalIncome)}</small></article>
+          <article><span>年度生活開銷</span><strong>NT$ ${formatAmount(annualDisplay.annualLivingExpense)}</strong><small>月平均 NT$ ${formatAmount(annualForecast.averageMonthlyLivingExpense)}・近幾期平均日常開銷 × 12</small></article>
+          <article><span>年度固定開銷</span><strong>NT$ ${formatAmount(annualDisplay.annualFixedExpense)}</strong><small>月平均 NT$ ${formatAmount(Math.round(annualDisplay.annualFixedExpense / 12))}・每月固定開銷 × 12 ＋ 年繳</small></article>
+          <article class="annual-overview-savings"><span>預估全年可存</span><strong>NT$ ${formatAmount(annualDisplay.estimatedAnnualSavings)}</strong><small>收入 NT$ ${formatAmount(annualDisplay.annualIncome)} − 生活 NT$ ${formatAmount(annualDisplay.annualLivingExpense)} − 固定 NT$ ${formatAmount(annualDisplay.annualFixedExpense)}</small><small>平均每月可存 NT$ ${formatAmount(annualDisplay.averageMonthlySavings)}</small><small class="${annualSavingsRateClass}">${annualSavingsRateLabel}</small></article>
         </div>
         <div class="annual-forecast-detail">
-          <p><span>平均每月可存</span><strong>NT$ ${formatAmount(annualForecast.averageMonthlySavings)}</strong></p>
-          <p><span>預估年終＋分紅</span><strong>NT$ ${formatAmount(annualForecast.inputs.expectedBonus + annualForecast.inputs.expectedDividend)}</strong></p>
+          <p><span>平均每月可存</span><strong>NT$ ${formatAmount(annualDisplay.averageMonthlySavings)}</strong></p>
+          <p><span>預估年終＋分紅</span><strong>NT$ ${formatAmount(annualDisplay.supplementalIncome)}</strong></p>
         </div>
       </section>
     </section>`;

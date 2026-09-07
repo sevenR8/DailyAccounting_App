@@ -250,7 +250,9 @@ test('整張圓餅圖卡片可開啟含年度總覽的消費分析長頁', () =>
   assert.match(appSource, /ledgerHome\.dataset\.mobileView = 'analysis'/);
   assert.match(appSource, /data-action="close-analysis"/);
   assert.match(appSource, /animatedSurface: analysisPanel/);
-  assert.match(appSource, /平均每月可存 NT\$ \$\{formatAmount\(annualForecast\.averageMonthlySavings\)\}/);
+  assert.match(appSource, /annualForecastDisplayValues\(annualForecast\)/);
+  assert.match(appSource, /年度收入<\/span><strong>NT\$ \$\{formatAmount\(annualDisplay\.annualIncome\)\}/);
+  assert.match(appSource, /平均每月可存 NT\$ \$\{formatAmount\(annualDisplay\.averageMonthlySavings\)\}/);
 });
 
 test('本期可存額會顯示收入、開銷與上月信用卡的計算式', () => {
