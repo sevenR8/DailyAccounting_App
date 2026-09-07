@@ -97,6 +97,7 @@ export class SupabaseLedgerAdapter {
     this.expenseAnalysisSettingsSupported = null;
     this.expenseAdvancesSupported = null;
     this.expenseDetailsSupported = null;
+    this.expenseDailyAverageSupported = null;
   }
 
   async findPersonalLedger(userId) {
@@ -213,7 +214,7 @@ export class SupabaseLedgerAdapter {
 
   async listExpenseEntries(ledgerId) {
     const parameters = new URLSearchParams({
-      select: 'id,category_id,item_name,item_detail,amount,payment_method,occurred_at,is_fixed,created_at',
+      select: 'id,category_id,item_name,item_detail,include_in_daily_average,amount,payment_method,occurred_at,is_fixed,created_at',
       ledger_id: `eq.${ledgerId}`,
       order: 'occurred_at.desc',
       limit: '1000',
@@ -221,6 +222,7 @@ export class SupabaseLedgerAdapter {
     let response = await this.connection.request(`/rest/v1/expense_entries?${parameters}`);
     if (!response.ok) {
       this.expenseDetailsSupported = false;
+      this.expenseDailyAverageSupported = false;
       const legacyParameters = new URLSearchParams({
         select: 'id,category_id,item_name,amount,payment_method,occurred_at,is_fixed,created_at',
         ledger_id: `eq.${ledgerId}`,
@@ -230,6 +232,7 @@ export class SupabaseLedgerAdapter {
       response = await this.connection.request(`/rest/v1/expense_entries?${legacyParameters}`);
     } else {
       this.expenseDetailsSupported = true;
+      this.expenseDailyAverageSupported = true;
     }
     if (!response.ok) throw new Error('無法讀取開銷紀錄，請稍後再試一次。');
     return response.json();
@@ -249,15 +252,17 @@ export class SupabaseLedgerAdapter {
       limit: String(normalizedLimit),
     });
     let response = await this.connection.request(
-      `/rest/v1/expense_entries?${buildParameters('id,category_id,item_name,item_detail,amount,payment_method,occurred_at,is_fixed,created_at')}`,
+      `/rest/v1/expense_entries?${buildParameters('id,category_id,item_name,item_detail,include_in_daily_average,amount,payment_method,occurred_at,is_fixed,created_at')}`,
     );
     if (!response.ok) {
       this.expenseDetailsSupported = false;
+      this.expenseDailyAverageSupported = false;
       response = await this.connection.request(
         `/rest/v1/expense_entries?${buildParameters('id,category_id,item_name,amount,payment_method,occurred_at,is_fixed,created_at')}`,
       );
     } else {
       this.expenseDetailsSupported = true;
+      this.expenseDailyAverageSupported = true;
     }
     if (!response.ok) throw new Error('無法搜尋開銷紀錄，請稍後再試一次。');
     return response.json();
@@ -267,7 +272,7 @@ export class SupabaseLedgerAdapter {
     const endExclusive = new Date(`${endsOn}T00:00:00Z`);
     endExclusive.setUTCDate(endExclusive.getUTCDate() + 1);
     const parameters = new URLSearchParams({
-      select: 'id,category_id,item_name,item_detail,amount,payment_method,occurred_at,is_fixed,created_at',
+      select: 'id,category_id,item_name,item_detail,include_in_daily_average,amount,payment_method,occurred_at,is_fixed,created_at',
       ledger_id: `eq.${ledgerId}`,
       order: 'occurred_at.desc',
     });
@@ -279,6 +284,7 @@ export class SupabaseLedgerAdapter {
     let response = await this.connection.request(`/rest/v1/expense_entries?${parameters}`);
     if (!response.ok) {
       this.expenseDetailsSupported = false;
+      this.expenseDailyAverageSupported = false;
       const legacyParameters = new URLSearchParams({
         select: 'id,category_id,item_name,amount,payment_method,occurred_at,is_fixed,created_at',
         ledger_id: `eq.${ledgerId}`,
@@ -292,6 +298,7 @@ export class SupabaseLedgerAdapter {
       response = await this.connection.request(`/rest/v1/expense_entries?${legacyParameters}`);
     } else {
       this.expenseDetailsSupported = true;
+      this.expenseDailyAverageSupported = true;
     }
     if (!response.ok) throw new Error('無法讀取分析期間的開銷紀錄。');
     return response.json();
@@ -302,6 +309,7 @@ export class SupabaseLedgerAdapter {
     categoryId,
     itemName,
     itemDetail = '',
+    includeInDailyAverage = true,
     amount,
     paymentMethod,
     occurredAt,
@@ -315,6 +323,7 @@ export class SupabaseLedgerAdapter {
       occurred_at: occurredAt,
     };
     if (this.expenseDetailsSupported === true) body.item_detail = itemDetail || null;
+    if (this.expenseDailyAverageSupported === true) body.include_in_daily_average = includeInDailyAverage !== false;
     const response = await this.connection.request('/rest/v1/expense_entries', {
       method: 'POST',
       headers: { Prefer: 'return=representation' },
@@ -333,6 +342,7 @@ export class SupabaseLedgerAdapter {
     categoryId,
     itemName,
     itemDetail = '',
+    includeInDailyAverage = true,
     amount,
     paymentMethod,
     occurredAt,
@@ -350,6 +360,7 @@ export class SupabaseLedgerAdapter {
       occurred_at: occurredAt,
     };
     if (this.expenseDetailsSupported === true) body.item_detail = itemDetail || null;
+    if (this.expenseDailyAverageSupported === true) body.include_in_daily_average = includeInDailyAverage !== false;
     const response = await this.connection.request(`/rest/v1/expense_entries?${parameters}`, {
       method: 'PATCH',
       headers: { Prefer: 'return=representation' },

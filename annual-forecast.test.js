@@ -44,6 +44,19 @@ test('近幾期日常開銷排除固定開銷與尚未結束的當期', () => {
   });
 });
 
+test('被標記為特別支出的開銷不會拉高日常平均', () => {
+  const result = recentVariableSpending({
+    now: '2026-09-07T10:00:00+08:00',
+    cycleStartDay: 5,
+    entries: [
+      { occurred_at: '2026-08-10T10:00:00+08:00', amount: 400 },
+      { occurred_at: '2026-08-12T10:00:00+08:00', amount: 20, include_in_daily_average: false },
+    ],
+  });
+
+  assert.deepEqual(result.periods, [{ startsOn: '2026-08-05', amount: 400 }]);
+});
+
 test('年度預估以月薪、近期日常平均、固定開銷與年終分紅計算可存額', () => {
   const forecast = buildAnnualFinancialForecast({
     now: '2026-09-07T10:00:00+08:00',

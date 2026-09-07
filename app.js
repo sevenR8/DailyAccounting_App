@@ -1198,6 +1198,10 @@ async function renderLedger(
             <label class="edit-form-wide">細項
               <textarea name="itemDetail" maxlength="200" rows="4" placeholder="可逐行輸入細項、金額或計算方式">${escapeHtml(entry.item_detail ?? '')}</textarea>
             </label>
+            <label class="edit-form-wide daily-average-toggle">
+              <input name="includeInDailyAverage" type="checkbox" ${entry.include_in_daily_average !== false ? 'checked' : ''} />
+              <span>納入日常平均開銷</span>
+            </label>
             <p class="form-status edit-form-wide" aria-live="polite"></p>
             <div class="dialog-actions edit-form-wide">
               <button
@@ -1778,6 +1782,10 @@ async function renderLedger(
             </label>
             <label class="edit-form-wide">細項
               <textarea name="itemDetail" maxlength="200" rows="4" placeholder="可逐行輸入細項、金額或計算方式"></textarea>
+            </label>
+            <label class="edit-form-wide daily-average-toggle">
+              <input name="includeInDailyAverage" type="checkbox" checked />
+              <span>納入日常平均開銷</span>
             </label>
             <p class="form-status edit-form-wide" aria-live="polite"></p>
             <div class="dialog-actions edit-form-wide">
@@ -2429,6 +2437,7 @@ async function renderLedger(
         editFields.paymentMethod.value = entry.payment_method ?? 'cash';
         editFields.occurredAt.value = toDateTimeLocalValue(new Date(entry.occurred_at));
         editFields.itemDetail.value = entry.item_detail ?? '';
+        if (editFields.includeInDailyAverage) editFields.includeInDailyAverage.checked = entry.include_in_daily_average !== false;
         searchExpenseEditForm.querySelector('.form-status').textContent = '';
         searchExpenseEditDeleteButton.dataset.entryId = entry.id;
         searchExpenseEditDeleteButton.dataset.entryName = entry.item_name ?? '';
@@ -2924,6 +2933,7 @@ async function renderLedger(
           categoryId: formData.get('categoryId'),
           itemName,
           itemDetail: String(formData.get('itemDetail') ?? '').trim(),
+          includeInDailyAverage: form.elements.includeInDailyAverage?.checked !== false,
           amount,
           paymentMethod: formData.get('paymentMethod'),
           occurredAt: new Date(formData.get('occurredAt')).toISOString(),

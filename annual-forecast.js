@@ -62,6 +62,7 @@ export function recentVariableSpending({
   const totalsByPeriod = new Map();
   entries.forEach((entry) => {
     if (entry?.is_fixed || entry?.isFixed) return;
+    if (entry?.include_in_daily_average === false || entry?.includeInDailyAverage === false) return;
     const occurredOn = taipeiDay(entry?.occurred_at ?? entry?.occurredAt);
     if (occurredOn > today) return;
     const startsOn = startOfAccountingPeriod(occurredOn, cycleStartDay);

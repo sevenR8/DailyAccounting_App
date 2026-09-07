@@ -663,6 +663,15 @@ html.is-reordering-fixed-expense .fixed-rule-sortable { -webkit-user-select: non
   white-space: pre-wrap;
   field-sizing: content;
 }
+.daily-average-toggle {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  color: #4e5e52;
+  font-size: 0.74rem !important;
+  font-weight: 700 !important;
+}
+.daily-average-toggle input { width: auto; accent-color: #267247; }
 .edit-form-wide { grid-column: 1 / -1; }
 .dialog-actions {
   display: grid;
@@ -991,6 +1000,7 @@ input[type="datetime-local"] {
   .secondary-button { background: #2a412e; color: #dce5dd; }
   .fixed-rule-delete { border-color: #875d58; color: #f2aaa0; }
   .fixed-rule-delete:hover { background: #3b2725; }
+  .daily-average-toggle { color: #aeb9af; }
   .finance-subsection { border-color: #3b493d; }
   .panel-heading > span, .money-list .empty-money-list, .migration-notice p { color: #aeb9af; }
   .expense-pie::after { background: #172119; }
