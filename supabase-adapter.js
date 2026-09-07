@@ -561,9 +561,16 @@ export class SupabaseLedgerAdapter {
       limit: '1',
     });
     let response = await this.connection.request(`/rest/v1/ledger_financial_settings?${parametersFor(
-      'ledger_id,cycle_start_day,default_salary_amount,quick_entry_enabled,country_living_cost_baselines',
+      'ledger_id,cycle_start_day,default_salary_amount,quick_entry_enabled,country_living_cost_baselines,annual_cycle_start_month,annual_expected_bonus_amount,annual_expected_dividend_amount',
     )}`);
     let countryBaselinesSupported = true;
+    let annualForecastSupported = true;
+    if (!response.ok) {
+      response = await this.connection.request(`/rest/v1/ledger_financial_settings?${parametersFor(
+        'ledger_id,cycle_start_day,default_salary_amount,quick_entry_enabled,country_living_cost_baselines',
+      )}`);
+      annualForecastSupported = false;
+    }
     if (!response.ok) {
       response = await this.connection.request(`/rest/v1/ledger_financial_settings?${parametersFor(
         'ledger_id,cycle_start_day,default_salary_amount,quick_entry_enabled',
@@ -572,7 +579,14 @@ export class SupabaseLedgerAdapter {
     }
     if (!response.ok) throw new Error('無法讀取帳務設定。');
     const [settings] = await response.json();
-    return settings ? { ...settings, countryBaselinesSupported } : settings;
+    return settings ? {
+      ...settings,
+      annual_cycle_start_month: Number(settings.annual_cycle_start_month) || 1,
+      annual_expected_bonus_amount: Number(settings.annual_expected_bonus_amount) || 0,
+      annual_expected_dividend_amount: Number(settings.annual_expected_dividend_amount) || 0,
+      countryBaselinesSupported,
+      annualForecastSupported,
+    } : settings;
   }
 
   async updateFinancialSettings({
@@ -580,21 +594,38 @@ export class SupabaseLedgerAdapter {
     cycleStartDay,
     defaultSalaryAmount,
     countryLivingCostBaselines,
+    annualCycleStartMonth,
+    annualExpectedBonusAmount,
+    annualExpectedDividendAmount,
   }) {
-    const payload = {
-      ledger_id: ledgerId,
-      cycle_start_day: cycleStartDay,
-      default_salary_amount: defaultSalaryAmount,
-    };
+    const payload = { ledger_id: ledgerId };
+    if (cycleStartDay !== undefined) payload.cycle_start_day = cycleStartDay;
+    if (defaultSalaryAmount !== undefined) payload.default_salary_amount = defaultSalaryAmount;
     if (countryLivingCostBaselines !== undefined) {
       payload.country_living_cost_baselines = countryLivingCostBaselines;
+    }
+    if (annualCycleStartMonth !== undefined) {
+      payload.annual_cycle_start_month = annualCycleStartMonth;
+    }
+    if (annualExpectedBonusAmount !== undefined) {
+      payload.annual_expected_bonus_amount = annualExpectedBonusAmount;
+    }
+    if (annualExpectedDividendAmount !== undefined) {
+      payload.annual_expected_dividend_amount = annualExpectedDividendAmount;
     }
     const response = await this.connection.request('/rest/v1/ledger_financial_settings', {
       method: 'POST',
       headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
       body: JSON.stringify(payload),
     });
-    if (!response.ok) throw new Error('無法儲存帳務設定。');
+    if (!response.ok) {
+      if (annualCycleStartMonth !== undefined
+        || annualExpectedBonusAmount !== undefined
+        || annualExpectedDividendAmount !== undefined) {
+        throw new Error('年度預估設定尚未啟用，請先執行 supabase-0011-annual-financial-forecast.sql。');
+      }
+      throw new Error('無法儲存帳務設定。');
+    }
     const [settings] = await response.json();
     return settings;
   }

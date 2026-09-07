@@ -281,7 +281,6 @@ export function buildExpenseAnalysis({
   }));
 
   const allItems = aggregateItems(nonFixedEntries, merchantGroups);
-  const topItems = allItems.slice(0, 10);
   const merchantItems = allItems.filter((item) => item.merchantType);
   const merchantGroupSummary = (groupType) => {
     const items = merchantItems.filter((item) => item.merchantType === groupType);
@@ -389,7 +388,6 @@ export function buildExpenseAnalysis({
       projectedCompleteLivingSpend,
     },
     weekdayDistribution,
-    topItems,
     countryComparisons: resolvedCountryBaselines.map((country) => ({
       ...country,
       ratio: country.amount ? (completeLivingSpend / country.amount) * 100 : 0,

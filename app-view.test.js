@@ -230,17 +230,17 @@ test('手機摘要卡可開啟獨立帳務管理頁並保留桌面完整資訊',
   assert.match(stylesSource, /@media \(min-width: 900px\)[\s\S]*\.finance-panel \{ grid-area: finance; \}/);
 });
 
-test('整張圓餅圖卡片可開啟含七項分析的單一長頁', () => {
+test('整張圓餅圖卡片可開啟含年度總覽的消費分析長頁', () => {
   assert.match(appSource, /data-action="open-analysis" role="button" tabindex="0"/);
   assert.match(appSource, /buildExpenseAnalysis\(\{/);
+  assert.match(appSource, /buildAnnualFinancialForecast\(\{/);
+  assert.match(appSource, /年度總覽/);
+  assert.match(appSource, /年度週期從/);
+  assert.match(appSource, /預估年終/);
+  assert.match(appSource, /預估分紅/);
   assert.match(appSource, /class="analysis-page"/);
-  assert.match(appSource, /01・生活全貌/);
-  assert.match(appSource, /02・日常節奏/);
-  assert.match(appSource, /03・主要去向/);
-  assert.match(appSource, /04・生活尺度/);
-  assert.match(appSource, /05・生活習慣/);
-  assert.match(appSource, /06・消費心情/);
-  assert.match(appSource, /07・前後變化/);
+  assert.doesNotMatch(appSource, /01・生活全貌/);
+  assert.doesNotMatch(appSource, /非固定開銷 Top 10/);
   assert.match(appSource, /ledgerHome\.dataset\.mobileView = 'analysis'/);
   assert.match(appSource, /data-action="close-analysis"/);
   assert.match(appSource, /animatedSurface: analysisPanel/);

@@ -19,7 +19,11 @@ import {
   countryBaselinesFromSettings,
   DEFAULT_MERCHANT_GROUPS,
   identifyMerchant,
-} from './expense-analysis.js?v=60';
+} from './expense-analysis.js?v=61';
+import {
+  buildAnnualFinancialForecast,
+  recentVariableSpending,
+} from './annual-forecast.js?v=1';
 import {
   advanceRepaymentsInPeriod,
   applyAnalysisExpenseAmounts,
@@ -32,7 +36,7 @@ import {
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=79';
+} from './supabase-adapter.js?v=80';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -440,6 +444,8 @@ function formatAnalysisPercent(value, maximumFractionDigits = 0) {
 
 function renderExpenseAnalysis({
   analysis,
+  annualForecast,
+  annualForecastSupported,
   periodMonthLabel,
   periodLabel,
   canGoNext,
@@ -458,12 +464,6 @@ function renderExpenseAnalysis({
       <strong>$${formatAmount(weekday.average)}</strong>
       <small>${weekday.occurrences} 週平均</small>
     </li>`).join('');
-  const topItemRows = analysis.topItems.map((item, index) => `
-    <tr>
-      <td><span class="analysis-rank">${index + 1}</span></td>
-      <th scope="row">${escapeHtml(item.name)}<small>${item.count} 筆</small></th>
-      <td>$${formatAmount(item.amount)}</td>
-    </tr>`).join('');
   const countryCards = analysis.countryComparisons.map((country, index) => `
     <li style="--country-accent:${chartColors[(index + 3) % chartColors.length]}">
       <span>${escapeHtml(country.name)}</span>
@@ -507,6 +507,36 @@ function renderExpenseAnalysis({
   const analysisSavingsRateClass = analysisSavingsRate !== null && analysisSavingsRate < 0
     ? 'analysis-rate-negative'
     : 'analysis-rate-positive';
+  const annualSavingsRate = annualForecast?.averageSavingsRate;
+  const annualSavingsRateLabel = Number.isFinite(annualSavingsRate)
+    ? `平均儲蓄率 ${formatAnalysisPercent(annualSavingsRate, 1)}`
+    : '平均儲蓄率 —';
+  const annualSavingsRateClass = annualSavingsRate !== null && annualSavingsRate < 0
+    ? 'analysis-rate-negative'
+    : 'analysis-rate-positive';
+  const annualStartMonthOptions = Array.from({ length: 12 }, (_, index) => {
+    const month = index + 1;
+    return `<option value="${month}" ${annualForecast?.cycle.startMonth === month ? 'selected' : ''}>${month} 月</option>`;
+  }).join('');
+  const annualForecastSettings = annualForecastSupported ? `
+    <form class="annual-forecast-form" id="annual-forecast-form">
+      <label>年度週期從
+        <select name="annualCycleStartMonth" aria-label="年度週期起始月份">${annualStartMonthOptions}</select>
+        開始
+      </label>
+      <label>預估年終
+        <input name="expectedBonusAmount" type="text" inputmode="text" autocomplete="off" value="${annualForecast.inputs.expectedBonus || ''}" placeholder="可輸入 10000+5000" aria-label="預估年終" />
+      </label>
+      <label>預估分紅
+        <input name="expectedDividendAmount" type="text" inputmode="text" autocomplete="off" value="${annualForecast.inputs.expectedDividend || ''}" placeholder="可輸入 10000+5000" aria-label="預估分紅" />
+      </label>
+      <button class="secondary-button" type="submit">儲存年度預估</button>
+      <p class="form-status" aria-live="polite">年終與分紅只用於預估，不會計入目前收入。</p>
+    </form>` : `
+      <p class="settings-unavailable annual-forecast-unavailable">請先執行 <code>supabase-0011-annual-financial-forecast.sql</code>，即可儲存年度週期、年終與分紅預估。</p>`;
+  const annualForecastBasis = annualForecast.inputs.includesCurrentPeriod
+    ? '本期目前已記錄的日常開銷'
+    : `近 ${annualForecast.inputs.recentPeriodCount || 1} 期平均日常開銷`;
 
   return `
     <section class="analysis-page" id="expense-analysis-page" aria-label="${escapeHtml(periodMonthLabel)}消費分析">
@@ -520,8 +550,24 @@ function renderExpenseAnalysis({
         </div>
       </header>
 
+      <section class="analysis-section annual-overview-section">
+        <div class="analysis-section-heading"><p class="eyebrow">年度預估</p><h2>年度總覽</h2><span>${escapeHtml(annualForecast.cycle.label)}・${annualForecast.cycle.startsOn.replaceAll('-', '/')}－${annualForecast.cycle.endsOn.replaceAll('-', '/')}</span></div>
+        <p class="annual-overview-note">依目前月薪、固定開銷與${annualForecastBasis}推估。</p>
+        <div class="annual-overview-grid">
+          <article><span>年度收入</span><strong>NT$ ${formatAmount(annualForecast.annualIncome)}</strong><small>月薪 × 12 ＋ 年終、分紅</small></article>
+          <article><span>年度生活開銷</span><strong>NT$ ${formatAmount(annualForecast.annualLivingExpense)}</strong><small>近幾期平均日常開銷 × 12</small></article>
+          <article><span>年度固定開銷</span><strong>NT$ ${formatAmount(annualForecast.annualFixedExpense)}</strong><small>每月固定開銷 × 12 ＋ 年繳</small></article>
+          <article class="annual-overview-savings"><span>預估全年可存</span><strong>NT$ ${formatAmount(annualForecast.estimatedAnnualSavings)}</strong><small class="${annualSavingsRateClass}">${annualSavingsRateLabel}</small></article>
+        </div>
+        <div class="annual-forecast-detail">
+          <p><span>每月預估可存</span><strong>NT$ ${formatAmount(annualForecast.monthlySavings)}</strong></p>
+          <p><span>預估年終＋分紅</span><strong>NT$ ${formatAmount(annualForecast.inputs.expectedBonus + annualForecast.inputs.expectedDividend)}</strong></p>
+        </div>
+        ${annualForecastSettings}
+      </section>
+
       <section class="analysis-section analysis-totals-section">
-        <div class="analysis-section-heading"><p class="eyebrow">01・生活全貌</p><h2>本期生活成本</h2></div>
+        <div class="analysis-section-heading"><p class="eyebrow">生活全貌</p><h2>本期生活成本</h2></div>
         <div class="analysis-total-grid">
           <article class="analysis-total-primary"><span>完整生活開銷（不包含代墊）</span><strong>NT$ ${formatAmount(analysis.totals.completeLivingSpend)}</strong><small>非固定開銷＋本期全部固定開銷</small></article>
           <article><span>日常開銷每日平均</span><strong>NT$ ${formatAmount(analysis.totals.dailyAverage)}</strong><small>非固定開銷・${analysis.period.elapsedDays} 天</small></article>
@@ -531,24 +577,19 @@ function renderExpenseAnalysis({
       </section>
 
       <section class="analysis-section analysis-weekday-section">
-        <div class="analysis-section-heading"><p class="eyebrow">02・日常節奏</p><h2>星期消費分布</h2><span>不含固定開銷</span></div>
+        <div class="analysis-section-heading"><p class="eyebrow">日常節奏</p><h2>星期消費分布</h2><span>不含固定開銷</span></div>
         <ul class="weekday-analysis">${weekdayRows}</ul>
       </section>
 
-      <section class="analysis-section analysis-top-section">
-        <div class="analysis-section-heading"><p class="eyebrow">03・主要去向</p><h2>非固定開銷 Top 10</h2><span>相同項目與店家別名已合併</span></div>
-        <div class="analysis-table-scroll"><table class="analysis-top-table"><tbody>${topItemRows || '<tr><td class="analysis-empty">本期尚無非固定開銷</td></tr>'}</tbody></table></div>
-      </section>
-
       <section class="analysis-section analysis-country-section">
-        <div class="analysis-section-heading"><p class="eyebrow">04・生活尺度</p><h2>各國生活費比較</h2><span>帳本可設定・單身租房族每月平均</span></div>
+        <div class="analysis-section-heading"><p class="eyebrow">生活尺度</p><h2>各國生活費比較</h2><span>單身租房族每月平均</span></div>
         <p class="country-spending-level">你的消費水平為 <strong>${escapeHtml(analysis.spendingLevel)}</strong></p>
         <p class="country-projection">本期完整生活開銷 <strong>NT$ ${formatAmount(analysis.totals.completeLivingSpend)}</strong></p>
         <ul class="country-analysis-grid">${countryCards}</ul>
       </section>
 
       <section class="analysis-section analysis-merchants-section">
-        <div class="analysis-section-heading"><p class="eyebrow">05・生活習慣</p><h2>速食與超商</h2><span>固定開銷不納入</span></div>
+        <div class="analysis-section-heading"><p class="eyebrow">生活習慣</p><h2>速食與超商</h2><span>固定開銷不納入</span></div>
         <div class="merchant-analysis-grid">
           ${merchantBlock('速食店', analysis.merchantAnalysis.fastFood, '本期沒有速食店開銷')}
           ${merchantBlock('便利商店', analysis.merchantAnalysis.convenience, '本期沒有便利商店開銷')}
@@ -556,7 +597,7 @@ function renderExpenseAnalysis({
       </section>
 
       <section class="analysis-section analysis-nature-section">
-        <div class="analysis-section-heading"><p class="eyebrow">06・消費心情</p><h2>維持生活與快樂支出</h2><span>依分類設定・不含固定開銷</span></div>
+        <div class="analysis-section-heading"><p class="eyebrow">消費心情</p><h2>維持生活與快樂支出</h2><span>依分類設定・不含固定開銷</span></div>
         <div class="nature-analysis-grid">
           <div class="nature-balance" role="img" aria-label="維持生活 ${formatAnalysisPercent(nature.maintenance.share)}，快樂支出 ${formatAnalysisPercent(nature.pleasure.share)}">
             <span class="nature-maintenance" style="width:${(nature.maintenance.amount / natureTotal) * 100}%"></span>
@@ -569,7 +610,7 @@ function renderExpenseAnalysis({
       </section>
 
       <section class="analysis-section analysis-comparison-section">
-        <div class="analysis-section-heading"><p class="eyebrow">07・前後變化</p><h2>${escapeHtml(analysis.comparison.label)}</h2><span>同期 ${analysis.comparison.elapsedDays} 天・不含固定開銷</span></div>
+        <div class="analysis-section-heading"><p class="eyebrow">前後變化</p><h2>${escapeHtml(analysis.comparison.label)}</h2><span>同期 ${analysis.comparison.elapsedDays} 天・不含固定開銷</span></div>
         <blockquote>${escapeHtml(analysis.comparison.summary)}</blockquote>
         <p class="previous-full-total">完整上期總額 <strong>NT$ ${formatAmount(analysis.comparison.previousFullTotal)}</strong></p>
         <div class="analysis-table-scroll"><table class="comparison-table"><thead><tr><th>項目</th><th>本期同期</th><th>上期同期</th><th>變化</th></tr></thead><tbody>${comparisonRows}</tbody></table></div>
@@ -756,6 +797,7 @@ async function renderLedger(
   const expenseAdvances = decorateExpenseAdvances(financialOverview?.expenseAdvances ?? []);
   const personalAnalysisEntries = applyPersonalExpenseAmounts(analysisEntries, expenseAdvances);
   const analysisPersonalEntries = applyAnalysisExpenseAmounts(analysisEntries, expenseAdvances);
+  const annualAnalysisEntries = applyAnalysisExpenseAmounts(entries, expenseAdvances);
   const personalPeriodEntries = personalAnalysisEntries.filter((entry) => {
     const occurredAt = new Date(entry.occurred_at);
     return occurredAt >= periodStart && occurredAt < periodEnd;
@@ -821,6 +863,26 @@ async function renderLedger(
     : null;
   const savingsRateLabel = savingsRate === null ? '' : `儲蓄率 ${savingsRate.toFixed(1)}%`;
   const savingsRateClass = savingsRate !== null && savingsRate < 0 ? ' savings-rate-negative' : '';
+  const annualRecentSpending = financialOverview
+    ? recentVariableSpending({
+      entries: annualAnalysisEntries,
+      cycleStartDay: financialOverview.settings.cycle_start_day,
+      now: new Date(),
+      limit: 3,
+    })
+    : { periods: [], includesCurrentPeriod: false };
+  const annualForecast = buildAnnualFinancialForecast({
+    now: new Date(),
+    annualCycleStartMonth: financialOverview?.settings.annual_cycle_start_month ?? 1,
+    currentSalaryAmount: financialOverview?.period.salary_amount
+      ?? financialOverview?.settings.default_salary_amount
+      ?? 0,
+    fixedExpenseRules: financialOverview?.fixedExpenseRules ?? [],
+    recentVariableSpendAmounts: annualRecentSpending.periods.map((period) => period.amount),
+    includesCurrentPeriod: annualRecentSpending.includesCurrentPeriod,
+    expectedBonusAmount: financialOverview?.settings.annual_expected_bonus_amount ?? 0,
+    expectedDividendAmount: financialOverview?.settings.annual_expected_dividend_amount ?? 0,
+  });
   const activeStartsOn = financialOverview?.period.starts_on;
   const previousStartsOn = activeStartsOn
     ? shiftAccountingPeriodStart(activeStartsOn, -1)
@@ -1220,6 +1282,8 @@ async function renderLedger(
   }) : null;
   const analysisPage = expenseAnalysis ? renderExpenseAnalysis({
     analysis: expenseAnalysis,
+    annualForecast,
+    annualForecastSupported: financialOverview?.settings.annualForecastSupported === true,
     periodMonthLabel,
     periodLabel,
     canGoNext,
@@ -2582,6 +2646,48 @@ async function renderLedger(
     } catch (error) {
       status.textContent = error.message;
     } finally {
+      button.disabled = false;
+    }
+  });
+
+  document.querySelector('#annual-forecast-form')?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    const annualCycleStartMonth = Number(formData.get('annualCycleStartMonth'));
+    const expectedBonusAmount = parseSignedAmountExpression(
+      formData.get('expectedBonusAmount'),
+      { allowZero: true },
+    );
+    const expectedDividendAmount = parseSignedAmountExpression(
+      formData.get('expectedDividendAmount'),
+      { allowZero: true },
+    );
+    const button = form.querySelector('button[type="submit"]');
+    const status = form.querySelector('.form-status');
+    if (!Number.isInteger(annualCycleStartMonth)
+      || annualCycleStartMonth < 1
+      || annualCycleStartMonth > 12) {
+      status.textContent = '請選擇年度開始月份。';
+      return;
+    }
+    if (expectedBonusAmount === null || expectedBonusAmount < 0
+      || expectedDividendAmount === null || expectedDividendAmount < 0) {
+      status.textContent = '請輸入 0 或正整數，也可使用加減算式。';
+      return;
+    }
+    button.disabled = true;
+    status.textContent = '正在儲存…';
+    try {
+      await expenseAdapter.updateFinancialSettings({
+        ledgerId: ledger.id,
+        annualCycleStartMonth,
+        annualExpectedBonusAmount: expectedBonusAmount,
+        annualExpectedDividendAmount: expectedDividendAmount,
+      });
+      await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
+    } catch (error) {
+      status.textContent = error.message;
       button.disabled = false;
     }
   });

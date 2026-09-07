@@ -81,7 +81,7 @@ test('星期消費分布以相同星期實際出現次數計算平均且排除�
   });
 });
 
-test('相同項目與店家別名合併後產生非固定開銷 Top 10', () => {
+test('相同項目與店家別名合併後用於店家生活習慣分析', () => {
   const analysis = buildExpenseAnalysis({
     period,
     previousPeriod,
@@ -96,8 +96,10 @@ test('相同項目與店家別名合併後產生非固定開銷 Top 10', () => {
     ],
   });
 
-  assert.deepEqual(analysis.topItems.slice(0, 2).map(({ name, amount, count }) => ({ name, amount, count })), [
+  assert.deepEqual(analysis.merchantAnalysis.convenience.items.map(({ name, amount, count }) => ({ name, amount, count })), [
     { name: '7-11', amount: 219, count: 3 },
+  ]);
+  assert.deepEqual(analysis.merchantAnalysis.fastFood.items.map(({ name, amount, count }) => ({ name, amount, count })), [
     { name: '麥當勞', amount: 198, count: 1 },
   ]);
 });

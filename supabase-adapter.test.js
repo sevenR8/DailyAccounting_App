@@ -47,13 +47,13 @@ test('可依項目名稱搜尋歷史開銷並依日期由新到舊取得結果',
   assert.deepEqual(entries, [{ id: 'expense-2', item_name: '晚餐', occurred_at: '2026-09-06T12:00:00+08:00' }]);
 });
 
-test('帳本財務設定可讀取與儲存各國生活費基準，尚未升級時安全回退', async () => {
+test('帳本財務設定可在尚未升級年度與生活費欄位時安全回退', async () => {
   const calls = [];
   const connection = new SupabaseConnection({
     supabaseUrl: 'https://example.supabase.co', supabaseAnonKey: 'public-key', accessToken: 'token',
     fetchImpl: async (url, options = {}) => {
       calls.push({ url, options });
-      if (calls.length === 1) return { ok: false, json: async () => ({ message: 'column does not exist' }) };
+      if (calls.length < 3) return { ok: false, json: async () => ({ message: 'column does not exist' }) };
       if (options.method === 'POST') return response([{
         ledger_id: 'ledger-1', cycle_start_day: 5, default_salary_amount: 45_000,
         country_living_cost_baselines: { TW: 37000, JP: 38370, KR: 41553, CN: 19000, US: 128000 },
@@ -72,13 +72,52 @@ test('帳本財務設定可讀取與儲存各國生活費基準，尚未升級�
   });
 
   assert.equal(legacySettings.countryBaselinesSupported, false);
-  assert.match(calls[0].url, /country_living_cost_baselines/);
-  assert.doesNotMatch(calls[1].url, /country_living_cost_baselines/);
-  assert.equal(calls[2].options.method, 'POST');
-  assert.deepEqual(JSON.parse(calls[2].options.body).country_living_cost_baselines, {
+  assert.equal(legacySettings.annualForecastSupported, false);
+  assert.match(calls[0].url, /annual_cycle_start_month/);
+  assert.match(calls[1].url, /country_living_cost_baselines/);
+  assert.doesNotMatch(calls[2].url, /country_living_cost_baselines/);
+  assert.equal(calls[3].options.method, 'POST');
+  assert.deepEqual(JSON.parse(calls[3].options.body).country_living_cost_baselines, {
     TW: 37000, JP: 38370, KR: 41553, CN: 19000, US: 128000,
   });
   assert.equal(savedSettings.country_living_cost_baselines.US, 128000);
+});
+
+test('帳本財務設定可讀取與儲存年度週期、年終與分紅預估', async () => {
+  const calls = [];
+  const connection = new SupabaseConnection({
+    supabaseUrl: 'https://example.supabase.co', supabaseAnonKey: 'public-key', accessToken: 'token',
+    fetchImpl: async (url, options = {}) => {
+      calls.push({ url, options });
+      if (options.method === 'POST') return response([{
+        ledger_id: 'ledger-1', annual_cycle_start_month: 4,
+        annual_expected_bonus_amount: 60_000, annual_expected_dividend_amount: 24_000,
+      }]);
+      return response([{
+        ledger_id: 'ledger-1', cycle_start_day: 5, default_salary_amount: 45_000,
+        annual_cycle_start_month: 4,
+        annual_expected_bonus_amount: 60_000,
+        annual_expected_dividend_amount: 24_000,
+      }]);
+    },
+  });
+  const adapter = new SupabaseLedgerAdapter(connection);
+
+  const settings = await adapter.getFinancialSettings('ledger-1');
+  await adapter.updateFinancialSettings({
+    ledgerId: 'ledger-1', annualCycleStartMonth: 4,
+    annualExpectedBonusAmount: 60_000, annualExpectedDividendAmount: 24_000,
+  });
+
+  assert.equal(settings.annualForecastSupported, true);
+  assert.equal(settings.annual_cycle_start_month, 4);
+  assert.equal(settings.annual_expected_bonus_amount, 60_000);
+  assert.deepEqual(JSON.parse(calls[1].options.body), {
+    ledger_id: 'ledger-1',
+    annual_cycle_start_month: 4,
+    annual_expected_bonus_amount: 60_000,
+    annual_expected_dividend_amount: 24_000,
+  });
 });
 
 test('閒置後憑證失效時會刷新登入憑證並安全重試原本的開銷寫入', async () => {
