@@ -608,6 +608,10 @@ html.is-reordering-fixed-expense .fixed-rule-sortable { -webkit-user-select: non
 .finance-subsection h3 { margin: 0; font-size: 1rem; }
 .money-list { display: grid; gap: 6px; padding: 0; margin: 0; list-style: none; }
 .money-list li { display: flex; justify-content: space-between; gap: 10px; padding: 7px 9px; border-radius: 10px; background: #f4f6f1; font-size: 0.82rem; }
+.money-list-actions { display: flex; align-items: center; gap: 8px; }
+.money-list-delete { border: 0; padding: 2px 4px; background: transparent; color: #a33a2b; font-size: 0.72rem; font-weight: 800; cursor: pointer; }
+.money-list-delete:hover, .money-list-delete:focus-visible { text-decoration: underline; }
+.money-list-delete:disabled { cursor: wait; opacity: 0.55; }
 .money-list .empty-money-list { display: block; color: #657066; }
 .fixed-rule-row { align-items: center; }
 .fixed-rule-actions { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }

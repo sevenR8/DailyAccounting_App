@@ -47,6 +47,25 @@ test('可依項目名稱搜尋歷史開銷並依日期由新到舊取得結果',
   assert.deepEqual(entries, [{ id: 'expense-2', item_name: '晚餐', occurred_at: '2026-09-06T12:00:00+08:00' }]);
 });
 
+test('其他收入可依帳本與收入 id 刪除', async () => {
+  let request;
+  const connection = new SupabaseConnection({
+    supabaseUrl: 'https://example.supabase.co', supabaseAnonKey: 'public-key', accessToken: 'token',
+    fetchImpl: async (url, options) => {
+      request = { url, options };
+      return response(null);
+    },
+  });
+
+  await new SupabaseLedgerAdapter(connection).deleteOtherIncomeEntry({
+    ledgerId: 'ledger-1',
+    incomeId: 'income-2',
+  });
+
+  assert.match(request.url, /other_income_entries\?id=eq\.income-2&ledger_id=eq\.ledger-1/);
+  assert.equal(request.options.method, 'DELETE');
+});
+
 test('帳本財務設定可在尚未升級年度與生活費欄位時安全回退', async () => {
   const calls = [];
   const connection = new SupabaseConnection({

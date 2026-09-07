@@ -476,6 +476,13 @@ test('收入與固定開銷平時只顯示摘要，點擊後才開啟輸入或�
   assert.match(stylesSource, /\.finance-dialog::backdrop/);
 });
 
+test('其他收入可在收入清單直接刪除', () => {
+  assert.match(appSource, /data-action="delete-other-income"/);
+  assert.match(appSource, /deleteOtherIncomeEntry/);
+  assert.match(appSource, /確定刪除其他收入/);
+  assert.match(stylesSource, /\.money-list-delete/);
+});
+
 test('儲存本期薪水時直接沿用為未來週期預設，不再顯示第二組薪水設定', () => {
   assert.doesNotMatch(appSource, /id="default-salary-form"/);
   assert.doesNotMatch(appSource, /name="defaultSalaryAmount"/);

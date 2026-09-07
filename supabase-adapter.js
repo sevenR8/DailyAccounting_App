@@ -738,6 +738,18 @@ export class SupabaseLedgerAdapter {
     return income;
   }
 
+  async deleteOtherIncomeEntry({ ledgerId, incomeId }) {
+    const parameters = new URLSearchParams({
+      id: `eq.${incomeId}`,
+      ledger_id: `eq.${ledgerId}`,
+    });
+    const response = await this.connection.request(`/rest/v1/other_income_entries?${parameters}`, {
+      method: 'DELETE',
+      headers: { Prefer: 'return=minimal' },
+    });
+    if (!response.ok) throw new Error('無法刪除這筆其他收入，請確認網路後再試一次。');
+  }
+
   async listFixedExpenseRules(ledgerId) {
     const parameters = new URLSearchParams({
       select: 'id,category_id,item_name,amount,payment_method,scheduled_day,recurrence_type,scheduled_month,sort_order,active_from,retired_at,created_at',

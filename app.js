@@ -38,7 +38,7 @@ import {
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=80';
+} from './supabase-adapter.js?v=81';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -1337,7 +1337,10 @@ async function renderLedger(
     : '上期實際帳單・已納入本期可存額';
   const supportsFixedExpenseScheduling = financialOverview?.fixedExpenseSchedulingSupported === true;
   const otherIncomeList = financialOverview?.otherIncomeEntries.map((income) => `
-    <li><span>${escapeHtml(income.name)}</span><strong>+$${formatAmount(income.amount)}</strong></li>`).join('') || '';
+    <li>
+      <span>${escapeHtml(income.name)}</span>
+      <span class="money-list-actions"><strong>+$${formatAmount(income.amount)}</strong><button class="money-list-delete" type="button" data-action="delete-other-income" data-income-id="${escapeHtml(income.id)}" data-income-name="${escapeHtml(income.name)}" data-income-amount="${income.amount}" aria-label="刪除其他收入：${escapeHtml(income.name)}">刪除</button></span>
+    </li>`).join('') || '';
   const outstandingAdvanceTotal = expenseAdvances
     .reduce((total, advance) => total + advance.outstandingAmount, 0);
   const visibleExpenseAdvances = advancesVisibleInPeriod(
@@ -3509,6 +3512,27 @@ async function renderLedger(
         await expenseAdapter.deleteExpenseEntry({
           ledgerId: ledger.id,
           entryId: button.dataset.entryId,
+        });
+        await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
+      } catch (error) {
+        button.disabled = false;
+        window.alert(error.message);
+      }
+    });
+  });
+
+  document.querySelectorAll('[data-action="delete-other-income"]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const confirmed = window.confirm(
+        `確定刪除其他收入「${button.dataset.incomeName}・$${formatAmount(Number(button.dataset.incomeAmount))}」？`,
+      );
+      if (!confirmed) return;
+
+      button.disabled = true;
+      try {
+        await expenseAdapter.deleteOtherIncomeEntry({
+          ledgerId: ledger.id,
+          incomeId: button.dataset.incomeId,
         });
         await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
       } catch (error) {
