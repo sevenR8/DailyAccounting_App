@@ -24,7 +24,7 @@ import {
   annualForecastDisplayValues,
   buildAnnualFinancialForecast,
   recentVariableSpending,
-} from './annual-forecast.js?v=7';
+} from './annual-forecast.js?v=8';
 import {
   advanceRepaymentsInPeriod,
   applyAnalysisExpenseAmounts,
@@ -595,7 +595,7 @@ function renderExpenseAnalysis({
         <div class="analysis-section-heading"><p class="eyebrow">年度預估</p><h2>年度總覽</h2><span>${escapeHtml(annualForecast.cycle.label)}・${annualForecast.cycle.startsOn.replaceAll('-', '/')}－${annualForecast.cycle.endsOn.replaceAll('-', '/')}</span></div>
         <p class="annual-overview-note">依目前月薪、固定開銷與${annualForecastBasis}推估。</p>
         <div class="annual-overview-grid">
-          <article><span>年度收入</span><strong>NT$ ${formatAmount(annualDisplay.annualIncome)}</strong><small>月平均收入 NT$ ${formatAmount(Math.round(annualDisplay.annualIncome / 12))}（含年終、分紅）</small><small>月薪年收入 NT$ ${formatAmount(annualDisplay.salaryAnnualIncome)} ＋ 年終、分紅 NT$ ${formatAmount(annualDisplay.supplementalIncome)}</small></article>
+          <article><span>年度收入</span><strong>NT$ ${formatAmount(annualDisplay.annualIncome)}</strong><small>每月平均收入 NT$ ${formatAmount(Math.round(annualDisplay.salaryAnnualIncome / 12))} × 12 ＋ 分紅、年終 NT$ ${formatAmount(annualDisplay.supplementalIncome)}</small></article>
           <article><span>年度生活開銷</span><strong>NT$ ${formatAmount(annualDisplay.annualLivingExpense)}</strong><small>月平均 NT$ ${formatAmount(annualForecast.averageMonthlyLivingExpense)}・近幾期平均日常開銷 × 12</small></article>
           <article><span>年度固定開銷</span><strong>NT$ ${formatAmount(annualDisplay.annualFixedExpense)}</strong><small>月平均 NT$ ${formatAmount(Math.round(annualDisplay.annualFixedExpense / 12))}・每月固定開銷 × 12 ＋ 年繳</small></article>
           <article class="annual-overview-savings"><span>預估全年可存</span><strong>NT$ ${formatAmount(annualDisplay.estimatedAnnualSavings)}</strong><small>收入 NT$ ${formatAmount(annualDisplay.annualIncome)} − 生活 NT$ ${formatAmount(annualDisplay.annualLivingExpense)} − 固定 NT$ ${formatAmount(annualDisplay.annualFixedExpense)}</small><small>平均每月可存 NT$ ${formatAmount(annualDisplay.averageMonthlySavings)}</small><small class="${annualSavingsRateClass}">${annualSavingsRateLabel}</small></article>

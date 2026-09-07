@@ -252,7 +252,7 @@ test('整張圓餅圖卡片可開啟含年度總覽的消費分析長頁', () =>
   assert.match(appSource, /animatedSurface: analysisPanel/);
   assert.match(appSource, /annualForecastDisplayValues\(annualForecast\)/);
   assert.match(appSource, /年度收入<\/span><strong>NT\$ \$\{formatAmount\(annualDisplay\.annualIncome\)\}/);
-  assert.match(appSource, /月平均收入 NT\$ \$\{formatAmount\(Math\.round\(annualDisplay\.annualIncome \/ 12\)\)\}（含年終、分紅）/);
+  assert.match(appSource, /每月平均收入 NT\$ \$\{formatAmount\(Math\.round\(annualDisplay\.salaryAnnualIncome \/ 12\)\)\} × 12 ＋ 分紅、年終 NT\$ \$\{formatAmount\(annualDisplay\.supplementalIncome\)\}/);
   assert.match(appSource, /平均每月可存 NT\$ \$\{formatAmount\(annualDisplay\.averageMonthlySavings\)\}/);
 });
 
