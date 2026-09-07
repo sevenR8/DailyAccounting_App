@@ -452,6 +452,7 @@ function renderExpenseAnalysis({
   chartColors,
   savingsAmount,
   savingsRate,
+  savingsBreakdown,
 }) {
   const maximumWeekdayAverage = Math.max(
     1,
@@ -507,6 +508,14 @@ function renderExpenseAnalysis({
   const analysisSavingsRateClass = analysisSavingsRate !== null && analysisSavingsRate < 0
     ? 'analysis-rate-negative'
     : 'analysis-rate-positive';
+  const savingsBreakdownMarkup = savingsBreakdown
+    ? `<div class="analysis-savings-breakdown" aria-label="本期可存額計算">
+        <div><span>本月總收入</span><strong>NT$ ${formatAmount(savingsBreakdown.totalIncome)}</strong></div>
+        <div><span>− 現金開銷</span><strong>NT$ ${formatAmount(savingsBreakdown.cashExpense)}</strong></div>
+        <div><span>− 固定開銷（現金）</span><strong>NT$ ${formatAmount(savingsBreakdown.cashFixedExpense)}</strong></div>
+        <div><span>− 本月信用卡應繳</span><strong>NT$ ${formatAmount(savingsBreakdown.previousCardBill)}</strong></div>
+      </div>`
+    : '';
   const annualSavingsRate = annualForecast?.averageSavingsRate;
   const annualSavingsRateLabel = Number.isFinite(annualSavingsRate)
     ? `平均儲蓄率 ${formatAnalysisPercent(annualSavingsRate, 1)}`
@@ -536,7 +545,7 @@ function renderExpenseAnalysis({
           <article class="analysis-total-primary"><span>完整生活開銷（不包含代墊）</span><strong>NT$ ${formatAmount(analysis.totals.completeLivingSpend)}</strong><small>非固定開銷＋本期全部固定開銷</small></article>
           <article><span>日常開銷每日平均</span><strong>NT$ ${formatAmount(analysis.totals.dailyAverage)}</strong><small>非固定開銷・${analysis.period.elapsedDays} 天</small></article>
           <article><span>完整生活成本每日平均</span><strong>NT$ ${formatAmount(analysis.totals.completeDailyAverage)}</strong><small>包含固定成本</small></article>
-          <article class="analysis-total-savings"><span>本期可存額</span><strong>NT$ ${analysisSavingsAmount === null ? '—' : formatAmount(analysisSavingsAmount)}</strong><small class="${analysisSavingsRateClass}">${analysisSavingsRateLabel}</small></article>
+          <article class="analysis-total-savings"><span>本期可存額</span><strong>NT$ ${analysisSavingsAmount === null ? '—' : formatAmount(analysisSavingsAmount)}</strong>${savingsBreakdownMarkup}<small class="${analysisSavingsRateClass}">${analysisSavingsRateLabel}</small></article>
         </div>
       </section>
 
@@ -843,14 +852,6 @@ async function renderLedger(
     : null;
   const savingsRateLabel = savingsRate === null ? '' : `儲蓄率 ${savingsRate.toFixed(1)}%`;
   const savingsRateClass = savingsRate !== null && savingsRate < 0 ? ' savings-rate-negative' : '';
-  const savingsFormulaSalary = financialOverview?.period?.salary_amount ?? 0;
-  const savingsFormulaOtherIncome = calculatedSummary?.otherIncomeTotal ?? 0;
-  const savingsFormulaExpenses = (calculatedSummary?.netCashOutflowTotal ?? 0)
-    + (calculatedSummary?.cashFixedExpenseTotal ?? 0);
-  const savingsFormulaPreviousCardBill = financialOverview?.period?.previous_card_bill_amount ?? 0;
-  const savingsFormula = savingsFormulaOtherIncome > 0
-    ? `薪資 $${formatAmount(savingsFormulaSalary)} ＋其他收入 $${formatAmount(savingsFormulaOtherIncome)} − 開銷 $${formatAmount(savingsFormulaExpenses)} − 上月信用卡 $${formatAmount(savingsFormulaPreviousCardBill)}`
-    : `薪資 $${formatAmount(savingsFormulaSalary)} − 開銷 $${formatAmount(savingsFormulaExpenses)} − 上月信用卡 $${formatAmount(savingsFormulaPreviousCardBill)}`;
   const annualRecentSpending = financialOverview
     ? recentVariableSpending({
       entries: annualAnalysisEntries,
@@ -1309,6 +1310,12 @@ async function renderLedger(
     chartColors,
     savingsAmount,
     savingsRate,
+    savingsBreakdown: calculatedSummary ? {
+      totalIncome: calculatedSummary.totalIncome,
+      cashExpense: calculatedSummary.netCashOutflowTotal,
+      cashFixedExpense: calculatedSummary.cashFixedExpenseTotal,
+      previousCardBill: financialOverview.period.previous_card_bill_amount ?? 0,
+    } : null,
   }) : '';
   const salaryAmount = financialOverview?.period.salary_amount ?? 0;
   const otherIncomeTotal = calculatedSummary?.otherIncomeTotal ?? 0;
@@ -1679,7 +1686,7 @@ async function renderLedger(
         <div><span>信用卡</span><strong>$${formatAmount(creditCardTotal)}</strong></div>
         <div><span>總開銷</span><strong>$${formatAmount(personalNonFixedExpenseTotal)}</strong></div>
         <div><span>本期固定開銷</span><strong>${fixedExpenseTotal === null ? '—' : `$${formatAmount(fixedExpenseTotal)}`}</strong></div>
-        <div class="savings-summary"><span class="savings-summary-label">本期可存額${savingsRateLabel ? ` <small class="savings-rate${savingsRateClass}">${savingsRateLabel}</small>` : ''}</span><strong>${savingsAmount === null ? '—' : `$${formatAmount(savingsAmount)}`}</strong><small class="savings-formula">${savingsAmount === null ? '' : savingsFormula}</small></div>
+        <div class="savings-summary"><span class="savings-summary-label">本期可存額${savingsRateLabel ? ` <small class="savings-rate${savingsRateClass}">${savingsRateLabel}</small>` : ''}</span><strong>${savingsAmount === null ? '—' : `$${formatAmount(savingsAmount)}`}</strong></div>
       </section>
       ${analysisPage}
       <section class="expense-search-page" id="expense-search-page" aria-label="搜尋歷史開銷">

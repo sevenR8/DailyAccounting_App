@@ -253,11 +253,13 @@ test('整張圓餅圖卡片可開啟含年度總覽的消費分析長頁', () =>
 });
 
 test('本期可存額會顯示收入、開銷與上月信用卡的計算式', () => {
-  assert.match(appSource, /savingsFormula/);
-  assert.match(appSource, /savingsFormulaSalary/);
-  assert.match(appSource, /savingsFormulaExpenses/);
-  assert.match(appSource, /savingsFormulaPreviousCardBill/);
-  assert.match(appSource, /class="savings-formula"/);
+  assert.match(appSource, /savingsBreakdown/);
+  assert.match(appSource, /本月總收入/);
+  assert.match(appSource, /現金開銷/);
+  assert.match(appSource, /固定開銷（現金）/);
+  assert.match(appSource, /本月信用卡應繳/);
+  assert.match(appSource, /class="analysis-savings-breakdown"/);
+  assert.doesNotMatch(appSource, /class="savings-formula"/);
 });
 
 test('分析內頁可切換帳務週期並使用文青風響應式卡片', () => {
