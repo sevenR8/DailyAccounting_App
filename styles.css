@@ -294,6 +294,7 @@ button { font: inherit; cursor: pointer; }
 .summary-panel strong { font-size: 1rem; }
 .savings-summary { padding: 10px; border-radius: 14px; background: #e9f4df; }
 .savings-summary-label { display: flex; align-items: center; justify-content: flex-start; gap: 10px; min-width: 0; white-space: nowrap; }
+.savings-formula { display: block; color: #657066; font-size: 0.62rem; line-height: 1.35; white-space: normal; overflow-wrap: anywhere; }
 .savings-rate { position: relative; top: 11px; flex: 0 0 auto; color: #78c98e; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.01em; line-height: 1.1; white-space: nowrap; }
 .savings-rate-negative { color: #e87870; }
 
@@ -960,7 +961,7 @@ input[type="datetime-local"] {
   .smart-suggestion-list em { background: #304634; color: #b9e3c2; }
   .history-limit-control { color: #aeb9af; }
   .history-limit-control select { border-color: #425146; background: #202c22; color: #dce5dd; }
-  .summary-panel span, .chart-heading > span, .expense-pie span, .chart-legend li small, .chart-legend .empty-chart, .entry-date small, .entry-detail small { color: #aeb9af; }
+  .summary-panel span, .chart-heading > span, .expense-pie span, .chart-legend li small, .chart-legend .empty-chart, .entry-date small, .entry-detail small, .savings-formula { color: #aeb9af; }
   .savings-rate { color: #9fe8b0; }
   .savings-rate-negative { color: #f28b82; }
   .savings-summary { background: #263b29; }

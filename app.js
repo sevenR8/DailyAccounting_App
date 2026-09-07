@@ -843,6 +843,14 @@ async function renderLedger(
     : null;
   const savingsRateLabel = savingsRate === null ? '' : `儲蓄率 ${savingsRate.toFixed(1)}%`;
   const savingsRateClass = savingsRate !== null && savingsRate < 0 ? ' savings-rate-negative' : '';
+  const savingsFormulaSalary = financialOverview?.period?.salary_amount ?? 0;
+  const savingsFormulaOtherIncome = calculatedSummary?.otherIncomeTotal ?? 0;
+  const savingsFormulaExpenses = (calculatedSummary?.netCashOutflowTotal ?? 0)
+    + (calculatedSummary?.cashFixedExpenseTotal ?? 0);
+  const savingsFormulaPreviousCardBill = financialOverview?.period?.previous_card_bill_amount ?? 0;
+  const savingsFormula = savingsFormulaOtherIncome > 0
+    ? `薪資 $${formatAmount(savingsFormulaSalary)} ＋其他收入 $${formatAmount(savingsFormulaOtherIncome)} − 開銷 $${formatAmount(savingsFormulaExpenses)} − 上月信用卡 $${formatAmount(savingsFormulaPreviousCardBill)}`
+    : `薪資 $${formatAmount(savingsFormulaSalary)} − 開銷 $${formatAmount(savingsFormulaExpenses)} − 上月信用卡 $${formatAmount(savingsFormulaPreviousCardBill)}`;
   const annualRecentSpending = financialOverview
     ? recentVariableSpending({
       entries: annualAnalysisEntries,
@@ -1671,7 +1679,7 @@ async function renderLedger(
         <div><span>信用卡</span><strong>$${formatAmount(creditCardTotal)}</strong></div>
         <div><span>總開銷</span><strong>$${formatAmount(personalNonFixedExpenseTotal)}</strong></div>
         <div><span>本期固定開銷</span><strong>${fixedExpenseTotal === null ? '—' : `$${formatAmount(fixedExpenseTotal)}`}</strong></div>
-        <div class="savings-summary"><span class="savings-summary-label">本期可存額${savingsRateLabel ? ` <small class="savings-rate${savingsRateClass}">${savingsRateLabel}</small>` : ''}</span><strong>${savingsAmount === null ? '—' : `$${formatAmount(savingsAmount)}`}</strong></div>
+        <div class="savings-summary"><span class="savings-summary-label">本期可存額${savingsRateLabel ? ` <small class="savings-rate${savingsRateClass}">${savingsRateLabel}</small>` : ''}</span><strong>${savingsAmount === null ? '—' : `$${formatAmount(savingsAmount)}`}</strong><small class="savings-formula">${savingsAmount === null ? '' : savingsFormula}</small></div>
       </section>
       ${analysisPage}
       <section class="expense-search-page" id="expense-search-page" aria-label="搜尋歷史開銷">
