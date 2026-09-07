@@ -24,7 +24,7 @@ import {
   annualForecastDisplayValues,
   buildAnnualFinancialForecast,
   recentVariableSpending,
-} from './annual-forecast.js?v=8';
+} from './annual-forecast.js?v=9';
 import {
   advanceRepaymentsInPeriod,
   applyAnalysisExpenseAmounts,
@@ -528,6 +528,9 @@ function renderExpenseAnalysis({
   const annualForecastBasis = annualForecast.inputs.includesCurrentPeriod
     ? '本期目前已記錄的日常開銷'
     : `近 ${annualForecast.inputs.recentPeriodCount || 1} 期平均日常開銷`;
+  const annualSalaryBasis = annualForecast.inputs.salaryPeriodCount
+    ? `年度週期內 ${annualForecast.inputs.salaryPeriodCount} 期已輸入薪資平均`
+    : '目前月薪（尚無年度薪資紀錄）';
 
   return `
     <section class="analysis-page" id="expense-analysis-page" aria-label="${escapeHtml(periodMonthLabel)}消費分析">
@@ -593,7 +596,7 @@ function renderExpenseAnalysis({
 
       <section class="analysis-section annual-overview-section">
         <div class="analysis-section-heading"><p class="eyebrow">年度預估</p><h2>年度總覽</h2><span>${escapeHtml(annualForecast.cycle.label)}・${annualForecast.cycle.startsOn.replaceAll('-', '/')}－${annualForecast.cycle.endsOn.replaceAll('-', '/')}</span></div>
-        <p class="annual-overview-note">依目前月薪、固定開銷與${annualForecastBasis}推估。</p>
+        <p class="annual-overview-note">依${annualSalaryBasis}、固定開銷與${annualForecastBasis}推估。</p>
         <div class="annual-overview-grid">
           <article><span>年度收入</span><strong>NT$ ${formatAmount(annualDisplay.annualIncome)}</strong><small>每月平均收入 NT$ ${formatAmount(Math.round(annualDisplay.salaryAnnualIncome / 12))} × 12 ＋ 分紅、年終 NT$ ${formatAmount(annualDisplay.supplementalIncome)}</small></article>
           <article><span>年度生活開銷</span><strong>NT$ ${formatAmount(annualDisplay.annualLivingExpense)}</strong><small>月平均 NT$ ${formatAmount(annualForecast.averageMonthlyLivingExpense)}・近幾期平均日常開銷 × 12</small></article>
@@ -634,10 +637,11 @@ async function loadLedgerViewData(ledger, expenseAdapter, selectedStartsOn = nul
   let financialOverview = null;
   let financialOverviewLoaded = false;
   try {
-    const [currentPeriod, settings, fixedExpenseRules] = await Promise.all([
+    const [currentPeriod, settings, fixedExpenseRules, salaryPeriods] = await Promise.all([
       expenseAdapter.ensureCurrentAccountingPeriod(ledger.id),
       expenseAdapter.getFinancialSettings(ledger.id),
       expenseAdapter.listFixedExpenseRules(ledger.id),
+      expenseAdapter.listAccountingPeriods({ ledgerId: ledger.id }).catch(() => []),
     ]);
     const selectedDay = selectedStartsOn ? Number(String(selectedStartsOn).slice(-2)) : null;
     const selectedPeriodIsStaleCurrent = Boolean(
@@ -710,6 +714,7 @@ async function loadLedgerViewData(ledger, expenseAdapter, selectedStartsOn = nul
     financialOverview = {
       period,
       previousPeriod,
+      salaryPeriods,
       settings,
       otherIncomeEntries,
       fixedExpenseRules: effectiveFixedExpenseRules,
@@ -868,6 +873,7 @@ async function renderLedger(
     currentSalaryAmount: financialOverview?.period.salary_amount
       ?? financialOverview?.settings.default_salary_amount
       ?? 0,
+    salaryPeriods: financialOverview?.salaryPeriods ?? [],
     fixedExpenseRules: financialOverview?.fixedExpenseRules ?? [],
     recentVariableSpendAmounts: annualRecentSpending.periods.map((period) => period.amount),
     includesCurrentPeriod: annualRecentSpending.includesCurrentPeriod,

@@ -511,6 +511,17 @@ export class SupabaseLedgerAdapter {
     return period ?? null;
   }
 
+  async listAccountingPeriods({ ledgerId }) {
+    const parameters = new URLSearchParams({
+      select: 'ledger_id,starts_on,ends_on,salary_amount',
+      ledger_id: `eq.${ledgerId}`,
+      order: 'starts_on.asc',
+    });
+    const response = await this.connection.request(`/rest/v1/accounting_periods?${parameters}`);
+    if (!response.ok) throw new Error('無法讀取薪資紀錄。');
+    return response.json();
+  }
+
   async listMerchantGroups(ledgerId) {
     const parameters = new URLSearchParams({
       select: 'id,name,group_type,auto_credit_card,retired_at,created_at,merchant_aliases(id,alias,created_at)',

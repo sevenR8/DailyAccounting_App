@@ -110,6 +110,7 @@ export function buildAnnualFinancialForecast({
   now = new Date(),
   annualCycleStartMonth = 1,
   currentSalaryAmount = 0,
+  salaryPeriods = [],
   fixedExpenseRules = [],
   recentVariableSpendAmounts = [],
   includesCurrentPeriod = false,
@@ -117,7 +118,18 @@ export function buildAnnualFinancialForecast({
   expectedDividendAmount = 0,
 } = {}) {
   const cycle = annualCycleForDate({ now, startMonth: annualCycleStartMonth });
-  const monthlySalary = positiveAmount(currentSalaryAmount);
+  const recordedSalaryAmounts = salaryPeriods
+    .map((period) => {
+      const startsOn = period?.starts_on ?? period?.startsOn;
+      const amount = positiveAmount(period?.salary_amount ?? period?.salaryAmount);
+      return startsOn && startsOn >= cycle.startsOn && startsOn <= cycle.endsOn && amount > 0
+        ? amount
+        : null;
+    })
+    .filter((amount) => amount !== null);
+  const monthlySalary = recordedSalaryAmounts.length
+    ? Math.round(recordedSalaryAmounts.reduce((total, amount) => total + amount, 0) / recordedSalaryAmounts.length)
+    : positiveAmount(currentSalaryAmount);
   const recentAmounts = recentVariableSpendAmounts
     .map((value) => positiveAmount(value?.amount ?? value))
     .filter((value) => Number.isFinite(value));
@@ -142,6 +154,7 @@ export function buildAnnualFinancialForecast({
     },
     inputs: {
       monthlySalary,
+      salaryPeriodCount: recordedSalaryAmounts.length,
       expectedBonus,
       expectedDividend,
       recentPeriodCount: recentAmounts.length,

@@ -91,6 +91,23 @@ test('年度收入會把年終與分紅加到月薪乘以 12', () => {
   assert.equal(forecast.averageMonthlySavings, 60_983);
 });
 
+test('年度預估只平均年度週期內已有數值的薪資月份', () => {
+  const forecast = buildAnnualFinancialForecast({
+    now: '2026-09-07T10:00:00+08:00',
+    salaryPeriods: [
+      { starts_on: '2026-01-05', salary_amount: 30_000 },
+      { starts_on: '2026-02-05', salary_amount: 31_000 },
+      { starts_on: '2026-03-05', salary_amount: 0 },
+      { starts_on: '2025-12-05', salary_amount: 99_000 },
+    ],
+    expectedBonusAmount: 18_400,
+  });
+
+  assert.equal(forecast.inputs.salaryPeriodCount, 2);
+  assert.equal(forecast.inputs.monthlySalary, 30_500);
+  assert.equal(forecast.annualIncome, 384_400);
+});
+
 test('年度總覽使用畫面中的收入與開銷數字重新計算，不信任舊衍生結果', () => {
   const display = annualForecastDisplayValues({
     inputs: {
