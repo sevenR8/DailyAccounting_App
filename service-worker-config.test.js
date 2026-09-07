@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
 const serviceWorker = await readFile(new URL('./service-worker.js', import.meta.url), 'utf8');
+const indexHtml = await readFile(new URL('./index.html', import.meta.url), 'utf8');
 
 test('已部署的設定檔優先從網路讀取，避免舊快取卡住連線設定', () => {
   assert.match(serviceWorker, /daily-ledger-shell-v\d+/);
@@ -22,4 +23,11 @@ test('新版 PWA 會先完成快取再接管，且不強制重新導向既有頁
     /event\.waitUntil\(\s*caches\.open\(CACHE_NAME\)[\s\S]*cache\.addAll\(APP_SHELL\)[\s\S]*self\.skipWaiting\(\)/,
   );
   assert.doesNotMatch(serviceWorker, /client\.navigate\(client\.url\)/);
+});
+
+test('新 Service Worker 接管後會自動重新載入一次，避免保留舊版年度計算畫面', () => {
+  assert.match(indexHtml, /serviceWorker\.addEventListener\('controllerchange'/);
+  assert.match(indexHtml, /window\.location\.reload\(\)/);
+  assert.match(indexHtml, /updateViaCache:\s*'none'/);
+  assert.match(indexHtml, /service-worker\.js\?v=120/);
 });
