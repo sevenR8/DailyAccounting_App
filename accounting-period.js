@@ -18,6 +18,21 @@ export function accountingPeriodFromStart(startsOn) {
   };
 }
 
+export function receivedAtForAccountingPeriod({ now = new Date(), startsOn, endsOn }) {
+  const current = new Date(now);
+  const periodStart = new Date(`${startsOn}T00:00:00+08:00`);
+  const periodEndExclusive = new Date(`${endsOn}T00:00:00+08:00`);
+  periodEndExclusive.setUTCDate(periodEndExclusive.getUTCDate() + 1);
+  if (
+    Number.isFinite(current.getTime())
+    && current >= periodStart
+    && current < periodEndExclusive
+  ) {
+    return current.toISOString();
+  }
+  return `${startsOn}T00:00:00+08:00`;
+}
+
 export function canRebaseEmptyCurrentPeriod({ period, entries = [], otherIncomeEntries = [] }) {
   if (!period) return false;
   if (Number(period.salary_amount ?? 0) !== 0) return false;

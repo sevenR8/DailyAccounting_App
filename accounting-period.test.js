@@ -5,6 +5,7 @@ import {
   accountingPeriodFromStart,
   compareExpenseTotals,
   canRebaseEmptyCurrentPeriod,
+  receivedAtForAccountingPeriod,
   scheduledDateInAccountingPeriod,
   shiftAccountingPeriodStart,
 } from './accounting-period.js';
@@ -44,6 +45,25 @@ test('帳務週期可按月前後移動並維持自訂起始日', () => {
     startsOn: '2026-08-05',
     endsOn: '2026-09-04',
   });
+});
+
+test('歷史週期新增其他收入時會寫入該週期，而不是使用目前日期', () => {
+  assert.equal(
+    receivedAtForAccountingPeriod({
+      now: '2026-09-08T10:00:00+08:00',
+      startsOn: '2026-02-05',
+      endsOn: '2026-03-04',
+    }),
+    '2026-02-05T00:00:00+08:00',
+  );
+  assert.equal(
+    receivedAtForAccountingPeriod({
+      now: '2026-02-10T10:00:00+08:00',
+      startsOn: '2026-02-05',
+      endsOn: '2026-03-04',
+    }),
+    '2026-02-10T02:00:00.000Z',
+  );
 });
 
 test('固定開銷日期會落在跨月帳務週期內的正確月份', () => {

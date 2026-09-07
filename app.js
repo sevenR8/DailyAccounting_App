@@ -11,9 +11,10 @@ import {
 import {
   accountingPeriodFromStart,
   compareExpenseTotals,
+  receivedAtForAccountingPeriod,
   scheduledDateInAccountingPeriod,
   shiftAccountingPeriodStart,
-} from './accounting-period.js?v=45';
+} from './accounting-period.js?v=46';
 import {
   buildExpenseAnalysis,
   countryBaselinesFromSettings,
@@ -3220,7 +3221,11 @@ async function renderLedger(
           ledgerId: ledger.id,
           name: formData.get('name').trim(),
           amount,
-          receivedAt: new Date().toISOString(),
+          receivedAt: receivedAtForAccountingPeriod({
+            now: new Date(),
+            startsOn: financialOverview.period.starts_on,
+            endsOn: financialOverview.period.ends_on,
+          }),
         });
         await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
       } catch (error) {
@@ -3461,7 +3466,11 @@ async function renderLedger(
           ledgerId: ledger.id,
           name: formData.get('name').trim(),
           amount,
-          receivedAt: new Date().toISOString(),
+          receivedAt: receivedAtForAccountingPeriod({
+            now: new Date(),
+            startsOn: financialOverview.period.starts_on,
+            endsOn: financialOverview.period.ends_on,
+          }),
         });
         await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
       } catch (error) {
