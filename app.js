@@ -1,5 +1,5 @@
 import { LedgerModule } from './ledger-module.js?v=44';
-import { calculateDailyLivingBudget, calculateFinancialSummary } from './financial-summary.js?v=45';
+import { calculateDailyLivingBudget, calculateFinancialSummary } from './financial-summary.js?v=46';
 import { parseAmountExpression, parseSignedAmountExpression } from './amount-expression.js?v=45';
 import {
   buildExpenseTemplates,
@@ -851,8 +851,10 @@ async function renderLedger(
     ?? periodEntries.reduce((total, entry) => total + entry.amount, 0);
   const personalGeneratedExpenseTotal = personalPeriodEntries
     .reduce((total, entry) => total + entry.amount, 0);
+  const fixedExpenseTotal = calculatedSummary?.fixedExpenseTotal ?? null;
   const dailyLivingBudget = calculateDailyLivingBudget({
     livingExpenseLimitAmount: financialOverview?.period.living_expense_limit_amount,
+    reservedFixedAmount: fixedExpenseTotal ?? 0,
     spentAmount: personalNonFixedExpenseTotal,
     periodStart: financialOverview?.period.starts_on,
     periodEnd: financialOverview?.period.ends_on,
@@ -863,13 +865,12 @@ async function renderLedger(
         <div><span>每日還可花</span><strong>${dailyLivingBudget.remainingDays > 0
     ? `${dailyLivingBudget.remainingAmount < 0 ? '−' : ''}$${formatAmount(Math.abs(dailyLivingBudget.dailyAmount))}`
     : '—'}</strong></div>
-        <small>本期上限 $${formatAmount(dailyLivingBudget.limit)}・已花 $${formatAmount(dailyLivingBudget.spent)}${dailyLivingBudget.remainingDays > 0 ? `・剩 ${dailyLivingBudget.remainingDays} 天` : '・本期已結束'}</small>
+        <small>上限 $${formatAmount(dailyLivingBudget.limit)}・固定 $${formatAmount(dailyLivingBudget.fixed)}・已花 $${formatAmount(dailyLivingBudget.spent)}${dailyLivingBudget.remainingDays > 0 ? `・剩 ${dailyLivingBudget.remainingDays} 天` : '・本期已結束'}</small>
       </aside></section>`
     : '';
   // 圓餅圖與消費分析只呈現本人實際負擔；全額代墊會排除，部分代墊只保留自己的部分。
   const analysisExpenseTotal = analysisPeriodEntries
     .reduce((total, entry) => total + entry.amount, 0);
-  const fixedExpenseTotal = calculatedSummary?.fixedExpenseTotal ?? null;
   const fixedCreditCardExpenseTotal = fixedExpensesForSummary
     .filter((entry) => entry.payment_method === 'credit_card')
     .reduce((total, entry) => total + Number(entry.amount || 0), 0);

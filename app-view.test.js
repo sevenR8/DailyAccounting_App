@@ -495,6 +495,7 @@ test('帳務管理可設定本期生活開銷上限，並在快速記帳區顯�
   assert.match(appSource, /livingExpenseLimitAmount: parsedLivingExpenseLimit/);
   assert.match(appSource, /class="daily-living-budget/);
   assert.match(appSource, /calculateDailyLivingBudget\(/);
+  assert.match(appSource, /reservedFixedAmount: fixedExpenseTotal/);
   assert.match(stylesSource, /\.daily-living-budget/);
 });
 

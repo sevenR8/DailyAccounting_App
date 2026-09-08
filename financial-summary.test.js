@@ -77,9 +77,10 @@ test('信用卡代墊收回保留完整刷卡額並增加本期可用現金', ()
   assert.equal(summary.savingsAmount, 4500);
 });
 
-test('每日可花額以本期生活上限扣除已發生生活開銷後除以剩餘天數', () => {
+test('每日可花額以本期生活上限扣除固定與已發生生活開銷後除以剩餘天數', () => {
   const budget = calculateDailyLivingBudget({
     livingExpenseLimitAmount: 8000,
+    reservedFixedAmount: 2000,
     spentAmount: 2500,
     periodStart: '2026-09-05',
     periodEnd: '2026-10-04',
@@ -87,8 +88,9 @@ test('每日可花額以本期生活上限扣除已發生生活開銷後除以�
   });
 
   assert.equal(budget.limit, 8000);
+  assert.equal(budget.fixed, 2000);
   assert.equal(budget.spent, 2500);
-  assert.equal(budget.remainingAmount, 5500);
+  assert.equal(budget.remainingAmount, 3500);
   assert.equal(budget.remainingDays, 27);
-  assert.equal(budget.dailyAmount, 203);
+  assert.equal(budget.dailyAmount, 129);
 });
