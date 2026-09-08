@@ -338,16 +338,17 @@ button { font: inherit; cursor: pointer; }
 
 .daily-living-budget {
   display: grid;
-  gap: 4px;
-  padding: 10px 12px;
+  gap: 2px;
+  padding: 8px 12px;
   border-radius: 14px;
   background: #e9f4df;
   color: #24422d;
 }
+.daily-living-budget-panel { display: grid; align-content: start; }
 .daily-living-budget div { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
-.daily-living-budget span { font-size: 0.84rem; font-weight: 700; }
-.daily-living-budget strong { font-size: 1.15rem; }
-.daily-living-budget small { color: #68736a; font-size: 0.72rem; }
+.daily-living-budget span { font-size: 0.8rem; font-weight: 700; }
+.daily-living-budget strong { font-size: 1.05rem; }
+.daily-living-budget small { color: #68736a; font-size: 0.68rem; }
 .daily-living-budget.is-over-budget { background: #fbe8e5; color: #8f2e26; }
 .daily-living-budget.is-over-budget small { color: #a33a2b; }
 
@@ -1167,6 +1168,7 @@ input[type="datetime-local"] {
   }
   .mobile-finance-back:focus-visible { outline: 2px solid #4d8f64; outline-offset: 2px; }
   .ledger-home[data-mobile-view="finance"] > .period-navigation,
+  .ledger-home[data-mobile-view="finance"] > .daily-living-budget-panel,
   .ledger-home[data-mobile-view="finance"] > .chart-panel,
   .ledger-home[data-mobile-view="finance"] > .summary-panel,
   .ledger-home[data-mobile-view="finance"] > .quick-entry-panel,
@@ -1184,6 +1186,7 @@ input[type="datetime-local"] {
     padding: 16px;
   }
   .quick-entry-panel { gap: 10px; }
+  .daily-living-budget-panel { padding: 0 4px; }
   .expense-form { gap: 10px; }
   .period-navigation,
   .chart-panel,
@@ -1327,6 +1330,7 @@ input[type="datetime-local"] {
     grid-template-areas:
       "header header"
       "navigator navigator"
+      "budget budget"
       "summary summary"
       "chart finance"
       "quick finance"
@@ -1335,6 +1339,7 @@ input[type="datetime-local"] {
   }
   .top-bar { grid-area: header; }
   .period-navigation { grid-area: navigator; }
+  .daily-living-budget-panel { grid-area: budget; }
   .summary-panel { grid-area: summary; grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .chart-panel { grid-area: chart; }
   .finance-panel { grid-area: finance; }
@@ -1352,6 +1357,7 @@ input[type="datetime-local"] {
     grid-template-areas:
       "header header header"
       "navigator navigator navigator"
+      "budget budget budget"
       "summary summary summary"
       "chart quick finance"
       "history quick finance";

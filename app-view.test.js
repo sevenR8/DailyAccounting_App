@@ -504,6 +504,15 @@ test('本期收入卡片會顯示本期生活開銷上限', () => {
   assert.match(appSource, /尚未設定/);
 });
 
+test('每日可花顯示在週期日期下方並縮窄卡片高度', () => {
+  const periodIndex = appSource.indexOf('class="period-navigation"');
+  const budgetIndex = appSource.indexOf('${dailyLivingBudgetMarkup}');
+  const summaryIndex = appSource.indexOf('class="summary-panel"');
+  assert.ok(periodIndex >= 0 && budgetIndex > periodIndex && budgetIndex < summaryIndex);
+  assert.match(stylesSource, /\.daily-living-budget-panel/);
+  assert.match(stylesSource, /\.daily-living-budget \{[\s\S]*padding: 8px 12px/);
+});
+
 test('本月信用卡繳納顯示在收入與固定開銷之間，並使用上期實際帳單', () => {
   const incomeIndex = appSource.indexOf('class="income-overview-section"');
   const cardBillIndex = appSource.indexOf('class="card-bill-overview-section"');

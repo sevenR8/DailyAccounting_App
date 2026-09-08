@@ -859,12 +859,12 @@ async function renderLedger(
     now: new Date(),
   });
   const dailyLivingBudgetMarkup = dailyLivingBudget
-    ? `<aside class="daily-living-budget${dailyLivingBudget.remainingAmount < 0 ? ' is-over-budget' : ''}" aria-label="每日還可花">
+    ? `<section class="daily-living-budget-panel" aria-label="本期生活開銷預算"><aside class="daily-living-budget${dailyLivingBudget.remainingAmount < 0 ? ' is-over-budget' : ''}">
         <div><span>每日還可花</span><strong>${dailyLivingBudget.remainingDays > 0
     ? `${dailyLivingBudget.remainingAmount < 0 ? '−' : ''}$${formatAmount(Math.abs(dailyLivingBudget.dailyAmount))}`
     : '—'}</strong></div>
         <small>本期上限 $${formatAmount(dailyLivingBudget.limit)}・已花 $${formatAmount(dailyLivingBudget.spent)}${dailyLivingBudget.remainingDays > 0 ? `・剩 ${dailyLivingBudget.remainingDays} 天` : '・本期已結束'}</small>
-      </aside>`
+      </aside></section>`
     : '';
   // 圓餅圖與消費分析只呈現本人實際負擔；全額代墊會排除，部分代墊只保留自己的部分。
   const analysisExpenseTotal = analysisPeriodEntries
@@ -1704,6 +1704,7 @@ async function renderLedger(
           </div>
           <div class="period-comparison comparison-${periodComparison.direction}">${escapeHtml(comparisonText)}</div>
         </section>` : ''}
+      ${dailyLivingBudgetMarkup}
       <section class="chart-panel chart-panel-action" id="period-overview-section" data-mobile-section="overview" data-action="open-analysis" role="button" tabindex="0" aria-label="本期開銷分類占比，開啟七項消費分析">
         <div class="chart-heading">
           <p class="eyebrow">本期總覽</p>
@@ -1791,7 +1792,6 @@ async function renderLedger(
           <button class="email-button" type="submit">儲存開銷</button>
           <p class="form-status" id="expense-status" aria-live="polite"></p>
         </form>
-        ${dailyLivingBudgetMarkup}
       </section>
       <section class="history-panel" id="expense-history-section" data-mobile-section="record">
         <div class="history-heading">
