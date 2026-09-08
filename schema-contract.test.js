@@ -30,6 +30,10 @@ const countryLivingCostMigration = await readFile(
   new URL('./supabase-0007-country-living-cost-baselines.sql', import.meta.url),
   'utf8',
 );
+const livingExpenseLimitMigration = await readFile(
+  new URL('./supabase-0013-living-expense-limit.sql', import.meta.url),
+  'utf8',
+);
 
 test('資料模型保留開銷的記錄者、可選付款者與同帳本外鍵', () => {
   assert.match(migration, /create table public\.expense_entries/i);
@@ -116,4 +120,10 @@ test('各國生活費基準保存於帳本財務設定並預填使用者指定�
   assert.match(countryLivingCostMigration, /'KR', 41553/i);
   assert.match(countryLivingCostMigration, /'CN', 19000/i);
   assert.match(countryLivingCostMigration, /'US', 128000/i);
+});
+
+test('每期生活開銷上限可為空值或非負整數', () => {
+  assert.match(livingExpenseLimitMigration, /alter table public\.accounting_periods/i);
+  assert.match(livingExpenseLimitMigration, /living_expense_limit_amount integer/i);
+  assert.match(livingExpenseLimitMigration, /is null or living_expense_limit_amount >= 0/i);
 });

@@ -490,6 +490,14 @@ test('儲存本期薪水時直接沿用為未來週期預設，不再顯示第�
   assert.match(appSource, /updateFinancialSettings\(\{[\s\S]*defaultSalaryAmount: updatedSalaryAmount/);
 });
 
+test('帳務管理可設定本期生活開銷上限，並在快速記帳區顯示每日剩餘預算', () => {
+  assert.match(appSource, /name="livingExpenseLimitAmount"/);
+  assert.match(appSource, /livingExpenseLimitAmount: parsedLivingExpenseLimit/);
+  assert.match(appSource, /class="daily-living-budget/);
+  assert.match(appSource, /calculateDailyLivingBudget\(/);
+  assert.match(stylesSource, /\.daily-living-budget/);
+});
+
 test('本月信用卡繳納顯示在收入與固定開銷之間，並使用上期實際帳單', () => {
   const incomeIndex = appSource.indexOf('class="income-overview-section"');
   const cardBillIndex = appSource.indexOf('class="card-bill-overview-section"');
@@ -544,10 +552,11 @@ test('代墊只從開銷內頁設定，不在每次快速記帳後提示', () =>
   assert.doesNotMatch(appSource, /id="expense-form"[\s\S]{0,1600}name="debtorName"/);
 });
 
-test('待收代墊顯示在本期收入上方，並可記錄部分收回', () => {
+test('待收代墊移至每期固定開銷上方，並可記錄部分收回', () => {
   const advanceIndex = appSource.indexOf('class="advance-overview-section"');
-  const incomeIndex = appSource.indexOf('class="income-overview-section"');
-  assert.ok(advanceIndex >= 0 && advanceIndex < incomeIndex);
+  const cardBillIndex = appSource.indexOf('class="card-bill-overview-section"');
+  const fixedIndex = appSource.indexOf('class="fixed-overview-section"');
+  assert.ok(advanceIndex >= 0 && cardBillIndex >= 0 && advanceIndex > cardBillIndex && advanceIndex < fixedIndex);
   assert.match(appSource, /全部待收/);
   assert.match(appSource, /class="advance-repayment-form"/);
   assert.match(appSource, /createAdvanceRepayment/);

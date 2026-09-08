@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { calculateFinancialSummary } from './financial-summary.js';
+import { calculateDailyLivingBudget, calculateFinancialSummary } from './financial-summary.js';
 
 test('可存額扣除上期帳單、非固定現金與現金固定開銷，不先扣本期刷卡', () => {
   const summary = calculateFinancialSummary({
@@ -75,4 +75,20 @@ test('信用卡代墊收回保留完整刷卡額並增加本期可用現金', ()
   assert.equal(summary.creditCardTotal, 9000);
   assert.equal(summary.netCashOutflowTotal, -4500);
   assert.equal(summary.savingsAmount, 4500);
+});
+
+test('每日可花額以本期生活上限扣除已發生生活開銷後除以剩餘天數', () => {
+  const budget = calculateDailyLivingBudget({
+    livingExpenseLimitAmount: 8000,
+    spentAmount: 2500,
+    periodStart: '2026-09-05',
+    periodEnd: '2026-10-04',
+    now: '2026-09-08T10:00:00+08:00',
+  });
+
+  assert.equal(budget.limit, 8000);
+  assert.equal(budget.spent, 2500);
+  assert.equal(budget.remainingAmount, 5500);
+  assert.equal(budget.remainingDays, 27);
+  assert.equal(budget.dailyAmount, 203);
 });

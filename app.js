@@ -1,5 +1,5 @@
 import { LedgerModule } from './ledger-module.js?v=44';
-import { calculateFinancialSummary } from './financial-summary.js?v=44';
+import { calculateDailyLivingBudget, calculateFinancialSummary } from './financial-summary.js?v=45';
 import { parseAmountExpression, parseSignedAmountExpression } from './amount-expression.js?v=45';
 import {
   buildExpenseTemplates,
@@ -38,7 +38,7 @@ import {
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=81';
+} from './supabase-adapter.js?v=82';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -666,6 +666,7 @@ async function loadLedgerViewData(ledger, expenseAdapter, selectedStartsOn = nul
       ledgerId: ledger.id,
       startsOn: targetStartsOn,
     }).catch(() => null);
+    const inheritedLivingExpenseLimit = previousStoredPeriod?.living_expense_limit_amount ?? null;
     const period = storedPeriod ?? {
       ledger_id: ledger.id,
       starts_on: targetBounds.startsOn,
@@ -680,7 +681,11 @@ async function loadLedgerViewData(ledger, expenseAdapter, selectedStartsOn = nul
       previous_card_bill_zero_confirmed: isFuturePeriod
         ? Boolean(previousStoredPeriod?.previous_card_bill_zero_confirmed)
         : false,
+      living_expense_limit_amount: inheritedLivingExpenseLimit,
     };
+    if (storedPeriod && (isCurrentPeriod || isFuturePeriod) && storedPeriod.living_expense_limit_amount == null) {
+      period.living_expense_limit_amount = inheritedLivingExpenseLimit;
+    }
     const previousBounds = accountingPeriodFromStart(fallbackPreviousStartsOn);
     const previousPeriod = previousStoredPeriod ?? {
       starts_on: previousBounds.startsOn,
@@ -846,6 +851,21 @@ async function renderLedger(
     ?? periodEntries.reduce((total, entry) => total + entry.amount, 0);
   const personalGeneratedExpenseTotal = personalPeriodEntries
     .reduce((total, entry) => total + entry.amount, 0);
+  const dailyLivingBudget = calculateDailyLivingBudget({
+    livingExpenseLimitAmount: financialOverview?.period.living_expense_limit_amount,
+    spentAmount: personalNonFixedExpenseTotal,
+    periodStart: financialOverview?.period.starts_on,
+    periodEnd: financialOverview?.period.ends_on,
+    now: new Date(),
+  });
+  const dailyLivingBudgetMarkup = dailyLivingBudget
+    ? `<aside class="daily-living-budget${dailyLivingBudget.remainingAmount < 0 ? ' is-over-budget' : ''}" aria-label="每日還可花">
+        <div><span>每日還可花</span><strong>${dailyLivingBudget.remainingDays > 0
+    ? `${dailyLivingBudget.remainingAmount < 0 ? '−' : ''}$${formatAmount(Math.abs(dailyLivingBudget.dailyAmount))}`
+    : '—'}</strong></div>
+        <small>本期上限 $${formatAmount(dailyLivingBudget.limit)}・已花 $${formatAmount(dailyLivingBudget.spent)}${dailyLivingBudget.remainingDays > 0 ? `・剩 ${dailyLivingBudget.remainingDays} 天` : '・本期已結束'}</small>
+      </aside>`
+    : '';
   // 圓餅圖與消費分析只呈現本人實際負擔；全額代墊會排除，部分代墊只保留自己的部分。
   const analysisExpenseTotal = analysisPeriodEntries
     .reduce((total, entry) => total + entry.amount, 0);
@@ -1517,20 +1537,6 @@ async function renderLedger(
   const financialPanel = financialOverview ? `
     <section class="finance-panel" id="financial-management-section" data-mobile-section="finance">
       ${mobileFinanceHeading}
-      <section class="advance-overview-section">
-        <div class="finance-overview-heading">
-          <div>
-            <h2>待收代墊</h2>
-            <p>全部待收 NT$ ${formatAmount(outstandingAdvanceTotal)}・本期已收 NT$ ${formatAmount(advanceRepaymentTotal)}</p>
-          </div>
-          ${financialOverview.expenseAdvancesSupported
-            ? '<span class="period-read-only">從開銷紀錄設定</span>'
-            : '<span class="period-read-only">需要資料庫升級</span>'}
-        </div>
-        ${financialOverview.expenseAdvancesSupported ? `
-          <ul class="advance-overview-list">${advanceOverviewRows || '<li class="advance-empty-state">尚無代墊紀錄。需要時可從開銷紀錄打開該筆帳目並設為代墊。</li>'}</ul>`
-          : '<p class="advance-migration-note">請在 Supabase SQL Editor 執行 <code>supabase-0005-expense-advances.sql</code>。</p>'}
-      </section>
       <section class="income-overview-section">
         <div class="finance-overview-heading">
           <div>
@@ -1566,6 +1572,20 @@ async function renderLedger(
           <strong class="credit-card-payment-amount">NT$ ${formatAmount(previousCardBillAmount ?? 0)}</strong>
         </button>
       </section>
+      <section class="advance-overview-section">
+        <div class="finance-overview-heading">
+          <div>
+            <h2>待收代墊</h2>
+            <p>全部待收 NT$ ${formatAmount(outstandingAdvanceTotal)}・本期已收 NT$ ${formatAmount(advanceRepaymentTotal)}</p>
+          </div>
+          ${financialOverview.expenseAdvancesSupported
+            ? '<span class="period-read-only">從開銷紀錄設定</span>'
+            : '<span class="period-read-only">需要資料庫升級</span>'}
+        </div>
+        ${financialOverview.expenseAdvancesSupported ? `
+          <ul class="advance-overview-list">${advanceOverviewRows || '<li class="advance-empty-state">尚無代墊紀錄。需要時可從開銷紀錄打開該筆帳目並設為代墊。</li>'}</ul>`
+          : '<p class="advance-migration-note">請在 Supabase SQL Editor 執行 <code>supabase-0005-expense-advances.sql</code>。</p>'}
+      </section>
       <section class="fixed-overview-section">
         <div class="finance-overview-heading">
           <div>
@@ -1595,6 +1615,9 @@ async function renderLedger(
             </label>
             <label>上期信用卡帳單
               <input id="previous-card-bill" name="previousCardBillAmount" type="text" inputmode="text" pattern="[0-9+＋\\-－\\s]+" value="${financialOverview.period.previous_card_bill_amount ?? ''}" placeholder="未輸入視為 0" />
+            </label>
+            <label>本期生活開銷上限
+              <input name="livingExpenseLimitAmount" type="text" inputmode="text" pattern="[0-9+＋\\-－\\s]+" value="${financialOverview.period.living_expense_limit_amount ?? ''}" placeholder="未設定" />
             </label>
             <p class="form-helper">儲存後，本期薪水會自動作為後續週期的預設薪水。</p>
             <button class="small-primary-button" type="submit">儲存本期資料</button>
@@ -1762,6 +1785,7 @@ async function renderLedger(
           <button class="email-button" type="submit">儲存開銷</button>
           <p class="form-status" id="expense-status" aria-live="polite"></p>
         </form>
+        ${dailyLivingBudgetMarkup}
       </section>
       <section class="history-panel" id="expense-history-section" data-mobile-section="record">
         <div class="history-heading">
@@ -3176,9 +3200,17 @@ async function renderLedger(
       const parsedBillValue = billValue === ''
         ? 0
         : parseSignedAmountExpression(billValue, { allowZero: true });
+      const limitValue = String(formData.get('livingExpenseLimitAmount') ?? '').trim();
+      const parsedLivingExpenseLimit = limitValue === ''
+        ? null
+        : parseSignedAmountExpression(limitValue, { allowZero: true });
       const updatedSalaryAmount = parseSignedAmountExpression(formData.get('salaryAmount'), { allowZero: true });
-      if (parsedBillValue === null || updatedSalaryAmount === null) {
-        status.textContent = '請輸入有效的數字或加減算式。';
+      if (
+        parsedBillValue === null
+        || updatedSalaryAmount === null
+        || (limitValue !== '' && (parsedLivingExpenseLimit === null || parsedLivingExpenseLimit < 0))
+      ) {
+        status.textContent = '請輸入有效的數字或加減算式；生活開銷上限不可為負數。';
         return;
       }
       button.disabled = true;
@@ -3192,6 +3224,7 @@ async function renderLedger(
             salaryAmount: updatedSalaryAmount,
             previousCardBillAmount: parsedBillValue === 0 ? null : parsedBillValue,
             previousCardBillZeroConfirmed: parsedBillValue === 0,
+            livingExpenseLimitAmount: parsedLivingExpenseLimit,
           }),
           expenseAdapter.updateFinancialSettings({
             ledgerId: ledger.id,
@@ -3428,9 +3461,17 @@ async function renderLedger(
       const parsedBillValue = billValue === ''
         ? 0
         : parseSignedAmountExpression(billValue, { allowZero: true });
+      const limitValue = String(formData.get('livingExpenseLimitAmount') ?? '').trim();
+      const parsedLivingExpenseLimit = limitValue === ''
+        ? null
+        : parseSignedAmountExpression(limitValue, { allowZero: true });
       const updatedSalaryAmount = parseSignedAmountExpression(formData.get('salaryAmount'), { allowZero: true });
-      if (parsedBillValue === null || updatedSalaryAmount === null) {
-        status.textContent = '請輸入有效的數字或加減算式。';
+      if (
+        parsedBillValue === null
+        || updatedSalaryAmount === null
+        || (limitValue !== '' && (parsedLivingExpenseLimit === null || parsedLivingExpenseLimit < 0))
+      ) {
+        status.textContent = '請輸入有效的數字或加減算式；生活開銷上限不可為負數。';
         return;
       }
       button.disabled = true;
@@ -3443,6 +3484,7 @@ async function renderLedger(
           salaryAmount: updatedSalaryAmount,
           previousCardBillAmount: parsedBillValue === 0 ? null : parsedBillValue,
           previousCardBillZeroConfirmed: parsedBillValue === 0,
+          livingExpenseLimitAmount: parsedLivingExpenseLimit,
         });
         await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
       } catch (error) {

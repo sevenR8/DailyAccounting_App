@@ -336,6 +336,21 @@ button { font: inherit; cursor: pointer; }
 }
 .history-list { display: grid; gap: 12px; }
 
+.daily-living-budget {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #e9f4df;
+  color: #24422d;
+}
+.daily-living-budget div { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.daily-living-budget span { font-size: 0.84rem; font-weight: 700; }
+.daily-living-budget strong { font-size: 1.15rem; }
+.daily-living-budget small { color: #68736a; font-size: 0.72rem; }
+.daily-living-budget.is-over-budget { background: #fbe8e5; color: #8f2e26; }
+.daily-living-budget.is-over-budget small { color: #a33a2b; }
+
 .mobile-bottom-nav,
 .mobile-pull-refresh,
 .summary-mobile-open,
@@ -968,6 +983,10 @@ input[type="datetime-local"] {
   .savings-rate { color: #9fe8b0; }
   .savings-rate-negative { color: #f28b82; }
   .savings-summary { background: #263b29; }
+  .daily-living-budget { background: #263b29; color: #dce5dd; }
+  .daily-living-budget small { color: #aeb9af; }
+  .daily-living-budget.is-over-budget { background: #3b2725; color: #ff8178; }
+  .daily-living-budget.is-over-budget small { color: #f2aaa0; }
   .compact-form, .money-list li { background: #202c22; }
   .finance-overview-heading p, .income-total-row span, .income-breakdown small, .fixed-rule-name small, .fixed-empty-state, .dialog-note, .fixed-detail-list dt { color: #aeb9af; }
   .text-action { color: #9ed7ad; }

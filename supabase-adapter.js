@@ -486,12 +486,16 @@ export class SupabaseLedgerAdapter {
 
   async getAccountingPeriod({ ledgerId, startsOn }) {
     const parameters = new URLSearchParams({
-      select: 'ledger_id,starts_on,ends_on,salary_amount,previous_card_bill_amount,previous_card_bill_zero_confirmed',
+      select: 'ledger_id,starts_on,ends_on,salary_amount,previous_card_bill_amount,previous_card_bill_zero_confirmed,living_expense_limit_amount',
       ledger_id: `eq.${ledgerId}`,
       starts_on: `eq.${startsOn}`,
       limit: '1',
     });
-    const response = await this.connection.request(`/rest/v1/accounting_periods?${parameters}`);
+    let response = await this.connection.request(`/rest/v1/accounting_periods?${parameters}`);
+    if (!response.ok) {
+      parameters.set('select', 'ledger_id,starts_on,ends_on,salary_amount,previous_card_bill_amount,previous_card_bill_zero_confirmed');
+      response = await this.connection.request(`/rest/v1/accounting_periods?${parameters}`);
+    }
     if (!response.ok) throw new Error('無法讀取指定帳務週期。');
     const [period] = await response.json();
     return period ?? null;
@@ -499,13 +503,17 @@ export class SupabaseLedgerAdapter {
 
   async getPreviousAccountingPeriod({ ledgerId, startsOn }) {
     const parameters = new URLSearchParams({
-      select: 'ledger_id,starts_on,ends_on,salary_amount,previous_card_bill_amount,previous_card_bill_zero_confirmed',
+      select: 'ledger_id,starts_on,ends_on,salary_amount,previous_card_bill_amount,previous_card_bill_zero_confirmed,living_expense_limit_amount',
       ledger_id: `eq.${ledgerId}`,
       starts_on: `lt.${startsOn}`,
       order: 'starts_on.desc',
       limit: '1',
     });
-    const response = await this.connection.request(`/rest/v1/accounting_periods?${parameters}`);
+    let response = await this.connection.request(`/rest/v1/accounting_periods?${parameters}`);
+    if (!response.ok) {
+      parameters.set('select', 'ledger_id,starts_on,ends_on,salary_amount,previous_card_bill_amount,previous_card_bill_zero_confirmed');
+      response = await this.connection.request(`/rest/v1/accounting_periods?${parameters}`);
+    }
     if (!response.ok) throw new Error('無法讀取前一期帳務週期。');
     const [period] = await response.json();
     return period ?? null;
@@ -659,6 +667,7 @@ export class SupabaseLedgerAdapter {
     salaryAmount,
     previousCardBillAmount,
     previousCardBillZeroConfirmed,
+    livingExpenseLimitAmount,
   }) {
     const response = await this.connection.request('/rest/v1/accounting_periods', {
       method: 'POST',
@@ -670,9 +679,17 @@ export class SupabaseLedgerAdapter {
         salary_amount: salaryAmount,
         previous_card_bill_amount: previousCardBillAmount,
         previous_card_bill_zero_confirmed: previousCardBillZeroConfirmed,
+        ...(livingExpenseLimitAmount !== undefined
+          ? { living_expense_limit_amount: livingExpenseLimitAmount }
+          : {}),
       }),
     });
-    if (!response.ok) throw new Error('無法儲存本期收入與信用卡帳單。');
+    if (!response.ok) {
+      if (livingExpenseLimitAmount !== undefined) {
+        throw new Error('生活開銷上限尚未啟用，請先執行 supabase-0013-living-expense-limit.sql。');
+      }
+      throw new Error('無法儲存本期收入與信用卡帳單。');
+    }
     const [period] = await response.json();
     return period;
   }

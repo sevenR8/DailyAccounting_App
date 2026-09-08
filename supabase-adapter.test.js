@@ -408,6 +408,31 @@ test('儲存本期收入與帳單時會帶上帳務週期結束日', async () =>
   assert.equal(JSON.parse(request.options.body).ends_on, '2026-09-04');
 });
 
+test('儲存本期收入時會帶上生活開銷上限', async () => {
+  let request;
+  const connection = new SupabaseConnection({
+    supabaseUrl: 'https://example.supabase.co',
+    supabaseAnonKey: 'public-key',
+    accessToken: 'access-token',
+    fetchImpl: async (url, options) => {
+      request = { url, options };
+      return response([{ id: 'period-1' }]);
+    },
+  });
+
+  await new SupabaseLedgerAdapter(connection).updateAccountingPeriod({
+    ledgerId: 'ledger-1',
+    startsOn: '2026-09-05',
+    endsOn: '2026-10-04',
+    salaryAmount: 45000,
+    previousCardBillAmount: 0,
+    previousCardBillZeroConfirmed: true,
+    livingExpenseLimitAmount: 12000,
+  });
+
+  assert.equal(JSON.parse(request.options.body).living_expense_limit_amount, 12000);
+});
+
 test('Email 登入連結會使用公開匿名金鑰並回到目前網站', async () => {
   const calls = [];
   await sendMagicLink({
