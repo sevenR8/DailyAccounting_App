@@ -498,6 +498,12 @@ test('帳務管理可設定本期生活開銷上限，並在快速記帳區顯�
   assert.match(stylesSource, /\.daily-living-budget/);
 });
 
+test('本期收入卡片會顯示本期生活開銷上限', () => {
+  assert.match(appSource, /class="income-limit-row/);
+  assert.match(appSource, /本期生活開銷上限/);
+  assert.match(appSource, /尚未設定/);
+});
+
 test('本月信用卡繳納顯示在收入與固定開銷之間，並使用上期實際帳單', () => {
   const incomeIndex = appSource.indexOf('class="income-overview-section"');
   const cardBillIndex = appSource.indexOf('class="card-bill-overview-section"');

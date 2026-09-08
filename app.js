@@ -1556,6 +1556,12 @@ async function renderLedger(
             <div><span class="income-marker salary-marker">＋</span><span><small>薪資收入</small><strong>$ ${formatAmount(salaryAmount)}</strong></span></div>
             <div><span class="income-marker other-marker">＋</span><span><small>其他收入</small><strong>$ ${formatAmount(otherIncomeTotal)}</strong></span></div>
           </div>
+          <div class="income-limit-row${financialOverview.period.living_expense_limit_amount == null ? ' is-unset' : ''}">
+            <span>本期生活開銷上限</span>
+            <strong>${financialOverview.period.living_expense_limit_amount == null
+    ? '尚未設定'
+    : `$ ${formatAmount(financialOverview.period.living_expense_limit_amount)}`}</strong>
+          </div>
         </div>
       </section>
       <section class="card-bill-overview-section">

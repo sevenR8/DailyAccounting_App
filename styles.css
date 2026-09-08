@@ -385,6 +385,10 @@ button { font: inherit; cursor: pointer; }
 .income-breakdown > div > span:last-child { display: grid; min-width: 0; }
 .income-breakdown small { color: #6d776f; }
 .income-breakdown strong { margin-top: 2px; font-size: 0.92rem; }
+.income-limit-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 12px; border-top: 1px solid #e5e8d8; }
+.income-limit-row span { color: #667166; font-size: 0.82rem; }
+.income-limit-row strong { font-size: 0.92rem; }
+.income-limit-row.is-unset strong { color: #7a847c; font-weight: 700; }
 .income-marker { display: grid; place-items: center; width: 28px; aspect-ratio: 1; flex: 0 0 auto; border-radius: 9px; font-size: 1.25rem; }
 .salary-marker { background: #e5f567; color: #183626; }
 .other-marker { background: #ded8ff; color: #433990; }
@@ -991,7 +995,8 @@ input[type="datetime-local"] {
   .finance-overview-heading p, .income-total-row span, .income-breakdown small, .fixed-rule-name small, .fixed-empty-state, .dialog-note, .fixed-detail-list dt { color: #aeb9af; }
   .text-action { color: #9ed7ad; }
   .income-overview-card { border-color: #4a5937; background: linear-gradient(135deg, #26331d, #202c22 74%); }
-  .income-total-row { border-color: #46513f; }
+  .income-total-row, .income-limit-row { border-color: #46513f; }
+  .income-limit-row span, .income-limit-row.is-unset strong { color: #aeb9af; }
   .credit-card-payment-card { border-color: #4f476e; background: #26233a; color: #eeeaff; }
   .credit-card-payment-card:hover, .credit-card-payment-card:focus-visible { background: #302b49; }
   .credit-card-payment-copy small, .compact-form .form-helper { color: #aaa4bf; }
