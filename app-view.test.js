@@ -239,8 +239,8 @@ test('整張圓餅圖卡片可開啟含年度總覽的消費分析長頁', () =>
   assert.match(appSource, /buildAnnualFinancialForecast\(\{/);
   assert.match(appSource, /年度總覽/);
   assert.match(appSource, /年度週期從/);
-  const analysisSettingsIndex = appSource.indexOf('<h3>消費分析分類</h3>');
-  const annualSettingsIndex = appSource.indexOf('<h3>年度預估</h3>');
+  const analysisSettingsIndex = appSource.indexOf('<strong>消費分析分類</strong>');
+  const annualSettingsIndex = appSource.indexOf('<strong>年度預估</strong>');
   assert.ok(analysisSettingsIndex >= 0 && annualSettingsIndex > analysisSettingsIndex);
   assert.match(appSource, /預估年終/);
   assert.match(appSource, /預估分紅/);
@@ -293,9 +293,20 @@ test('帳本建立者可設定分類分析性質與店家別名', () => {
 test('速食店與超商設定預設折疊，需要時可展開編輯', () => {
   assert.match(appSource, /class="merchant-settings-collapsible"/);
   assert.match(appSource, /<details class="merchant-settings-collapsible">/);
-  assert.match(appSource, /class="merchant-settings-summary-toggle"/);
+  assert.match(appSource, /merchant-settings-summary-toggle/);
   assert.match(appSource, /class="merchant-settings-content"/);
+  assert.match(appSource, /class="settings-collapsible-toggle merchant-settings-summary-toggle"/);
   assert.match(stylesSource, /\.merchant-settings-collapsible\[open\]/);
+});
+
+test('帳本設定的年度預估、消費分析分類與自訂分類預設收合', () => {
+  assert.match(appSource, /<details class="settings-collapsible">[\s\S]*<strong>自訂分類<\/strong>/);
+  assert.match(appSource, /<details class="settings-collapsible">[\s\S]*<strong>消費分析分類<\/strong>/);
+  assert.match(appSource, /<details class="settings-collapsible">[\s\S]*<strong>年度預估<\/strong>/);
+  assert.match(appSource, /class="settings-collapsible-content"/);
+  assert.match(stylesSource, /\.settings-collapsible\[open\] \.settings-collapsible-toggle::before/);
+  assert.match(stylesSource, /\.settings-collapsible-toggle::before,[\s\S]*content: '▶'/);
+  assert.match(stylesSource, /\.settings-collapsible\[open\] \.settings-collapsible-toggle::before,[\s\S]*content: '▼'/);
 });
 
 test('各國生活費基準不提供帳本設定介面', () => {

@@ -1066,55 +1066,76 @@ async function renderLedger(
                 <p class="form-status" aria-live="polite">既有帳務週期與歷史紀錄不會被修改。</p>
               </form>` : '<p class="settings-unavailable">目前無法讀取帳務週期設定。</p>'}
           </section>
-          <section class="settings-section">
-            <div>
-              <h3>自訂分類</h3>
-              <p>新增後會出現在快速記帳及固定開銷的分類選單。</p>
-            </div>
-            <div class="default-category-tags" aria-label="預設分類">${defaultCategoryTags}</div>
-            <ul class="category-settings-list">${customCategoryRows || '<li class="empty-category-settings">尚未新增自訂分類</li>'}</ul>
-            <form class="category-create-form" id="category-create-form">
-              <input name="categoryName" type="text" maxlength="50" placeholder="例如：貸款" aria-label="新增分類名稱" required />
-              <button class="small-primary-button" type="submit">新增分類</button>
-              <p class="form-status" aria-live="polite"></p>
-            </form>
-            <p class="dialog-note">停用只會從新的記帳選單隱藏，既有歷史紀錄仍會保留原分類。</p>
+          <section class="settings-section settings-collapsible-section">
+            <details class="settings-collapsible">
+              <summary class="settings-collapsible-summary">
+                <span class="settings-collapsible-copy">
+                  <strong>自訂分類</strong>
+                  <small>新增後會出現在快速記帳及固定開銷的分類選單。</small>
+                </span>
+                <span class="settings-collapsible-toggle" aria-hidden="true"></span>
+              </summary>
+              <div class="settings-collapsible-content">
+                <div class="default-category-tags" aria-label="預設分類">${defaultCategoryTags}</div>
+                <ul class="category-settings-list">${customCategoryRows || '<li class="empty-category-settings">尚未新增自訂分類</li>'}</ul>
+                <form class="category-create-form" id="category-create-form">
+                  <input name="categoryName" type="text" maxlength="50" placeholder="例如：貸款" aria-label="新增分類名稱" required />
+                  <button class="small-primary-button" type="submit">新增分類</button>
+                  <p class="form-status" aria-live="polite"></p>
+                </form>
+                <p class="dialog-note">停用只會從新的記帳選單隱藏，既有歷史紀錄仍會保留原分類。</p>
+              </div>
+            </details>
           </section>
-          <section class="settings-section">
-            <div>
-              <h3>消費分析分類</h3>
-              <p>只需勾選快樂支出；未勾選的分類會自動歸為維持生活，重新命名後仍會保留。</p>
-            </div>
-            ${analysisSettingsSupported
-              ? `<form class="category-analysis-form" id="category-analysis-form">
-                  <label for="pleasure-category-select">快樂支出分類</label>
-                  <select id="pleasure-category-select" name="pleasureCategories" multiple size="4" aria-label="選擇快樂支出分類">${pleasureCategoryOptions}</select>
-                  <button class="secondary-button" type="submit">儲存</button>
-                  <p class="form-status" aria-live="polite">按住 Ctrl／⌘ 可複選；未選分類自動歸為維持生活。</p>
-                </form>`
-              : '<p class="settings-unavailable">執行 supabase-0004-expense-analysis.sql 後即可同步分析分類。</p>'}
+          <section class="settings-section settings-collapsible-section">
+            <details class="settings-collapsible">
+              <summary class="settings-collapsible-summary">
+                <span class="settings-collapsible-copy">
+                  <strong>消費分析分類</strong>
+                  <small>只需勾選快樂支出，其餘自動歸為維持生活。</small>
+                </span>
+                <span class="settings-collapsible-toggle" aria-hidden="true"></span>
+              </summary>
+              <div class="settings-collapsible-content">
+                ${analysisSettingsSupported
+                  ? `<form class="category-analysis-form" id="category-analysis-form">
+                      <label for="pleasure-category-select">快樂支出分類</label>
+                      <select id="pleasure-category-select" name="pleasureCategories" multiple size="4" aria-label="選擇快樂支出分類">${pleasureCategoryOptions}</select>
+                      <button class="secondary-button" type="submit">儲存</button>
+                      <p class="form-status" aria-live="polite">按住 Ctrl／⌘ 可複選；未選分類自動歸為維持生活。</p>
+                    </form>`
+                  : '<p class="settings-unavailable">執行 supabase-0004-expense-analysis.sql 後即可同步分析分類。</p>'}
+              </div>
+            </details>
           </section>
-          <section class="settings-section">
-            <div>
-              <h3>年度預估</h3>
-              <p>設定年度週期與預估年終、分紅；這些數字只會用於生活消費誌的年度可存額。</p>
-            </div>
-            ${financialOverview?.settings.annualForecastSupported
-              ? `<form class="annual-forecast-form settings-annual-forecast-form" id="annual-forecast-form">
-                  <label>年度週期從
-                    <select name="annualCycleStartMonth" aria-label="年度週期起始月份">${annualCycleStartMonthOptions}</select>
-                    開始
-                  </label>
-                  <label>預估年終
-                    <input name="expectedBonusAmount" type="text" inputmode="text" autocomplete="off" value="${financialOverview.settings.annual_expected_bonus_amount || ''}" placeholder="例如 30000+5000" aria-label="預估年終" />
-                  </label>
-                  <label>預估分紅
-                    <input name="expectedDividendAmount" type="text" inputmode="text" autocomplete="off" value="${financialOverview.settings.annual_expected_dividend_amount || ''}" placeholder="例如 10000" aria-label="預估分紅" />
-                  </label>
-                  <button class="secondary-button" type="submit">儲存年度預估</button>
-                  <p class="form-status" aria-live="polite">可輸入數字或加減算式，例如 30000+5000。</p>
-                </form>`
-              : '<p class="settings-unavailable">請先執行 supabase-0011-annual-financial-forecast.sql 後即可設定。</p>'}
+          <section class="settings-section settings-collapsible-section">
+            <details class="settings-collapsible">
+              <summary class="settings-collapsible-summary">
+                <span class="settings-collapsible-copy">
+                  <strong>年度預估</strong>
+                  <small>設定年度週期與預估年終、分紅。</small>
+                </span>
+                <span class="settings-collapsible-toggle" aria-hidden="true"></span>
+              </summary>
+              <div class="settings-collapsible-content">
+                ${financialOverview?.settings.annualForecastSupported
+                  ? `<form class="annual-forecast-form settings-annual-forecast-form" id="annual-forecast-form">
+                      <label>年度週期從
+                        <select name="annualCycleStartMonth" aria-label="年度週期起始月份">${annualCycleStartMonthOptions}</select>
+                        開始
+                      </label>
+                      <label>預估年終
+                        <input name="expectedBonusAmount" type="text" inputmode="text" autocomplete="off" value="${financialOverview.settings.annual_expected_bonus_amount || ''}" placeholder="例如 30000+5000" aria-label="預估年終" />
+                      </label>
+                      <label>預估分紅
+                        <input name="expectedDividendAmount" type="text" inputmode="text" autocomplete="off" value="${financialOverview.settings.annual_expected_dividend_amount || ''}" placeholder="例如 10000" aria-label="預估分紅" />
+                      </label>
+                      <button class="secondary-button" type="submit">儲存年度預估</button>
+                      <p class="form-status" aria-live="polite">可輸入數字或加減算式，例如 30000+5000。</p>
+                    </form>`
+                  : '<p class="settings-unavailable">請先執行 supabase-0011-annual-financial-forecast.sql 後即可設定。</p>'}
+              </div>
+            </details>
           </section>
           <section class="settings-section merchant-settings-section">
             <details class="merchant-settings-collapsible">
@@ -1123,7 +1144,7 @@ async function renderLedger(
                   <strong>速食店、超商與別名</strong>
                   <small>${analysisSettingsSupported ? `已設定 ${merchantGroups.length} 組規則` : '需要資料庫升級'}</small>
                 </span>
-                <span class="merchant-settings-summary-toggle" aria-hidden="true"></span>
+                <span class="settings-collapsible-toggle merchant-settings-summary-toggle" aria-hidden="true"></span>
               </summary>
               <div class="merchant-settings-content">
                 <p>每行一個別名。可指定輸入這些店家時自動使用信用卡；規則只改變分析分組，不會修改原始記帳名稱。</p>
