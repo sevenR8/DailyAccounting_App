@@ -290,6 +290,14 @@ test('帳本建立者可設定分類分析性質與店家別名', () => {
   assert.match(appSource, /規則只改變分析分組，不會修改原始記帳名稱/);
 });
 
+test('速食店與超商設定預設折疊，需要時可展開編輯', () => {
+  assert.match(appSource, /class="merchant-settings-collapsible"/);
+  assert.match(appSource, /<details class="merchant-settings-collapsible">/);
+  assert.match(appSource, /class="merchant-settings-summary-toggle"/);
+  assert.match(appSource, /class="merchant-settings-content"/);
+  assert.match(stylesSource, /\.merchant-settings-collapsible\[open\]/);
+});
+
 test('各國生活費基準不提供帳本設定介面', () => {
   assert.match(appSource, /countryBaselinesFromSettings/);
   assert.doesNotMatch(appSource, /id="country-baseline-settings-form"/);

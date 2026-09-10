@@ -1116,25 +1116,33 @@ async function renderLedger(
                 </form>`
               : '<p class="settings-unavailable">請先執行 supabase-0011-annual-financial-forecast.sql 後即可設定。</p>'}
           </section>
-          <section class="settings-section">
-            <div>
-              <h3>速食店、超商與別名</h3>
-              <p>每行一個別名。可指定輸入這些店家時自動使用信用卡；規則只改變分析分組，不會修改原始記帳名稱。</p>
-            </div>
-            ${analysisSettingsSupported ? `
-              <ul class="merchant-settings-list">${merchantSettingsRows}</ul>
-              <form class="merchant-create-form" id="merchant-create-form">
-                <input name="merchantName" type="text" maxlength="60" placeholder="店家名稱，例如：美廉社" required />
-                <select name="merchantType" aria-label="新店家類型">
-                  <option value="convenience">便利商店</option>
-                  <option value="fast_food">速食店</option>
-                  <option value="other">其他分析店家</option>
-                </select>
-                <label class="merchant-credit-toggle"><input name="autoCreditCard" type="checkbox" /> 自動使用信用卡</label>
-                <textarea name="aliases" rows="2" placeholder="別名，每行一個"></textarea>
-                <button class="small-primary-button" type="submit">新增店家規則</button>
-                <p class="form-status" aria-live="polite"></p>
-              </form>` : '<p class="settings-unavailable">目前先使用內建店家規則；完成資料庫升級後即可自行管理。</p>'}
+          <section class="settings-section merchant-settings-section">
+            <details class="merchant-settings-collapsible">
+              <summary>
+                <span class="merchant-settings-summary-copy">
+                  <strong>速食店、超商與別名</strong>
+                  <small>${analysisSettingsSupported ? `已設定 ${merchantGroups.length} 組規則` : '需要資料庫升級'}</small>
+                </span>
+                <span class="merchant-settings-summary-toggle" aria-hidden="true"></span>
+              </summary>
+              <div class="merchant-settings-content">
+                <p>每行一個別名。可指定輸入這些店家時自動使用信用卡；規則只改變分析分組，不會修改原始記帳名稱。</p>
+                ${analysisSettingsSupported ? `
+                  <ul class="merchant-settings-list">${merchantSettingsRows}</ul>
+                  <form class="merchant-create-form" id="merchant-create-form">
+                    <input name="merchantName" type="text" maxlength="60" placeholder="店家名稱，例如：美廉社" required />
+                    <select name="merchantType" aria-label="新店家類型">
+                      <option value="convenience">便利商店</option>
+                      <option value="fast_food">速食店</option>
+                      <option value="other">其他分析店家</option>
+                    </select>
+                    <label class="merchant-credit-toggle"><input name="autoCreditCard" type="checkbox" /> 自動使用信用卡</label>
+                    <textarea name="aliases" rows="2" placeholder="別名，每行一個"></textarea>
+                    <button class="small-primary-button" type="submit">新增店家規則</button>
+                    <p class="form-status" aria-live="polite"></p>
+                  </form>` : '<p class="settings-unavailable">目前先使用內建店家規則；完成資料庫升級後即可自行管理。</p>'}
+              </div>
+            </details>
           </section>` : '<p class="settings-unavailable">只有帳本建立者可以修改分類、店家規則與週期。</p>'}
       </div>
     </dialog>`;

@@ -1478,6 +1478,19 @@ input[type="datetime-local"] {
 
 .category-analysis-list,
 .merchant-settings-list { display: grid; gap: 9px; padding: 0; margin: 0; list-style: none; }
+.merchant-settings-section { gap: 0; }
+.merchant-settings-collapsible { display: grid; gap: 12px; }
+.merchant-settings-collapsible > summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; cursor: pointer; list-style: none; }
+.merchant-settings-collapsible > summary::-webkit-details-marker { display: none; }
+.merchant-settings-summary-copy { display: grid; gap: 3px; min-width: 0; }
+.merchant-settings-summary-copy strong { font-size: 1.02rem; }
+.merchant-settings-summary-copy small { color: #68736a; font-size: 0.74rem; }
+.merchant-settings-summary-toggle { display: grid; flex: 0 0 auto; place-items: center; width: 28px; height: 28px; border: 1px solid #cbd4c9; border-radius: 50%; color: #365b42; }
+.merchant-settings-summary-toggle::before { content: '+'; font-size: 1.1rem; line-height: 1; }
+.merchant-settings-collapsible[open] .merchant-settings-summary-toggle::before { content: '−'; }
+.merchant-settings-collapsible > summary:focus-visible { outline: 2px solid #739d79; outline-offset: 3px; border-radius: 8px; }
+.merchant-settings-content { display: grid; gap: 10px; }
+.merchant-settings-content > p { margin: 0; color: #6d776f; font-size: 0.8rem; line-height: 1.5; }
 .category-analysis-form {
   display: grid;
   grid-template-columns: minmax(90px, 1fr) minmax(120px, auto) auto;
@@ -1757,6 +1770,7 @@ input[type="datetime-local"] {
   .merchant-settings-form textarea,
   .merchant-create-form textarea,
   .merchant-settings-actions { grid-column: 1; }
+  .merchant-settings-summary-copy strong { font-size: 0.96rem; }
 }
 
 @media (prefers-color-scheme: dark) {
@@ -1796,6 +1810,8 @@ input[type="datetime-local"] {
   .merchant-create-form input,
   .merchant-create-form select,
   .merchant-create-form textarea { border-color: #526154; background: #172119; }
+  .merchant-settings-summary-copy small, .merchant-settings-content > p { color: #aeb9af; }
+  .merchant-settings-summary-toggle { border-color: #526154; color: #9ed7ad; }
   .ledger-home[data-mobile-view="analysis"] > .analysis-page { border-color: #354238; background: #171d17; color: #eef1e8; box-shadow: none; }
   .analysis-back,
   .analysis-period-switcher,
