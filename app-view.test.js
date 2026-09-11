@@ -203,6 +203,8 @@ test('首頁本期可存額獨立顯示在摘要卡下方', () => {
   assert.match(savingsMarkupSource, /收入[\s\S]*總開銷/);
   assert.match(stylesSource, /\.savings-summary-panel\s*\{\s*padding:\s*0;/);
   assert.match(stylesSource, /\.savings-summary-card\s*\{[^}]*border:\s*0;/);
+  assert.match(stylesSource, /\.savings-summary-card\s*\{[^}]*background:\s*white;/);
+  assert.match(stylesSource, /\.savings-summary-card\s*\{[^}]*background:\s*#172119;/);
 });
 
 test('本期摘要保留代墊淨額計算但不加入註解小字或特殊金額顏色', () => {
