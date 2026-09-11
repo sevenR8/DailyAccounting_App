@@ -318,7 +318,7 @@ button { font: inherit; cursor: pointer; }
 .savings-summary-heading > span { padding-top: 2px; font-size: 0.95rem; font-weight: 900; }
 .savings-summary-heading > div { display: grid; justify-items: end; gap: 2px; min-width: 0; }
 .savings-summary-heading strong { font-size: clamp(1.2rem, 4vw, 1.55rem); line-height: 1.05; white-space: nowrap; }
-.savings-summary-heading .savings-rate { position: static; font-size: 0.95rem; }
+.savings-summary-heading .savings-rate { position: static; font-size: 0.68rem; }
 .savings-summary-card:not(.is-negative) .savings-summary-heading strong { color: #287145; }
 .savings-summary-card.is-negative .savings-summary-heading strong { color: #b55a47; }
 .savings-summary-breakdown { display: grid; gap: 5px; border-top: 1px solid rgb(101 112 103 / 24%); padding-top: 7px; }

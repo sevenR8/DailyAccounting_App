@@ -1782,8 +1782,8 @@ async function renderLedger(
       <section class="summary-panel" data-mobile-section="overview" aria-label="本期帳務摘要">
         <button class="summary-mobile-open" type="button" data-action="open-mobile-finance" aria-label="開啟帳務管理，查看與編輯收入、信用卡繳納及固定開銷"></button>
         <div><span>本期收入</span><strong>${totalIncome === null ? '—' : `$${formatAmount(totalIncome)}`}</strong></div>
-        <div><span>現金</span><strong>${netCashOutflowTotal < 0 ? '+' : ''}$${formatAmount(Math.abs(netCashOutflowTotal))}</strong></div>
-        <div><span>信用卡</span><strong>$${formatAmount(creditCardTotal)}</strong></div>
+        <div><span>現金開銷</span><strong>${netCashOutflowTotal < 0 ? '+' : ''}$${formatAmount(Math.abs(netCashOutflowTotal))}</strong></div>
+        <div><span>信用卡開銷</span><strong>$${formatAmount(creditCardTotal)}</strong></div>
         <div><span>總開銷</span><strong>$${formatAmount(personalNonFixedExpenseTotal)}</strong></div>
         <div><span>本期固定開銷</span><strong>${fixedExpenseTotal === null ? '—' : `$${formatAmount(fixedExpenseTotal)}`}</strong></div>
       </section>

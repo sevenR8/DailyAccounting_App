@@ -180,8 +180,8 @@ test('本期摘要以乾淨文字顯示收入、現金、信用卡、總開銷�
     appSource.indexOf('${analysisPage}'),
   );
   assert.match(summarySource, /本期收入/);
-  assert.match(summarySource, /<span>現金<\/span>/);
-  assert.match(summarySource, /<span>信用卡<\/span>/);
+  assert.match(summarySource, /<span>現金開銷<\/span>/);
+  assert.match(summarySource, /<span>信用卡開銷<\/span>/);
   assert.match(summarySource, /<span>總開銷<\/span>/);
   assert.doesNotMatch(summarySource, /非固定/);
   assert.match(summarySource, /本期固定開銷/);
