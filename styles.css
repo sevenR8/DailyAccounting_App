@@ -7,6 +7,7 @@
 
 * { box-sizing: border-box; }
 
+html, body { background: #f7f8f3; }
 body { margin: 0; min-width: 320px; }
 
 #app {
@@ -954,7 +955,7 @@ input[type="datetime-local"] {
 .entry-detail strong { align-self: center; }
 
 @media (prefers-color-scheme: dark) {
-  :root { background: #101812; color: #eff4ed; }
+  :root, html, body { background: #101812; color: #eff4ed; }
   .ledger-resume-avatar { background: #343052; }
   .ledger-resume-card { background: #172119; }
   .ledger-resume-card::after { background: linear-gradient(105deg, transparent 30%, rgb(255 255 255 / 7%) 48%, transparent 66%); }

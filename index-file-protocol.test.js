@@ -27,3 +27,9 @@ test('啟動時使用版本化資源，讓舊離線快取能取得新版登入�
   assert.match(indexHtml, /src="\.\/app\.js\?v=59"/);
   assert.match(indexHtml, /register\('\.\/service-worker\.js\?v=59'\)/);
 });
+
+test('啟動殼層使用深色背景，避免外部 CSS 載入前閃現淺灰畫面', () => {
+  assert.match(indexHtml, /meta name="theme-color" content="#101812" media="\(prefers-color-scheme: dark\)"/);
+  assert.match(indexHtml, /meta name="color-scheme" content="dark light"/);
+  assert.match(indexHtml, /<style[^>]*>[\s\S]*html,[\s\n]*body,[\s\n]*#app[\s\S]*background:\s*#101812/);
+});

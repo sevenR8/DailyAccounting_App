@@ -5,8 +5,8 @@
   "lang": "zh-Hant",
   "start_url": "./",
   "display": "standalone",
-  "background_color": "#f7f8f3",
-  "theme_color": "#f7f8f3",
+  "background_color": "#101812",
+  "theme_color": "#101812",
   "icons": [
     {
       "src": "./icon.svg",
