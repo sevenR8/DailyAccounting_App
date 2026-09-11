@@ -185,8 +185,19 @@ test('本期摘要以乾淨文字顯示收入、現金、信用卡、總開銷�
   assert.match(summarySource, /<span>總開銷<\/span>/);
   assert.doesNotMatch(summarySource, /非固定/);
   assert.match(summarySource, /本期固定開銷/);
-  assert.match(summarySource, /本期可存額/);
+  assert.doesNotMatch(summarySource, /本期可存額/);
   assert.doesNotMatch(summarySource, /待輸入帳單/);
+});
+
+test('首頁本期可存額獨立顯示在摘要卡下方', () => {
+  const summaryIndex = appSource.indexOf('<section class="summary-panel"');
+  const savingsIndex = appSource.indexOf('${savingsSummaryMarkup}');
+  const savingsMarkupIndex = appSource.indexOf('const savingsSummaryMarkup');
+  assert.ok(summaryIndex >= 0);
+  assert.ok(savingsIndex > summaryIndex);
+  assert.ok(savingsMarkupIndex >= 0);
+  assert.match(appSource.slice(savingsMarkupIndex), /savings-summary-panel[\s\S]*本月收支結餘/);
+  assert.match(appSource.slice(savingsMarkupIndex), /savings-summary-breakdown/);
 });
 
 test('本期摘要保留代墊淨額計算但不加入註解小字或特殊金額顏色', () => {

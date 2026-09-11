@@ -298,6 +298,36 @@ button { font: inherit; cursor: pointer; }
 .savings-rate { position: relative; top: 11px; flex: 0 0 auto; color: #78c98e; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.01em; line-height: 1.1; white-space: nowrap; }
 .savings-rate-negative { color: #e87870; }
 
+.savings-summary-panel {
+  border-radius: 22px;
+  padding: 20px;
+  background: white;
+  box-shadow: 0 10px 30px rgb(23 33 25 / 7%);
+}
+.savings-summary-card {
+  display: grid;
+  gap: 14px;
+  border: 2px solid #d9e6d0;
+  border-radius: 22px;
+  padding: 20px 22px;
+  background: #f2f8ed;
+  color: #173a2b;
+}
+.savings-summary-card.is-negative { border-color: #efd2c9; background: #fff6f2; color: #482d2a; }
+.savings-summary-heading { display: flex; justify-content: space-between; align-items: start; gap: 18px; }
+.savings-summary-heading > span { padding-top: 4px; font-size: 1.15rem; font-weight: 900; }
+.savings-summary-heading > div { display: grid; justify-items: end; gap: 4px; min-width: 0; }
+.savings-summary-heading strong { font-size: clamp(1.45rem, 5vw, 2rem); line-height: 1.1; white-space: nowrap; }
+.savings-summary-heading .savings-rate { position: static; font-size: 0.95rem; }
+.savings-summary-card:not(.is-negative) .savings-summary-heading strong { color: #287145; }
+.savings-summary-card.is-negative .savings-summary-heading strong { color: #b55a47; }
+.savings-summary-breakdown { display: grid; gap: 10px; border-top: 1px solid rgb(101 112 103 / 24%); padding-top: 14px; }
+.savings-summary-equation { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; font-size: 1rem; font-weight: 800; }
+.savings-summary-equation span { color: #53665a; }
+.savings-summary-equation strong { color: inherit; font-size: 1.06rem; }
+.savings-summary-equation b { color: #7d8b80; font-size: 1.25rem; }
+.savings-summary-details { display: flex; flex-wrap: wrap; gap: 5px 16px; color: #7b887e; font-size: 0.78rem; line-height: 1.45; }
+
 .quick-entry-panel { display: grid; gap: 16px; }
 .history-panel {
   display: grid;
@@ -964,7 +994,7 @@ input[type="datetime-local"] {
   .notice, .day-expense-group { background: #202c22; color: #d3ded3; }
   .period-comparison.comparison-down { background: #23422d; color: #a8e6b7; }
   .period-comparison.comparison-same { background: #29352c; color: #b6c2b8; }
-  .chart-panel, .summary-panel, .finance-panel, .quick-entry-panel, .history-panel { background: #172119; box-shadow: none; }
+  .chart-panel, .summary-panel, .savings-summary-panel, .finance-panel, .quick-entry-panel, .history-panel { background: #172119; box-shadow: none; }
   .user-menu summary:hover, .menu-sign-out { background: #202c22; color: #dce5dd; }
   .menu-action { background: #2a412e; color: #dce5dd; }
   .user-menu-popover { border-color: #3b493d; background: #172119; box-shadow: 0 14px 32px rgb(0 0 0 / 30%); }
@@ -989,6 +1019,13 @@ input[type="datetime-local"] {
   .savings-rate { color: #9fe8b0; }
   .savings-rate-negative { color: #f28b82; }
   .savings-summary { background: #263b29; }
+  .savings-summary-card { border-color: #4b5c4d; background: #263b29; color: #eff4ed; }
+  .savings-summary-card.is-negative { border-color: #7a4f4a; background: #3a2725; color: #f6e9e6; }
+  .savings-summary-card:not(.is-negative) .savings-summary-heading strong { color: #a8e6b7; }
+  .savings-summary-card.is-negative .savings-summary-heading strong { color: #ff9b8f; }
+  .savings-summary-equation span { color: #d3ded3; }
+  .savings-summary-equation b { color: #aeb9af; }
+  .savings-summary-details { color: #aeb9af; }
   .daily-living-budget { background: #263b29; color: #dce5dd; }
   .daily-living-budget small { color: #aeb9af; }
   .daily-living-budget.is-over-budget { background: #3b2725; color: #ff8178; }
@@ -1077,7 +1114,7 @@ input[type="datetime-local"] {
   .history-panel { order: -10; }
   .period-navigation { order: 0; }
   .chart-panel {
-    order: 2;
+    order: 3;
     gap: 12px;
     padding: 16px;
   }
@@ -1114,6 +1151,7 @@ input[type="datetime-local"] {
     grid-template-rows: repeat(3, minmax(0, auto));
     grid-auto-flow: column;
   }
+  .savings-summary-panel { order: 2; padding: 16px; }
   .summary-mobile-open {
     position: absolute;
     z-index: 2;
@@ -1174,6 +1212,7 @@ input[type="datetime-local"] {
   .ledger-home[data-mobile-view="finance"] > .daily-living-budget-panel,
   .ledger-home[data-mobile-view="finance"] > .chart-panel,
   .ledger-home[data-mobile-view="finance"] > .summary-panel,
+  .ledger-home[data-mobile-view="finance"] > .savings-summary-panel,
   .ledger-home[data-mobile-view="finance"] > .quick-entry-panel,
   .ledger-home[data-mobile-view="finance"] > .history-panel { display: none; }
   .ledger-home[data-mobile-view="finance"] > .finance-panel {
@@ -1335,6 +1374,7 @@ input[type="datetime-local"] {
       "navigator navigator"
       "budget budget"
       "summary summary"
+      "savings savings"
       "chart finance"
       "quick finance"
       "history history";
@@ -1344,6 +1384,7 @@ input[type="datetime-local"] {
   .period-navigation { grid-area: navigator; }
   .daily-living-budget-panel { grid-area: budget; }
   .summary-panel { grid-area: summary; grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .savings-summary-panel { grid-area: savings; }
   .chart-panel { grid-area: chart; }
   .finance-panel { grid-area: finance; }
   .quick-entry-panel { grid-area: quick; }
@@ -1362,6 +1403,7 @@ input[type="datetime-local"] {
       "navigator navigator navigator"
       "budget budget budget"
       "summary summary summary"
+      "savings savings savings"
       "chart quick finance"
       "history quick finance";
   }

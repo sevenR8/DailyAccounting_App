@@ -1395,6 +1395,24 @@ async function renderLedger(
     && !financialOverview?.period.previous_card_bill_zero_confirmed
     ? '未輸入，按 NT$ 0 計入本期可存額'
     : '上期實際帳單・已納入本期可存額';
+  const savingsExpenseTotal = calculatedSummary
+    ? calculatedSummary.netCashOutflowTotal
+      + calculatedSummary.cashFixedExpenseTotal
+      + (previousCardBillAmount ?? 0)
+    : null;
+  const savingsSummaryMarkup = financialOverview ? `
+      <section class="savings-summary-panel" data-mobile-section="overview" aria-label="本期可存額">
+        <div class="savings-summary-card${savingsAmount !== null && savingsAmount < 0 ? ' is-negative' : ''}">
+          <header class="savings-summary-heading">
+            <span>本月收支結餘</span>
+            <div><strong>${savingsAmount === null ? '—' : `NT$ ${formatAmount(savingsAmount)}`}</strong><small class="savings-rate${savingsRateClass}">${savingsRateLabel || '儲蓄率 —'}</small></div>
+          </header>
+          <div class="savings-summary-breakdown" aria-label="本期可存額計算">
+            <div class="savings-summary-equation"><span>收入 <strong>NT$ ${totalIncome === null ? '—' : formatAmount(totalIncome)}</strong></span><b>−</b><span>總開銷 <strong>NT$ ${savingsExpenseTotal === null ? '—' : formatAmount(savingsExpenseTotal)}</strong></span></div>
+            <div class="savings-summary-details"><span>固定現金開銷 NT$ ${formatAmount(calculatedSummary?.cashFixedExpenseTotal ?? 0)}</span><span>＋ 現金開銷 NT$ ${formatAmount(calculatedSummary?.netCashOutflowTotal ?? 0)}</span><span>＋ 信用卡應繳 NT$ ${formatAmount(previousCardBillAmount ?? 0)}</span></div>
+          </div>
+        </div>
+      </section>` : '';
   const supportsFixedExpenseScheduling = financialOverview?.fixedExpenseSchedulingSupported === true;
   const otherIncomeList = financialOverview?.otherIncomeEntries.map((income) => `
     <li>
@@ -1768,8 +1786,8 @@ async function renderLedger(
         <div><span>信用卡</span><strong>$${formatAmount(creditCardTotal)}</strong></div>
         <div><span>總開銷</span><strong>$${formatAmount(personalNonFixedExpenseTotal)}</strong></div>
         <div><span>本期固定開銷</span><strong>${fixedExpenseTotal === null ? '—' : `$${formatAmount(fixedExpenseTotal)}`}</strong></div>
-        <div class="savings-summary"><span class="savings-summary-label">本期可存額${savingsRateLabel ? ` <small class="savings-rate${savingsRateClass}">${savingsRateLabel}</small>` : ''}</span><strong>${savingsAmount === null ? '—' : `$${formatAmount(savingsAmount)}`}</strong></div>
       </section>
+      ${savingsSummaryMarkup}
       ${analysisPage}
       <section class="expense-search-page" id="expense-search-page" aria-label="搜尋歷史開銷">
         <header class="expense-search-heading">
