@@ -299,10 +299,7 @@ button { font: inherit; cursor: pointer; }
 .savings-rate-negative { color: #e87870; }
 
 .savings-summary-panel {
-  border-radius: 22px;
-  padding: 10px 14px;
-  background: white;
-  box-shadow: 0 10px 30px rgb(23 33 25 / 7%);
+  padding: 0;
 }
 .savings-summary-card {
   display: grid;
@@ -994,7 +991,7 @@ input[type="datetime-local"] {
   .notice, .day-expense-group { background: #202c22; color: #d3ded3; }
   .period-comparison.comparison-down { background: #23422d; color: #a8e6b7; }
   .period-comparison.comparison-same { background: #29352c; color: #b6c2b8; }
-  .chart-panel, .summary-panel, .savings-summary-panel, .finance-panel, .quick-entry-panel, .history-panel { background: #172119; box-shadow: none; }
+  .chart-panel, .summary-panel, .finance-panel, .quick-entry-panel, .history-panel { background: #172119; box-shadow: none; }
   .user-menu summary:hover, .menu-sign-out { background: #202c22; color: #dce5dd; }
   .menu-action { background: #2a412e; color: #dce5dd; }
   .user-menu-popover { border-color: #3b493d; background: #172119; box-shadow: 0 14px 32px rgb(0 0 0 / 30%); }
@@ -1151,7 +1148,7 @@ input[type="datetime-local"] {
     grid-template-rows: repeat(3, minmax(0, auto));
     grid-auto-flow: column;
   }
-  .savings-summary-panel { order: 2; padding: 8px 12px; }
+  .savings-summary-panel { order: 2; padding: 0; }
   .summary-mobile-open {
     position: absolute;
     z-index: 2;
