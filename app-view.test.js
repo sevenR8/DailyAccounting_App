@@ -144,6 +144,16 @@ test('已登入重新開啟時先顯示可操作快取，再於背景同步雲�
   );
 });
 
+test('重新開啟時先注入上次渲染畫面，避免等待完整帳本重建才首次繪製', () => {
+  const bootstrapSource = appSource.slice(
+    appSource.indexOf('async function bootstrap()'),
+    appSource.indexOf('\nbootstrap();'),
+  );
+  assert.match(appSource, /function renderCachedLedgerSnapshot\(cachedLedgerView\)/);
+  assert.match(bootstrapSource, /renderCachedLedgerSnapshot\(cachedLedgerView\)/);
+  assert.match(appSource, /renderedHtml/);
+});
+
 test('首次啟動時帳務週期、設定、固定開銷與歷史資料會並行讀取', () => {
   const loaderSource = appSource.slice(
     appSource.indexOf('async function loadLedgerViewData'),

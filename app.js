@@ -235,21 +235,31 @@ function readCachedLedgerView(session) {
   }
 }
 
-function saveCachedLedgerView({ ledger, user, selectedStartsOn, viewData }) {
+function saveCachedLedgerView({ ledger, user, selectedStartsOn, viewData, renderedHtml = null }) {
   if (!ledger?.id || !user?.id || !viewData?.cacheable) return;
   if (viewData.financialOverview && !viewData.financialOverview.isCurrentPeriod) return;
   try {
-    window.localStorage.setItem(LEDGER_VIEW_CACHE_STORAGE_KEY, JSON.stringify({
+    const cachePayload = {
       userId: user.id,
       cachedAt: Date.now(),
       ledger,
       user,
       selectedStartsOn,
       viewData,
-    }));
+      ...(renderedHtml && renderedHtml.length <= 900_000 ? { renderedHtml } : {}),
+    };
+    window.localStorage.setItem(LEDGER_VIEW_CACHE_STORAGE_KEY, JSON.stringify(cachePayload));
   } catch (error) {
     // 快取空間不足不應影響正常記帳與同步。
   }
+}
+
+function renderCachedLedgerSnapshot(cachedLedgerView) {
+  if (!cachedLedgerView?.renderedHtml) return false;
+  cleanupLedgerView();
+  app.innerHTML = cachedLedgerView.renderedHtml;
+  app.querySelector('.ledger-home')?.setAttribute('aria-busy', 'true');
+  return true;
 }
 
 function clearCachedLedgerView() {
@@ -3619,6 +3629,16 @@ async function renderLedger(
       }
     });
   });
+
+  if (persistViewData) {
+    saveCachedLedgerView({
+      ledger,
+      user,
+      selectedStartsOn: financialOverview?.period?.starts_on ?? selectedStartsOn,
+      viewData: resolvedViewData,
+      renderedHtml: app.innerHTML,
+    });
+  }
 }
 
 async function bootstrap() {
@@ -3645,7 +3665,12 @@ async function bootstrap() {
   });
   const expenseAdapter = new SupabaseLedgerAdapter(connection);
 
-  if (cachedLedgerView) {
+  const cachedSnapshotRendered = renderCachedLedgerSnapshot(cachedLedgerView);
+  if (cachedSnapshotRendered) {
+    // 先讓瀏覽器繪製上一個完整畫面，再在背景同步最新資料。
+    ledgerViewSyncBaseline = ledgerViewInteractionVersion;
+    await new Promise((resolve) => window.requestAnimationFrame(resolve));
+  } else if (cachedLedgerView) {
     await renderLedger(
       cachedLedgerView.ledger,
       cachedLedgerView.user,
@@ -3659,6 +3684,17 @@ async function bootstrap() {
   }
 
   try {
+    if (cachedSnapshotRendered) {
+      // 首幀完成後立刻補上互動事件；網路同步仍在其後進行。
+      await renderLedger(
+        cachedLedgerView.ledger,
+        cachedLedgerView.user,
+        expenseAdapter,
+        cachedLedgerView.selectedStartsOn,
+        { viewData: cachedLedgerView.viewData, persistViewData: false },
+      );
+      ledgerViewSyncBaseline = ledgerViewInteractionVersion;
+    }
     const accessToken = await getAccessToken(storedSession);
     if (!accessToken) {
       window.localStorage.removeItem('daily-ledger-session');
@@ -3690,6 +3726,7 @@ async function bootstrap() {
     }
   } catch (error) {
     if (cachedLedgerView) {
+      app.querySelector('.ledger-home')?.removeAttribute('aria-busy');
       const status = document.querySelector('#expense-status');
       if (status) status.textContent = '目前顯示上次同步資料，恢復連線後即可繼續記帳。';
       return;
