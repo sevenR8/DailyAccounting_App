@@ -559,6 +559,8 @@ test('每日可花顯示在週期日期下方並縮窄卡片高度', () => {
   assert.ok(periodIndex >= 0 && budgetIndex > periodIndex && budgetIndex < summaryIndex);
   assert.match(stylesSource, /\.daily-living-budget-panel/);
   assert.match(stylesSource, /\.daily-living-budget \{[\s\S]*padding: 8px 12px/);
+  assert.match(stylesSource, /\.daily-living-budget-panel \{[\s\S]*order: -11;[\s\S]*padding: 0;/);
+  assert.match(stylesSource, /\.daily-living-budget \{ width: 100%; \}/);
 });
 
 test('本月信用卡繳納顯示在收入與固定開銷之間，並使用上期實際帳單', () => {

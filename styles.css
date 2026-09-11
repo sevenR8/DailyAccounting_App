@@ -1225,7 +1225,11 @@ input[type="datetime-local"] {
     padding: 16px;
   }
   .quick-entry-panel { gap: 10px; }
-  .daily-living-budget-panel { padding: 0 4px; }
+  .daily-living-budget-panel {
+    order: -11;
+    padding: 0;
+  }
+  .daily-living-budget { width: 100%; }
   .expense-form { gap: 10px; }
   .period-navigation,
   .chart-panel,
