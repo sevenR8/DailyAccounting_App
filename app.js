@@ -1405,11 +1405,11 @@ async function renderLedger(
         <div class="savings-summary-card${savingsAmount !== null && savingsAmount < 0 ? ' is-negative' : ''}">
           <header class="savings-summary-heading">
             <span>本月收支結餘</span>
-            <div><strong>${savingsAmount === null ? '—' : `NT$ ${formatAmount(savingsAmount)}`}</strong><small class="savings-rate${savingsRateClass}">${savingsRateLabel || '儲蓄率 —'}</small></div>
+            <div><strong>${savingsAmount === null ? '—' : formatAmount(savingsAmount)}</strong><small class="savings-rate${savingsRateClass}">${savingsRateLabel || '儲蓄率 —'}</small></div>
           </header>
           <div class="savings-summary-breakdown" aria-label="本期可存額計算">
-            <div class="savings-summary-equation"><span>收入 <strong>NT$ ${totalIncome === null ? '—' : formatAmount(totalIncome)}</strong></span><b>−</b><span>總開銷 <strong>NT$ ${savingsExpenseTotal === null ? '—' : formatAmount(savingsExpenseTotal)}</strong></span></div>
-            <div class="savings-summary-details"><span>固定現金開銷 NT$ ${formatAmount(calculatedSummary?.cashFixedExpenseTotal ?? 0)}</span><span>＋ 現金開銷 NT$ ${formatAmount(calculatedSummary?.netCashOutflowTotal ?? 0)}</span><span>＋ 信用卡應繳 NT$ ${formatAmount(previousCardBillAmount ?? 0)}</span></div>
+            <div class="savings-summary-equation"><span>收入 <strong>${totalIncome === null ? '—' : formatAmount(totalIncome)}</strong></span><b>−</b><span>總開銷 <strong>${savingsExpenseTotal === null ? '—' : formatAmount(savingsExpenseTotal)}</strong></span></div>
+            <div class="savings-summary-details"><span>固定現金開銷 ${formatAmount(calculatedSummary?.cashFixedExpenseTotal ?? 0)}</span><span>＋ 現金開銷 ${formatAmount(calculatedSummary?.netCashOutflowTotal ?? 0)}</span><span>＋ 信用卡應繳 ${formatAmount(previousCardBillAmount ?? 0)}</span></div>
           </div>
         </div>
       </section>` : '';

@@ -197,7 +197,10 @@ test('首頁本期可存額獨立顯示在摘要卡下方', () => {
   assert.ok(savingsIndex > summaryIndex);
   assert.ok(savingsMarkupIndex >= 0);
   assert.match(appSource.slice(savingsMarkupIndex), /savings-summary-panel[\s\S]*本月收支結餘/);
-  assert.match(appSource.slice(savingsMarkupIndex), /savings-summary-breakdown/);
+  const savingsMarkupSource = appSource.slice(savingsMarkupIndex, appSource.indexOf('const supportsFixedExpenseScheduling'));
+  assert.match(savingsMarkupSource, /savings-summary-breakdown/);
+  assert.doesNotMatch(savingsMarkupSource, /NT\$/);
+  assert.match(savingsMarkupSource, /收入[\s\S]*總開銷/);
 });
 
 test('本期摘要保留代墊淨額計算但不加入註解小字或特殊金額顏色', () => {

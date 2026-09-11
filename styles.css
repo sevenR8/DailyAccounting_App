@@ -300,33 +300,33 @@ button { font: inherit; cursor: pointer; }
 
 .savings-summary-panel {
   border-radius: 22px;
-  padding: 20px;
+  padding: 10px 14px;
   background: white;
   box-shadow: 0 10px 30px rgb(23 33 25 / 7%);
 }
 .savings-summary-card {
   display: grid;
-  gap: 14px;
+  gap: 7px;
   border: 2px solid #d9e6d0;
-  border-radius: 22px;
-  padding: 20px 22px;
+  border-radius: 16px;
+  padding: 10px 14px;
   background: #f2f8ed;
   color: #173a2b;
 }
-.savings-summary-card.is-negative { border-color: #efd2c9; background: #fff6f2; color: #482d2a; }
+.savings-summary-card.is-negative { border-color: #d9e6d0; background: #f2f8ed; color: #173a2b; }
 .savings-summary-heading { display: flex; justify-content: space-between; align-items: start; gap: 18px; }
-.savings-summary-heading > span { padding-top: 4px; font-size: 1.15rem; font-weight: 900; }
-.savings-summary-heading > div { display: grid; justify-items: end; gap: 4px; min-width: 0; }
-.savings-summary-heading strong { font-size: clamp(1.45rem, 5vw, 2rem); line-height: 1.1; white-space: nowrap; }
+.savings-summary-heading > span { padding-top: 2px; font-size: 0.95rem; font-weight: 900; }
+.savings-summary-heading > div { display: grid; justify-items: end; gap: 2px; min-width: 0; }
+.savings-summary-heading strong { font-size: clamp(1.2rem, 4vw, 1.55rem); line-height: 1.05; white-space: nowrap; }
 .savings-summary-heading .savings-rate { position: static; font-size: 0.95rem; }
 .savings-summary-card:not(.is-negative) .savings-summary-heading strong { color: #287145; }
 .savings-summary-card.is-negative .savings-summary-heading strong { color: #b55a47; }
-.savings-summary-breakdown { display: grid; gap: 10px; border-top: 1px solid rgb(101 112 103 / 24%); padding-top: 14px; }
-.savings-summary-equation { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; font-size: 1rem; font-weight: 800; }
+.savings-summary-breakdown { display: grid; gap: 5px; border-top: 1px solid rgb(101 112 103 / 24%); padding-top: 7px; }
+.savings-summary-equation { display: flex; align-items: baseline; flex-wrap: nowrap; gap: 5px; overflow: hidden; font-size: 0.85rem; font-weight: 800; white-space: nowrap; }
 .savings-summary-equation span { color: #53665a; }
-.savings-summary-equation strong { color: inherit; font-size: 1.06rem; }
-.savings-summary-equation b { color: #7d8b80; font-size: 1.25rem; }
-.savings-summary-details { display: flex; flex-wrap: wrap; gap: 5px 16px; color: #7b887e; font-size: 0.78rem; line-height: 1.45; }
+.savings-summary-equation strong { color: inherit; font-size: 0.92rem; }
+.savings-summary-equation b { color: #7d8b80; font-size: 1rem; }
+.savings-summary-details { display: flex; flex-wrap: wrap; gap: 2px 12px; color: #7b887e; font-size: 0.68rem; line-height: 1.35; }
 
 .quick-entry-panel { display: grid; gap: 16px; }
 .history-panel {
@@ -1020,7 +1020,7 @@ input[type="datetime-local"] {
   .savings-rate-negative { color: #f28b82; }
   .savings-summary { background: #263b29; }
   .savings-summary-card { border-color: #4b5c4d; background: #263b29; color: #eff4ed; }
-  .savings-summary-card.is-negative { border-color: #7a4f4a; background: #3a2725; color: #f6e9e6; }
+  .savings-summary-card.is-negative { border-color: #4b5c4d; background: #263b29; color: #eff4ed; }
   .savings-summary-card:not(.is-negative) .savings-summary-heading strong { color: #a8e6b7; }
   .savings-summary-card.is-negative .savings-summary-heading strong { color: #ff9b8f; }
   .savings-summary-equation span { color: #d3ded3; }
@@ -1151,7 +1151,7 @@ input[type="datetime-local"] {
     grid-template-rows: repeat(3, minmax(0, auto));
     grid-auto-flow: column;
   }
-  .savings-summary-panel { order: 2; padding: 16px; }
+  .savings-summary-panel { order: 2; padding: 8px 12px; }
   .summary-mobile-open {
     position: absolute;
     z-index: 2;
