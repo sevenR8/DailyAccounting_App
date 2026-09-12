@@ -9,6 +9,18 @@
 
 html, body { background: #f7f8f3; }
 body { margin: 0; min-width: 320px; }
+html.has-open-modal,
+html.has-open-modal body { overflow: hidden; }
+
+@media (max-width: 899px) {
+  html.has-open-modal body {
+    position: fixed;
+    inset: var(--modal-scroll-y, 0) 0 auto;
+    width: 100%;
+    min-height: 100dvh;
+    overscroll-behavior: none;
+  }
+}
 
 #app {
   min-height: 100dvh;

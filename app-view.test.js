@@ -103,6 +103,14 @@ test('右上角選單可開啟帳本設定並管理自訂分類與週期起始�
   assert.match(stylesSource, /\.category-settings-list/);
 });
 
+test('所有彈窗開啟時鎖定背景捲動，關閉後再恢復原本位置', () => {
+  assert.match(appSource, /function setModalBackgroundLocked\(isLocked, \{ force = false \} = \{\}\)/);
+  assert.match(appSource, /const openDialog = \(dialogId\) => \{[\s\S]*setModalBackgroundLocked\(true\)[\s\S]*dialog\.showModal\(\)/);
+  assert.match(appSource, /dialog\.addEventListener\('close', \(\) => setModalBackgroundLocked\(false\)\)/);
+  assert.match(appSource, /cleanupLedgerView = \(\) => \{\s*setModalBackgroundLocked\(false, \{ force: true \}\)/);
+  assert.match(stylesSource, /html\.has-open-modal,\s*html\.has-open-modal body\s*\{[^}]*overflow:\s*hidden;/);
+});
+
 test('已保存登入狀態時直接顯示帳本啟動畫面，不會先閃過登入頁', () => {
   assert.match(appSource, /async function getAccessToken\(session = readSession\(\), \{ forceRefresh = false \} = \{\}\)/);
   assert.match(

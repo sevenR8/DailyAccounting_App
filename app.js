@@ -50,6 +50,23 @@ let cleanupLedgerView = () => {};
 let accessTokenRefreshPromise = null;
 let ledgerViewInteractionVersion = 0;
 let ledgerViewSyncBaseline = 0;
+let modalBackgroundScrollY = 0;
+
+function setModalBackgroundLocked(isLocked, { force = false } = {}) {
+  const root = document.documentElement;
+  if (isLocked) {
+    if (root.classList.contains('has-open-modal')) return;
+    modalBackgroundScrollY = window.scrollY;
+    root.style.setProperty('--modal-scroll-y', `-${modalBackgroundScrollY}px`);
+    root.classList.add('has-open-modal');
+    return;
+  }
+
+  if ((!force && document.querySelector('dialog[open]')) || !root.classList.contains('has-open-modal')) return;
+  root.classList.remove('has-open-modal');
+  root.style.removeProperty('--modal-scroll-y');
+  window.scrollTo(0, modalBackgroundScrollY);
+}
 
 const installSwipeBackGesture = ({ gestureTarget, animatedSurface, onBack }) => {
   if (!gestureTarget || !animatedSurface) return;
@@ -2380,6 +2397,7 @@ async function renderLedger(
   document.addEventListener('touchend', finishPullRefresh, { passive: true });
   document.addEventListener('touchcancel', cancelPullRefresh, { passive: true });
   cleanupLedgerView = () => {
+    setModalBackgroundLocked(false, { force: true });
     window.removeEventListener('scroll', syncMobileNavigation);
     window.removeEventListener('resize', syncMobileNavigation);
     document.removeEventListener('touchstart', startPullRefresh);
@@ -2461,7 +2479,10 @@ async function renderLedger(
 
   const openDialog = (dialogId) => {
     const dialog = document.getElementById(dialogId);
-    if (dialog && !dialog.open) dialog.showModal();
+    if (dialog && !dialog.open) {
+      setModalBackgroundLocked(true);
+      dialog.showModal();
+    }
   };
 
   const expenseSearchForm = document.querySelector('#expense-search-form');
@@ -3031,6 +3052,7 @@ async function renderLedger(
     button.addEventListener('click', () => button.closest('dialog').close());
   });
   document.querySelectorAll('.finance-dialog').forEach((dialog) => {
+    dialog.addEventListener('close', () => setModalBackgroundLocked(false));
     dialog.addEventListener('click', (event) => {
       if (event.target === dialog) dialog.close();
     });
