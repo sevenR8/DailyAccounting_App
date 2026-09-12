@@ -7,7 +7,7 @@ const indexHtml = await readFile(new URL('./index.html', import.meta.url), 'utf8
 
 test('已部署的設定檔優先從網路讀取，避免舊快取卡住連線設定', () => {
   assert.match(serviceWorker, /daily-ledger-shell-v\d+/);
-  assert.match(serviceWorker, /daily-ledger-shell-v142/);
+  assert.match(serviceWorker, /daily-ledger-shell-v143/);
   assert.match(serviceWorker, /\.\/amount-expression\.js/);
   assert.match(serviceWorker, /\.\/expense-analysis\.js/);
   assert.match(serviceWorker, /\.\/expense-advance\.js/);

@@ -98,6 +98,7 @@ test('右上角選單可開啟帳本設定並管理自訂分類與週期起始�
   assert.match(appSource, /updateCategory/);
   assert.match(appSource, /name="cycleStartDay"[^>]*min="1"[^>]*max="28"/);
   assert.match(appSource, /id="cycle-settings-form"/);
+  assert.match(appSource, /<details class="settings-collapsible">[\s\S]*<strong>帳務週期<\/strong>[\s\S]*settings-collapsible-toggle/);
   assert.match(stylesSource, /\.settings-dialog/);
   assert.match(stylesSource, /\.category-settings-list/);
 });

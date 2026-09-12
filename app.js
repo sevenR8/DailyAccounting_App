@@ -1061,20 +1061,28 @@ async function renderLedger(
           <button class="dialog-close" type="button" data-action="close-dialog" aria-label="關閉">×</button>
         </div>
         ${isLedgerOwner ? `
-          <section class="settings-section">
-            <div>
-              <h3>帳務週期</h3>
-              <p>設定每期從每月幾日開始，可輸入 1–28。</p>
-            </div>
-            ${financialOverview ? `
-              <form class="cycle-settings-form" id="cycle-settings-form">
-                <label>每期從每月第
-                  <input name="cycleStartDay" type="number" min="1" max="28" step="1" inputmode="numeric" value="${financialOverview.settings.cycle_start_day}" required />
-                  日開始
-                </label>
-                <button class="small-primary-button" type="submit">儲存週期</button>
-                <p class="form-status" aria-live="polite">既有帳務週期與歷史紀錄不會被修改。</p>
-              </form>` : '<p class="settings-unavailable">目前無法讀取帳務週期設定。</p>'}
+          <section class="settings-section settings-collapsible-section">
+            <details class="settings-collapsible">
+              <summary class="settings-collapsible-summary">
+                <span class="settings-collapsible-copy">
+                  <strong>帳務週期</strong>
+                  <small>設定每期從每月幾日開始。</small>
+                </span>
+                <span class="settings-collapsible-toggle" aria-hidden="true"></span>
+              </summary>
+              <div class="settings-collapsible-content">
+                <p class="dialog-note">可輸入 1–28 日；既有帳務週期與歷史紀錄不會被修改。</p>
+                ${financialOverview ? `
+                  <form class="cycle-settings-form" id="cycle-settings-form">
+                    <label>每期從每月第
+                      <input name="cycleStartDay" type="number" min="1" max="28" step="1" inputmode="numeric" value="${financialOverview.settings.cycle_start_day}" required />
+                      日開始
+                    </label>
+                    <button class="small-primary-button" type="submit">儲存週期</button>
+                    <p class="form-status" aria-live="polite"></p>
+                  </form>` : '<p class="settings-unavailable">目前無法讀取帳務週期設定。</p>'}
+              </div>
+            </details>
           </section>
           <section class="settings-section settings-collapsible-section">
             <details class="settings-collapsible">
