@@ -51,6 +51,8 @@ let accessTokenRefreshPromise = null;
 let ledgerViewInteractionVersion = 0;
 let ledgerViewSyncBaseline = 0;
 let modalBackgroundScrollY = 0;
+let activeLedgerViewData = null;
+let ledgerRenderGeneration = 0;
 
 function setModalBackgroundLocked(isLocked, { force = false } = {}) {
   const root = document.documentElement;
@@ -785,6 +787,8 @@ async function renderLedger(
   selectedStartsOn = null,
   { viewData = null, persistViewData = true } = {},
 ) {
+  const renderGeneration = ++ledgerRenderGeneration;
+  const hasProvidedViewData = Boolean(viewData);
   const existingLedgerView = app.querySelector('.ledger-home')?.dataset.mobileView;
   const existingExpenseSearchKeyword = app.querySelector('#expense-search-input')?.value.trim() || '';
   const preferredMobileView = ['finance', 'analysis', 'search'].includes(existingLedgerView)
@@ -792,6 +796,8 @@ async function renderLedger(
     : 'main';
   const resolvedViewData = viewData
     ?? await loadLedgerViewData(ledger, expenseAdapter, selectedStartsOn);
+  if (renderGeneration !== ledgerRenderGeneration) return false;
+  if (!hasProvidedViewData && ledgerViewHasUnsavedExpenseDraft()) return false;
   const {
     financialOverview,
     entries,
@@ -799,6 +805,7 @@ async function renderLedger(
     merchantGroups = [],
     analysisSettingsSupported = false,
   } = resolvedViewData;
+  activeLedgerViewData = resolvedViewData;
   if (persistViewData) {
     saveCachedLedgerView({
       ledger,
@@ -2469,8 +2476,20 @@ async function renderLedger(
         paymentMethod: formData.get('paymentMethod'),
         occurredAt: new Date(formData.get('occurredAt')).toISOString(),
       });
-      await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
       showExpenseSavedToast({ itemName, amount });
+      const optimisticViewData = appendOptimisticExpenseToViewData(activeLedgerViewData, createdEntry);
+      if (optimisticViewData) {
+        await renderLedger(ledger, user, expenseAdapter, activeStartsOn, {
+          viewData: optimisticViewData,
+        });
+      } else {
+        button.disabled = false;
+        form.reset();
+      }
+      void renderLedger(ledger, user, expenseAdapter, activeStartsOn).catch((error) => {
+        const refreshStatus = document.querySelector('#expense-status');
+        if (refreshStatus) refreshStatus.textContent = `已記錄；同步最新資料時遇到問題：${error.message}`;
+      });
     } catch (error) {
       status.textContent = error.message;
       button.disabled = false;
@@ -3687,6 +3706,55 @@ async function renderLedger(
       renderedHtml: app.innerHTML,
     });
   }
+}
+
+function ledgerViewHasUnsavedExpenseDraft() {
+  const form = document.querySelector('#expense-form');
+  if (!form) return false;
+  return Boolean(
+    form.querySelector('[name="amount"]')?.value.trim()
+    || form.querySelector('[name="itemName"]')?.value.trim()
+    || form.querySelector('button[type="submit"]')?.disabled,
+  );
+}
+
+function appendOptimisticExpenseToViewData(viewData, createdEntry) {
+  if (!viewData?.financialOverview || !createdEntry?.id) return null;
+
+  const normalizedEntry = {
+    ...createdEntry,
+    amount: Number(createdEntry.amount ?? 0),
+    item_name: createdEntry.item_name ?? createdEntry.itemName ?? '',
+    item_detail: createdEntry.item_detail ?? createdEntry.itemDetail ?? '',
+    category_id: createdEntry.category_id ?? createdEntry.categoryId,
+    payment_method: createdEntry.payment_method ?? createdEntry.paymentMethod,
+    occurred_at: createdEntry.occurred_at ?? createdEntry.occurredAt,
+    created_at: createdEntry.created_at ?? new Date().toISOString(),
+    is_fixed: false,
+    include_in_daily_average: createdEntry.include_in_daily_average !== false,
+  };
+  const appendUniqueAndSort = (entries) => [
+    ...entries.filter((entry) => entry.id !== normalizedEntry.id),
+    normalizedEntry,
+  ].sort((left, right) => new Date(right.occurred_at) - new Date(left.occurred_at));
+
+  const entries = appendUniqueAndSort(viewData.entries ?? []);
+  const existingAnalysisEntries = viewData.analysisEntries ?? viewData.entries ?? [];
+  const period = viewData.financialOverview.period;
+  const previousPeriod = viewData.financialOverview.previousPeriod ?? period;
+  const occurredAt = new Date(normalizedEntry.occurred_at);
+  const analysisStart = localDateFromISO(previousPeriod.starts_on);
+  const analysisEnd = new Date(localDateFromISO(period.ends_on).getTime() + 86_400_000);
+  const analysisEntries = occurredAt >= analysisStart && occurredAt < analysisEnd
+    ? appendUniqueAndSort(existingAnalysisEntries)
+    : existingAnalysisEntries;
+
+  return {
+    ...viewData,
+    entries,
+    analysisEntries,
+    cacheable: true,
+  };
 }
 
 async function bootstrap() {

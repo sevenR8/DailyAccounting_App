@@ -111,6 +111,15 @@ test('所有彈窗開啟時鎖定背景捲動，關閉後再恢復原本位置',
   assert.match(stylesSource, /html\.has-open-modal,\s*html\.has-open-modal body\s*\{[^}]*overflow:\s*hidden;/);
 });
 
+test('儲存開銷先立即套用畫面，再在背景同步完整帳本', () => {
+  assert.match(appSource, /function appendOptimisticExpenseToViewData\(viewData, createdEntry\)/);
+  const submitStart = appSource.indexOf("document.querySelector('#expense-form').addEventListener");
+  const submitEnd = appSource.indexOf('const openDialog =', submitStart);
+  const submitSource = appSource.slice(submitStart, submitEnd);
+  assert.match(submitSource, /appendOptimisticExpenseToViewData\(activeLedgerViewData, createdEntry\)/);
+  assert.match(submitSource, /showExpenseSavedToast\([\s\S]*?\);[\s\S]*?void renderLedger\(/);
+});
+
 test('已保存登入狀態時直接顯示帳本啟動畫面，不會先閃過登入頁', () => {
   assert.match(appSource, /async function getAccessToken\(session = readSession\(\), \{ forceRefresh = false \} = \{\}\)/);
   assert.match(
