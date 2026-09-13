@@ -32,7 +32,7 @@
           </main>`;
       }
     </script>
-  <script type="module" src="./app.js?v=142"></script>
+  <script type="module" src="./app.js?v=143"></script>
     <script>
       if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
         let isReloadingForNewServiceWorker = false;
@@ -41,7 +41,7 @@
           isReloadingForNewServiceWorker = true;
           window.location.reload();
         });
-        navigator.serviceWorker.register('./service-worker.js?v=146', { updateViaCache: 'none' })
+        navigator.serviceWorker.register('./service-worker.js?v=147', { updateViaCache: 'none' })
           .then((registration) => registration.update());
       }
     </script>
