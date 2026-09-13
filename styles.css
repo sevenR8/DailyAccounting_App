@@ -736,6 +736,12 @@ html.is-reordering-fixed-expense .fixed-rule-sortable { -webkit-user-select: non
   font-weight: 700 !important;
 }
 .daily-average-toggle input { width: auto; accent-color: #267247; }
+.expense-edit-toggle-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
 .edit-form-wide { grid-column: 1 / -1; }
 .dialog-actions {
   display: grid;

@@ -215,6 +215,11 @@ test('快速記帳以同款窄卡片提供預設關閉的收回款勾選框', ()
   assert.match(stylesSource, /\.reimbursement-toggle input[\s\S]*border-radius: 50%/);
 });
 
+test('編輯開銷時將收回款放在納入日常平均開銷右側', () => {
+  assert.match(appSource, /expense-edit-toggle-row[\s\S]*daily-average-toggle[\s\S]*reimbursement-edit-toggle/);
+  assert.match(stylesSource, /\.expense-edit-toggle-row\s*\{[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\) auto/);
+});
+
 test('現金與收回款選取圓點使用一致的亮藍色', () => {
   assert.match(stylesSource, /\.payment-method-fieldset input\[type="radio"\][^}]*accent-color:\s*#168df0/);
   assert.match(stylesSource, /\.reimbursement-toggle input:checked,[\s\S]*radial-gradient\(circle, #fff 0 3px, #168df0 3px 100%\)/);

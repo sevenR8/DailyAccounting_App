@@ -1319,14 +1319,16 @@ async function renderLedger(
             <label class="edit-form-wide">細項
               <textarea name="itemDetail" maxlength="200" rows="4" placeholder="可逐行輸入細項、金額或計算方式">${escapeHtml(entry.item_detail ?? '')}</textarea>
             </label>
-            <label class="edit-form-wide daily-average-toggle">
-              <input name="includeInDailyAverage" type="checkbox" ${entry.include_in_daily_average !== false ? 'checked' : ''} />
-              <span>納入日常平均開銷</span>
-            </label>
-            <label class="edit-form-wide reimbursement-edit-toggle">
-              <input name="isReimbursement" type="checkbox" ${entry.is_reimbursement ? 'checked' : ''} />
-              <span>收回款</span>
-            </label>
+            <div class="edit-form-wide expense-edit-toggle-row">
+              <label class="daily-average-toggle">
+                <input name="includeInDailyAverage" type="checkbox" ${entry.include_in_daily_average !== false ? 'checked' : ''} />
+                <span>納入日常平均開銷</span>
+              </label>
+              <label class="reimbursement-edit-toggle">
+                <input name="isReimbursement" type="checkbox" ${entry.is_reimbursement ? 'checked' : ''} />
+                <span>收回款</span>
+              </label>
+            </div>
             <p class="form-status edit-form-wide" aria-live="polite"></p>
             <div class="dialog-actions edit-form-wide">
               <button
@@ -1951,14 +1953,16 @@ async function renderLedger(
             <label class="edit-form-wide">細項
               <textarea name="itemDetail" maxlength="200" rows="4" placeholder="可逐行輸入細項、金額或計算方式"></textarea>
             </label>
-            <label class="edit-form-wide daily-average-toggle">
-              <input name="includeInDailyAverage" type="checkbox" checked />
-              <span>納入日常平均開銷</span>
-            </label>
-            <label class="edit-form-wide reimbursement-edit-toggle">
-              <input name="isReimbursement" type="checkbox" />
-              <span>收回款</span>
-            </label>
+            <div class="edit-form-wide expense-edit-toggle-row">
+              <label class="daily-average-toggle">
+                <input name="includeInDailyAverage" type="checkbox" checked />
+                <span>納入日常平均開銷</span>
+              </label>
+              <label class="reimbursement-edit-toggle">
+                <input name="isReimbursement" type="checkbox" />
+                <span>收回款</span>
+              </label>
+            </div>
             <p class="form-status edit-form-wide" aria-live="polite"></p>
             <div class="dialog-actions edit-form-wide">
               <button class="fixed-rule-delete" id="search-expense-edit-delete" type="button" data-action="delete-expense" data-entry-id="" data-entry-name="" data-entry-amount="0">刪除</button>
