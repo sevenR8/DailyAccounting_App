@@ -48,7 +48,6 @@ export function calculateFinancialSummary({
 
 export function calculateDailyLivingBudget({
   livingExpenseLimitAmount,
-  reservedFixedAmount = 0,
   spentAmount = 0,
   periodStart,
   periodEnd,
@@ -70,12 +69,11 @@ export function calculateDailyLivingBudget({
       ? 0
       : Math.max(1, Math.ceil((endExclusive - current) / 86_400_000));
   const spent = Math.max(0, Number(spentAmount) || 0);
-  const fixed = Math.max(0, Number(reservedFixedAmount) || 0);
-  const remainingAmount = Math.round(limit - fixed - spent);
+  // The living-expense limit is independent from fixed expenses.
+  const remainingAmount = Math.round(limit - spent);
 
   return {
     limit: Math.round(limit),
-    fixed: Math.round(fixed),
     spent: Math.round(spent),
     remainingAmount,
     remainingDays,

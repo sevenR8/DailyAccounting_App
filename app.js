@@ -1,5 +1,5 @@
 import { LedgerModule } from './ledger-module.js?v=44';
-import { calculateDailyLivingBudget, calculateFinancialSummary } from './financial-summary.js?v=47';
+import { calculateDailyLivingBudget, calculateFinancialSummary } from './financial-summary.js?v=48';
 import { parseAmountExpression, parseSignedAmountExpression } from './amount-expression.js?v=45';
 import {
   buildExpenseTemplates,
@@ -897,7 +897,6 @@ async function renderLedger(
   const fixedExpenseTotal = calculatedSummary?.fixedExpenseTotal ?? null;
   const dailyLivingBudget = calculateDailyLivingBudget({
     livingExpenseLimitAmount: financialOverview?.period.living_expense_limit_amount,
-    reservedFixedAmount: fixedExpenseTotal ?? 0,
     spentAmount: personalNonFixedExpenseTotal,
     periodStart: financialOverview?.period.starts_on,
     periodEnd: financialOverview?.period.ends_on,
@@ -908,7 +907,7 @@ async function renderLedger(
         <div><span>每日還可花</span><strong>${dailyLivingBudget.remainingDays > 0
     ? `${dailyLivingBudget.remainingAmount < 0 ? '−' : ''}$${formatAmount(Math.abs(dailyLivingBudget.dailyAmount))}`
     : '—'}</strong></div>
-        <small>上限 $${formatAmount(dailyLivingBudget.limit)}・固定 $${formatAmount(dailyLivingBudget.fixed)}・已花 $${formatAmount(dailyLivingBudget.spent)}${dailyLivingBudget.remainingDays > 0 ? `・剩 ${dailyLivingBudget.remainingDays} 天` : '・本期已結束'}</small>
+        <small>上限 $${formatAmount(dailyLivingBudget.limit)}（不含固定開銷）・已花 $${formatAmount(dailyLivingBudget.spent)}${dailyLivingBudget.remainingDays > 0 ? `・剩 ${dailyLivingBudget.remainingDays} 天` : '・本期已結束'}</small>
       </aside></section>`
     : '';
   // 圓餅圖與消費分析只呈現本人實際負擔；全額代墊會排除，部分代墊只保留自己的部分。
@@ -1662,7 +1661,7 @@ async function renderLedger(
             <div><span class="income-marker other-marker">＋</span><span><small>其他收入</small><strong>$ ${formatAmount(otherIncomeTotal)}</strong></span></div>
           </div>
           <div class="income-limit-row${financialOverview.period.living_expense_limit_amount == null ? ' is-unset' : ''}">
-            <span>本期生活開銷上限</span>
+            <span>本期生活開銷上限（不含固定開銷）</span>
             <strong>${financialOverview.period.living_expense_limit_amount == null
     ? '尚未設定'
     : `$ ${formatAmount(financialOverview.period.living_expense_limit_amount)}`}</strong>
@@ -1727,7 +1726,7 @@ async function renderLedger(
             <label>上期信用卡帳單
               <input id="previous-card-bill" name="previousCardBillAmount" type="text" inputmode="text" pattern="[0-9+＋\\-－\\s]+" value="${financialOverview.period.previous_card_bill_amount ?? ''}" placeholder="未輸入視為 0" />
             </label>
-            <label>本期生活開銷上限
+            <label>本期生活開銷上限（不含固定開銷）
               <input name="livingExpenseLimitAmount" type="text" inputmode="text" pattern="[0-9+＋\\-－\\s]+" value="${financialOverview.period.living_expense_limit_amount ?? ''}" placeholder="未設定" />
             </label>
             <p class="form-helper">儲存後，本期薪水會自動作為後續週期的預設薪水。</p>

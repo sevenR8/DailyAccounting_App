@@ -97,10 +97,9 @@ test('收回款不算生活開銷，並依付款方式抵銷本期現金流', ()
   assert.equal(summary.savingsAmount, 2350);
 });
 
-test('每日可花額以本期生活上限扣除固定與已發生生活開銷後除以剩餘天數', () => {
+test('每日可花額以不含固定開銷的本期生活上限扣除已發生生活開銷後除以剩餘天數', () => {
   const budget = calculateDailyLivingBudget({
     livingExpenseLimitAmount: 8000,
-    reservedFixedAmount: 2000,
     spentAmount: 2500,
     periodStart: '2026-09-05',
     periodEnd: '2026-10-04',
@@ -108,9 +107,8 @@ test('每日可花額以本期生活上限扣除固定與已發生生活開銷�
   });
 
   assert.equal(budget.limit, 8000);
-  assert.equal(budget.fixed, 2000);
   assert.equal(budget.spent, 2500);
-  assert.equal(budget.remainingAmount, 3500);
+  assert.equal(budget.remainingAmount, 5500);
   assert.equal(budget.remainingDays, 27);
-  assert.equal(budget.dailyAmount, 129);
+  assert.equal(budget.dailyAmount, 203);
 });
