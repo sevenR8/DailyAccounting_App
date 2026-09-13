@@ -858,7 +858,7 @@ input[type="datetime-local"] {
   font-weight: 700;
   white-space: nowrap;
 }
-.payment-method-fieldset input[type="radio"] { margin: 0; }
+.payment-method-fieldset input[type="radio"] { margin: 0; accent-color: #168df0; }
 .reimbursement-toggle {
   display: inline-flex;
   align-items: center;
@@ -889,8 +889,8 @@ input[type="datetime-local"] {
 }
 .reimbursement-toggle input:checked,
 .reimbursement-edit-toggle input:checked {
-  border-color: #267247 !important;
-  background: #267247 !important;
+  border-color: #168df0 !important;
+  background: #168df0 !important;
   box-shadow: inset 0 0 0 3px #dfeadd;
 }
 .reimbursement-edit-toggle {
@@ -1069,7 +1069,7 @@ input[type="datetime-local"] {
   .expense-form .payment-method-fieldset, .reimbursement-toggle { border-color: #526154; }
   .payment-method-fieldset label { color: #dce5dd; }
   .reimbursement-toggle, .reimbursement-edit-toggle { color: #dce5dd; }
-  .reimbursement-toggle input:checked, .reimbursement-edit-toggle input:checked { border-color: #8fd49f !important; background: #267247 !important; box-shadow: inset 0 0 0 3px #dce5dd; }
+  .reimbursement-toggle input:checked, .reimbursement-edit-toggle input:checked { border-color: #168df0 !important; background: #168df0 !important; box-shadow: inset 0 0 0 3px #dce5dd; }
   .smart-suggestions-heading strong { color: #a8dbb5; }
   .smart-suggestions-heading small, .smart-suggestion-list small { color: #aeb9af; }
   .smart-suggestion-list button { border-color: #425146; background: #202c22; color: #dce5dd; }

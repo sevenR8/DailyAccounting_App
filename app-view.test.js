@@ -215,6 +215,12 @@ test('快速記帳以同款窄卡片提供預設關閉的收回款勾選框', ()
   assert.match(stylesSource, /\.reimbursement-toggle input[\s\S]*border-radius: 50%/);
 });
 
+test('現金與收回款選取圓點使用一致的亮藍色', () => {
+  assert.match(stylesSource, /\.payment-method-fieldset input\[type="radio"\][^}]*accent-color:\s*#168df0/);
+  assert.match(stylesSource, /\.reimbursement-toggle input:checked,[\s\S]*background:\s*#168df0 !important/);
+  assert.match(stylesSource, /\.reimbursement-edit-toggle input:checked[\s\S]*background:\s*#168df0 !important/);
+});
+
 test('收回款勾選框不可因資料庫欄位支援狀態而直接禁用', () => {
   assert.doesNotMatch(
     appSource,
