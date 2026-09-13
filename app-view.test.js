@@ -215,6 +215,14 @@ test('快速記帳以同款窄卡片提供預設關閉的收回款勾選框', ()
   assert.match(stylesSource, /\.reimbursement-toggle input[\s\S]*border-radius: 50%/);
 });
 
+test('收回款勾選框不可因資料庫欄位支援狀態而直接禁用', () => {
+  assert.doesNotMatch(
+    appSource,
+    /name="isReimbursement"[^>]*\$\{reimbursementSupported \? '' : 'disabled'\}/,
+  );
+  assert.match(appSource, /isReimbursement[\s\S]*尚未升級/);
+});
+
 test('首頁本期可存額獨立顯示在摘要卡下方', () => {
   const summaryIndex = appSource.indexOf('<section class="summary-panel"');
   const savingsIndex = appSource.indexOf('${savingsSummaryMarkup}');

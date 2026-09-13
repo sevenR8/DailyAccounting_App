@@ -815,7 +815,6 @@ async function renderLedger(
     analysisSettingsSupported = false,
   } = resolvedViewData;
   activeLedgerViewData = resolvedViewData;
-  const reimbursementSupported = expenseAdapter.expenseReimbursementSupported !== false;
   if (persistViewData) {
     saveCachedLedgerView({
       ledger,
@@ -1325,7 +1324,7 @@ async function renderLedger(
               <span>納入日常平均開銷</span>
             </label>
             <label class="edit-form-wide reimbursement-edit-toggle">
-              <input name="isReimbursement" type="checkbox" ${entry.is_reimbursement ? 'checked' : ''} ${reimbursementSupported ? '' : 'disabled'} />
+              <input name="isReimbursement" type="checkbox" ${entry.is_reimbursement ? 'checked' : ''} />
               <span>收回款</span>
             </label>
             <p class="form-status edit-form-wide" aria-live="polite"></p>
@@ -1877,7 +1876,7 @@ async function renderLedger(
               <label><input type="radio" name="paymentMethod" value="credit_card" /> 信用卡</label>
             </fieldset>
             <label class="reimbursement-toggle">
-              <input name="isReimbursement" type="checkbox" ${reimbursementSupported ? '' : 'disabled'} />
+              <input name="isReimbursement" type="checkbox" />
               <span>收回款</span>
             </label>
           </div>
@@ -1957,7 +1956,7 @@ async function renderLedger(
               <span>納入日常平均開銷</span>
             </label>
             <label class="edit-form-wide reimbursement-edit-toggle">
-              <input name="isReimbursement" type="checkbox" ${reimbursementSupported ? '' : 'disabled'} />
+              <input name="isReimbursement" type="checkbox" />
               <span>收回款</span>
             </label>
             <p class="form-status edit-form-wide" aria-live="polite"></p>
@@ -2482,9 +2481,14 @@ async function renderLedger(
     const status = document.querySelector('#expense-status');
     const itemName = formData.get('itemName').trim();
     const amount = parseAmountExpression(formData.get('amount'));
+    const isReimbursement = formData.get('isReimbursement') === 'on';
 
     if (!itemName || !Number.isInteger(amount) || amount <= 0) {
       status.textContent = '請填寫正確的整數金額與項目名稱。';
+      return;
+    }
+    if (isReimbursement && expenseAdapter.expenseReimbursementSupported === false) {
+      status.textContent = '收回款功能尚未升級，請先執行 supabase-0014-expense-reimbursements.sql。';
       return;
     }
 
@@ -2496,12 +2500,11 @@ async function renderLedger(
         categoryId: formData.get('categoryId'),
         itemName,
         itemDetail: '',
-        isReimbursement: formData.get('isReimbursement') === 'on',
+        isReimbursement,
         amount,
         paymentMethod: formData.get('paymentMethod'),
         occurredAt: new Date(formData.get('occurredAt')).toISOString(),
       });
-      const isReimbursement = formData.get('isReimbursement') === 'on';
       showExpenseSavedToast({ itemName, amount, isReimbursement });
       const optimisticViewData = appendOptimisticExpenseToViewData(activeLedgerViewData, createdEntry);
       if (optimisticViewData) {
@@ -3119,6 +3122,11 @@ async function renderLedger(
       const amount = Number(formData.get('amount'));
       if (!itemName || !Number.isInteger(amount) || amount <= 0) {
         status.textContent = '請填寫正確的整數金額與項目名稱。';
+        return;
+      }
+      if (form.elements.isReimbursement?.checked === true
+        && expenseAdapter.expenseReimbursementSupported === false) {
+        status.textContent = '收回款功能尚未升級，請先執行 supabase-0014-expense-reimbursements.sql。';
         return;
       }
 
