@@ -496,6 +496,36 @@ test('快速記帳會以目前帳本與分類新增一筆開銷', async () => {
   });
 });
 
+test('快速記帳可用單一欄位標記收回款並保留付款方式', async () => {
+  let requestBody;
+  const connection = new SupabaseConnection({
+    supabaseUrl: 'https://example.supabase.co',
+    supabaseAnonKey: 'public-key',
+    accessToken: 'access-token',
+    fetchImpl: async (_url, options) => {
+      requestBody = JSON.parse(options.body);
+      return response([{ id: 'reimbursement-1', is_reimbursement: true }]);
+    },
+  });
+
+  const adapter = new SupabaseLedgerAdapter(connection);
+  adapter.expenseDetailsSupported = true;
+  adapter.expenseDailyAverageSupported = true;
+  adapter.expenseReimbursementSupported = true;
+  await adapter.createExpenseEntry({
+    ledgerId: 'ledger-1',
+    categoryId: 'category-1',
+    itemName: '旭集收回款',
+    amount: 350,
+    paymentMethod: 'cash',
+    isReimbursement: true,
+    occurredAt: '2026-08-18T12:00:00.000Z',
+  });
+
+  assert.equal(requestBody.is_reimbursement, true);
+  assert.equal(requestBody.payment_method, 'cash');
+});
+
 test('刪除開銷只會刪除目前帳本中指定的一筆紀錄', async () => {
   const calls = [];
   const connection = new SupabaseConnection({

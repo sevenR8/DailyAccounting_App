@@ -39,11 +39,21 @@ export function applyPersonalExpenseAmounts(entries = [], advances = []) {
       (receivedByExpense.get(advance.expenseEntryId) ?? 0) + receivedAmount,
     );
   });
-  return entries.map((entry) => ({
-    ...entry,
-    amount: Math.max(0, Number(entry.amount) - (receivedByExpense.get(entry.id) ?? 0)),
-    paid_amount: Number(entry.amount),
-  }));
+  return entries.map((entry) => {
+    const paidAmount = Number(entry.amount || 0);
+    if (entry.is_reimbursement) {
+      return {
+        ...entry,
+        amount: -paidAmount,
+        paid_amount: paidAmount,
+      };
+    }
+    return {
+      ...entry,
+      amount: Math.max(0, paidAmount - (receivedByExpense.get(entry.id) ?? 0)),
+      paid_amount: paidAmount,
+    };
+  });
 }
 
 // Analysis uses the amount that the account owner truly bears. A fully
@@ -57,11 +67,21 @@ export function applyAnalysisExpenseAmounts(entries = [], advances = []) {
       (advancedByExpense.get(advance.expenseEntryId) ?? 0) + Number(advance.amount || 0),
     );
   });
-  return entries.map((entry) => ({
-    ...entry,
-    amount: Math.max(0, Number(entry.amount) - (advancedByExpense.get(entry.id) ?? 0)),
-    paid_amount: Number(entry.amount),
-  }));
+  return entries.map((entry) => {
+    const paidAmount = Number(entry.amount || 0);
+    if (entry.is_reimbursement) {
+      return {
+        ...entry,
+        amount: -paidAmount,
+        paid_amount: paidAmount,
+      };
+    }
+    return {
+      ...entry,
+      amount: Math.max(0, paidAmount - (advancedByExpense.get(entry.id) ?? 0)),
+      paid_amount: paidAmount,
+    };
+  });
 }
 
 export function advanceRepaymentsInPeriod(advances = [], startsOn, endsOn) {

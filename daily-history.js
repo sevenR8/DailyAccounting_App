@@ -30,11 +30,14 @@ export function groupExpenseEntriesByDay(entries, personalAmountsByEntryId = new
 
     const day = days.get(key);
     day.entries.push(entry);
-    day.total += personalAmountsByEntryId.get(entry.id) ?? entry.amount;
+    const entryAmount = personalAmountsByEntryId.get(entry.id)
+      ?? (entry.is_reimbursement ? -Number(entry.amount || 0) : Number(entry.amount || 0));
+    const paymentAmount = entry.is_reimbursement ? -Number(entry.amount || 0) : Number(entry.amount || 0);
+    day.total += entryAmount;
     if (entry.payment_method === 'cash') {
-      day.cashTotal += entry.amount;
+      day.cashTotal += paymentAmount;
     } else if (entry.payment_method === 'credit_card') {
-      day.creditCardTotal += entry.amount;
+      day.creditCardTotal += paymentAmount;
     }
   });
 
@@ -44,7 +47,7 @@ export function groupExpenseEntriesByDay(entries, personalAmountsByEntryId = new
 export function buildExpenseTemplates(entries) {
   const templates = new Map();
   const sortedEntries = [...entries]
-    .filter((entry) => !entry.is_fixed)
+    .filter((entry) => !entry.is_fixed && !entry.is_reimbursement)
     .sort((left, right) => new Date(right.occurred_at) - new Date(left.occurred_at));
 
   sortedEntries.forEach((entry) => {

@@ -832,10 +832,18 @@ input[type="datetime-local"] {
 .expense-form fieldset { display: flex; flex-wrap: wrap; gap: 14px; margin: 0; padding: 12px; border: 1px solid #d4dbd3; border-radius: 13px; }
 .expense-form legend { padding: 0 4px; font-weight: 800; }
 .expense-form fieldset label { display: flex; gap: 6px; align-items: center; }
+.payment-method-controls {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  grid-column: 1 / -1;
+  width: 100%;
+  min-width: 0;
+}
 .expense-form .payment-method-fieldset {
-  grid-column: 1;
+  flex: 1 1 50%;
   justify-self: start;
-  width: 50%;
+  width: auto;
   min-width: 170px;
   margin-top: -8px;
   gap: 12px;
@@ -851,6 +859,49 @@ input[type="datetime-local"] {
   white-space: nowrap;
 }
 .payment-method-fieldset input[type="radio"] { margin: 0; }
+.reimbursement-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex: 0 0 auto;
+  min-height: 32px;
+  margin-top: -8px;
+  padding: 5px 10px;
+  border: 1px solid #aeb9ae;
+  border-radius: 9px;
+  color: #566157;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.reimbursement-toggle input,
+.reimbursement-edit-toggle input {
+  appearance: none;
+  width: 16px !important;
+  height: 16px;
+  margin: 0;
+  padding: 0 !important;
+  border: 2px solid #8fa493 !important;
+  border-radius: 50%;
+  background: transparent !important;
+  color: white;
+  cursor: pointer;
+}
+.reimbursement-toggle input:checked,
+.reimbursement-edit-toggle input:checked {
+  border-color: #267247 !important;
+  background: #267247 !important;
+  box-shadow: inset 0 0 0 3px #dfeadd;
+}
+.reimbursement-edit-toggle {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  color: #4e5e52;
+  font-size: 0.74rem !important;
+  font-weight: 700 !important;
+}
+.reimbursement-edit-toggle input { flex: 0 0 auto; }
 
 .smart-suggestions {
   display: grid;
@@ -1015,8 +1066,10 @@ input[type="datetime-local"] {
   .expense-datetime-control { border-color: #526154; background: #172119; }
   .expense-datetime-control input[type="datetime-local"] { border: 0; background: transparent; }
   .expense-form fieldset { border-color: #3b493d; }
-  .expense-form .payment-method-fieldset { border-color: #526154; }
+  .expense-form .payment-method-fieldset, .reimbursement-toggle { border-color: #526154; }
   .payment-method-fieldset label { color: #dce5dd; }
+  .reimbursement-toggle, .reimbursement-edit-toggle { color: #dce5dd; }
+  .reimbursement-toggle input:checked, .reimbursement-edit-toggle input:checked { border-color: #8fd49f !important; background: #267247 !important; box-shadow: inset 0 0 0 3px #dce5dd; }
   .smart-suggestions-heading strong { color: #a8dbb5; }
   .smart-suggestions-heading small, .smart-suggestion-list small { color: #aeb9af; }
   .smart-suggestion-list button { border-color: #425146; background: #202c22; color: #dce5dd; }

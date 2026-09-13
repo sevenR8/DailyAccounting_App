@@ -77,6 +77,26 @@ test('信用卡代墊收回保留完整刷卡額並增加本期可用現金', ()
   assert.equal(summary.savingsAmount, 4500);
 });
 
+test('收回款不算生活開銷，並依付款方式抵銷本期現金流', () => {
+  const summary = calculateFinancialSummary({
+    periodEntries: [
+      { amount: 1000, payment_method: 'cash', is_fixed: false },
+      { amount: 350, payment_method: 'cash', is_fixed: false, is_reimbursement: true },
+      { amount: 800, payment_method: 'credit_card', is_fixed: false },
+      { amount: 200, payment_method: 'credit_card', is_fixed: false, is_reimbursement: true },
+    ],
+    fixedExpenseRules: [],
+    salaryAmount: 3000,
+    otherIncomeEntries: [],
+    previousCardBillAmount: 0,
+  });
+
+  assert.equal(summary.cashTotal, 650);
+  assert.equal(summary.creditCardTotal, 600);
+  assert.equal(summary.nonFixedExpenseTotal, 1250);
+  assert.equal(summary.savingsAmount, 2350);
+});
+
 test('每日可花額以本期生活上限扣除固定與已發生生活開銷後除以剩餘天數', () => {
   const budget = calculateDailyLivingBudget({
     livingExpenseLimitAmount: 8000,

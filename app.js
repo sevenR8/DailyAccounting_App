@@ -1,5 +1,5 @@
 import { LedgerModule } from './ledger-module.js?v=44';
-import { calculateDailyLivingBudget, calculateFinancialSummary } from './financial-summary.js?v=46';
+import { calculateDailyLivingBudget, calculateFinancialSummary } from './financial-summary.js?v=47';
 import { parseAmountExpression, parseSignedAmountExpression } from './amount-expression.js?v=45';
 import {
   buildExpenseTemplates,
@@ -7,7 +7,7 @@ import {
   findExpenseTemplates,
   groupExpenseEntriesByDay,
   inferFrequentPaymentMethod,
-} from './daily-history.js?v=45';
+} from './daily-history.js?v=46';
 import {
   accountingPeriodFromStart,
   compareExpenseTotals,
@@ -32,13 +32,13 @@ import {
   advancesVisibleInPeriod,
   applyPersonalExpenseAmounts,
   decorateExpenseAdvances,
-} from './expense-advance.js?v=57';
+} from './expense-advance.js?v=58';
 import {
   sendMagicLink,
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=82';
+} from './supabase-adapter.js?v=83';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -429,12 +429,21 @@ function formatAmount(amount) {
   return new Intl.NumberFormat('zh-TW').format(amount);
 }
 
-function showExpenseSavedToast({ itemName, amount }) {
+function formatEntryAmount(entry) {
+  return `${entry?.is_reimbursement ? '+' : ''}$${formatAmount(Number(entry?.amount || 0))}`;
+}
+
+function formatEntryPaymentMethod(entry) {
+  const paymentMethod = entry?.payment_method === 'cash' ? '現金' : '信用卡';
+  return entry?.is_reimbursement ? `收回款・${paymentMethod}` : paymentMethod;
+}
+
+function showExpenseSavedToast({ itemName, amount, isReimbursement = false }) {
   document.querySelector('.expense-saved-toast')?.remove();
   const toast = document.createElement('aside');
   toast.className = 'expense-saved-toast';
   const message = document.createElement('span');
-  message.textContent = `已記錄 $${formatAmount(amount)}・${itemName}`;
+  message.textContent = `${isReimbursement ? '已記錄收回款' : '已記錄'} ${formatEntryAmount({ amount, is_reimbursement: isReimbursement })}・${itemName}`;
   toast.append(message);
   document.body.append(toast);
   toast.dismissTimer = window.setTimeout(() => toast.remove(), 3200);
@@ -806,6 +815,7 @@ async function renderLedger(
     analysisSettingsSupported = false,
   } = resolvedViewData;
   activeLedgerViewData = resolvedViewData;
+  const reimbursementSupported = expenseAdapter.expenseReimbursementSupported !== false;
   if (persistViewData) {
     saveCachedLedgerView({
       ledger,
@@ -1261,8 +1271,8 @@ async function renderLedger(
                 <time datetime="${escapeHtml(entry.occurred_at)}">${escapeHtml(formatEntryTime(entry.occurred_at))}</time>
               </span>
               <span class="entry-detail">
-                <strong>$${formatAmount(entry.amount)}・${escapeHtml(entry.item_name)}</strong>
-                <small>${escapeHtml(categoryNames.get(entry.category_id) || '未分類')}・${entry.payment_method === 'cash' ? '現金' : '信用卡'}${advancesByExpense.has(entry.id) ? `・代墊 $${formatAmount(advancesByExpense.get(entry.id).reduce((total, advance) => total + advance.amount, 0))}` : ''}</small>
+                <strong>${formatEntryAmount(entry)}・${escapeHtml(entry.item_name)}</strong>
+                <small>${escapeHtml(categoryNames.get(entry.category_id) || '未分類')}・${escapeHtml(formatEntryPaymentMethod(entry))}${advancesByExpense.has(entry.id) ? `・代墊 $${formatAmount(advancesByExpense.get(entry.id).reduce((total, advance) => total + advance.amount, 0))}` : ''}</small>
               </span>
             </button>
             ${entry.is_fixed ? '<span class="fixed-entry-indicator" aria-label="固定開銷，請至固定開銷面板管理">固定</span>' : `
@@ -1313,6 +1323,10 @@ async function renderLedger(
             <label class="edit-form-wide daily-average-toggle">
               <input name="includeInDailyAverage" type="checkbox" ${entry.include_in_daily_average !== false ? 'checked' : ''} />
               <span>納入日常平均開銷</span>
+            </label>
+            <label class="edit-form-wide reimbursement-edit-toggle">
+              <input name="isReimbursement" type="checkbox" ${entry.is_reimbursement ? 'checked' : ''} ${reimbursementSupported ? '' : 'disabled'} />
+              <span>收回款</span>
             </label>
             <p class="form-status edit-form-wide" aria-live="polite"></p>
             <div class="dialog-actions edit-form-wide">
@@ -1857,10 +1871,16 @@ async function renderLedger(
             </span>
             <small class="expense-amount-result" id="expense-amount-result" aria-live="polite"></small>
           </label>
-          <fieldset class="payment-method-fieldset" aria-label="付款方式">
-            <label><input type="radio" name="paymentMethod" value="cash" checked /> 現金</label>
-            <label><input type="radio" name="paymentMethod" value="credit_card" /> 信用卡</label>
-          </fieldset>
+          <div class="payment-method-controls">
+            <fieldset class="payment-method-fieldset" aria-label="付款方式">
+              <label><input type="radio" name="paymentMethod" value="cash" checked /> 現金</label>
+              <label><input type="radio" name="paymentMethod" value="credit_card" /> 信用卡</label>
+            </fieldset>
+            <label class="reimbursement-toggle">
+              <input name="isReimbursement" type="checkbox" ${reimbursementSupported ? '' : 'disabled'} />
+              <span>收回款</span>
+            </label>
+          </div>
           <section class="smart-suggestions" id="smart-suggestions" ${quickEntryTemplates.length ? '' : 'hidden'} aria-label="常用記帳紀錄">
             <div class="smart-suggestions-heading">
               <strong id="smart-suggestions-title">常用紀錄</strong>
@@ -1935,6 +1955,10 @@ async function renderLedger(
             <label class="edit-form-wide daily-average-toggle">
               <input name="includeInDailyAverage" type="checkbox" checked />
               <span>納入日常平均開銷</span>
+            </label>
+            <label class="edit-form-wide reimbursement-edit-toggle">
+              <input name="isReimbursement" type="checkbox" ${reimbursementSupported ? '' : 'disabled'} />
+              <span>收回款</span>
             </label>
             <p class="form-status edit-form-wide" aria-live="polite"></p>
             <div class="dialog-actions edit-form-wide">
@@ -2472,11 +2496,13 @@ async function renderLedger(
         categoryId: formData.get('categoryId'),
         itemName,
         itemDetail: '',
+        isReimbursement: formData.get('isReimbursement') === 'on',
         amount,
         paymentMethod: formData.get('paymentMethod'),
         occurredAt: new Date(formData.get('occurredAt')).toISOString(),
       });
-      showExpenseSavedToast({ itemName, amount });
+      const isReimbursement = formData.get('isReimbursement') === 'on';
+      showExpenseSavedToast({ itemName, amount, isReimbursement });
       const optimisticViewData = appendOptimisticExpenseToViewData(activeLedgerViewData, createdEntry);
       if (optimisticViewData) {
         await renderLedger(ledger, user, expenseAdapter, activeStartsOn, {
@@ -2545,13 +2571,13 @@ async function renderLedger(
       : '';
     expenseSearchResults.innerHTML = `${offlineNote}${matchingSearchEntries.map((entry, index) => {
       const categoryName = categoryNames.get(entry.category_id) || '未分類';
-      const paymentMethod = entry.payment_method === 'cash' ? '現金' : '信用卡';
+      const paymentMethod = formatEntryPaymentMethod(entry);
       return `
         <button class="expense-search-result" type="button" data-search-result-index="${index}">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6zM15 3v4h4M9 12h6M9 16h6" /></svg>
           <span>
             <strong>${escapeHtml(entry.item_name)}</strong>
-            <small>${escapeHtml(formatEntryDate(entry.occurred_at))}・$${formatAmount(entry.amount)}・${escapeHtml(categoryName)}・${paymentMethod}</small>
+            <small>${escapeHtml(formatEntryDate(entry.occurred_at))}・${formatEntryAmount(entry)}・${escapeHtml(categoryName)}・${escapeHtml(paymentMethod)}</small>
           </span>
           <b aria-hidden="true">›</b>
         </button>`;
@@ -2603,6 +2629,7 @@ async function renderLedger(
         editFields.occurredAt.value = toDateTimeLocalValue(new Date(entry.occurred_at));
         editFields.itemDetail.value = entry.item_detail ?? '';
         if (editFields.includeInDailyAverage) editFields.includeInDailyAverage.checked = entry.include_in_daily_average !== false;
+        if (editFields.isReimbursement) editFields.isReimbursement.checked = entry.is_reimbursement === true;
         searchExpenseEditForm.querySelector('.form-status').textContent = '';
         searchExpenseEditDeleteButton.dataset.entryId = entry.id;
         searchExpenseEditDeleteButton.dataset.entryName = entry.item_name ?? '';
@@ -2614,9 +2641,9 @@ async function renderLedger(
     const categoryName = categoryNames.get(entry.category_id) || '未分類';
     const itemDetail = String(entry.item_detail ?? '').trim();
     searchExpenseDetailTitle.textContent = entry.item_name;
-    searchExpenseDetailAmount.textContent = `$${formatAmount(entry.amount)}`;
+    searchExpenseDetailAmount.textContent = formatEntryAmount(entry);
     searchExpenseDetailCategory.textContent = categoryName;
-    searchExpenseDetailPaymentMethod.textContent = entry.payment_method === 'cash' ? '現金' : '信用卡';
+    searchExpenseDetailPaymentMethod.textContent = formatEntryPaymentMethod(entry);
     searchExpenseDetailOccurredAt.textContent = `${formatEntryDate(entry.occurred_at)} ${formatEntryTime(entry.occurred_at)}`;
     searchExpenseDetailItemDetail.textContent = itemDetail;
     searchExpenseDetailItemDetailRow.hidden = !itemDetail;
@@ -3105,6 +3132,7 @@ async function renderLedger(
           itemName,
           itemDetail: String(formData.get('itemDetail') ?? '').trim(),
           includeInDailyAverage: form.elements.includeInDailyAverage?.checked !== false,
+          isReimbursement: form.elements.isReimbursement?.checked === true,
           amount,
           paymentMethod: formData.get('paymentMethod'),
           occurredAt: new Date(formData.get('occurredAt')).toISOString(),
@@ -3645,6 +3673,8 @@ async function renderLedger(
       document.querySelector('#expense-item-name').value = entry.item_name;
       document.querySelector('#expense-category').value = entry.category_id;
       document.querySelector(`input[name="paymentMethod"][value="${entry.payment_method}"]`).checked = true;
+      const reimbursementInput = document.querySelector('input[name="isReimbursement"]');
+      if (reimbursementInput) reimbursementInput.checked = entry.is_reimbursement === true;
       expenseOccurredAtManuallyEdited = false;
       syncExpenseOccurredAt();
       if (button.dataset.action === 'duplicate-expense') {

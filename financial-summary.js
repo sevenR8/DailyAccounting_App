@@ -1,4 +1,5 @@
-const sumAmounts = (items) => items.reduce((total, item) => total + item.amount, 0);
+const signedAmount = (item) => (item.is_reimbursement ? -1 : 1) * Number(item.amount || 0);
+const sumAmounts = (items) => items.reduce((total, item) => total + signedAmount(item), 0);
 
 export function calculateFinancialSummary({
   periodEntries,

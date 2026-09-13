@@ -207,6 +207,14 @@ test('本期摘要以乾淨文字顯示收入、現金、信用卡、總開銷�
   assert.doesNotMatch(summarySource, /待輸入帳單/);
 });
 
+test('快速記帳以同款窄卡片提供預設關閉的收回款勾選框', () => {
+  assert.match(appSource, /class="payment-method-controls"/);
+  assert.match(appSource, /class="reimbursement-toggle"/);
+  assert.match(appSource, /name="isReimbursement" type="checkbox"/);
+  assert.match(stylesSource, /\.reimbursement-toggle[\s\S]*border-radius: 9px/);
+  assert.match(stylesSource, /\.reimbursement-toggle input[\s\S]*border-radius: 50%/);
+});
+
 test('首頁本期可存額獨立顯示在摘要卡下方', () => {
   const summaryIndex = appSource.indexOf('<section class="summary-panel"');
   const savingsIndex = appSource.indexOf('${savingsSummaryMarkup}');
