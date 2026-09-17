@@ -799,6 +799,9 @@ async function renderLedger(
   const renderGeneration = ++ledgerRenderGeneration;
   const hasProvidedViewData = Boolean(viewData);
   const existingLedgerView = app.querySelector('.ledger-home')?.dataset.mobileView;
+  const existingSettingsDialog = app.querySelector('#ledger-settings-dialog');
+  const shouldReopenSettingsDialog = existingSettingsDialog?.open === true;
+  const existingSettingsSection = existingSettingsDialog?.querySelector('details[open]')?.dataset.settingsSection || '';
   const existingExpenseSearchKeyword = app.querySelector('#expense-search-input')?.value.trim() || '';
   const preferredMobileView = ['finance', 'analysis', 'search'].includes(existingLedgerView)
     ? existingLedgerView
@@ -1094,7 +1097,7 @@ async function renderLedger(
         </div>
         ${isLedgerOwner ? `
           <section class="settings-section settings-collapsible-section">
-            <details class="settings-collapsible">
+            <details class="settings-collapsible" data-settings-section="cycle" ${existingSettingsSection === 'cycle' ? 'open' : ''}>
               <summary class="settings-collapsible-summary">
                 <span class="settings-collapsible-copy">
                   <strong>帳務週期</strong>
@@ -1117,7 +1120,7 @@ async function renderLedger(
             </details>
           </section>
           <section class="settings-section settings-collapsible-section">
-            <details class="settings-collapsible">
+            <details class="settings-collapsible" data-settings-section="custom-category" ${existingSettingsSection === 'custom-category' ? 'open' : ''}>
               <summary class="settings-collapsible-summary">
                 <span class="settings-collapsible-copy">
                   <strong>自訂分類</strong>
@@ -1138,7 +1141,7 @@ async function renderLedger(
             </details>
           </section>
           <section class="settings-section settings-collapsible-section">
-            <details class="settings-collapsible">
+            <details class="settings-collapsible" data-settings-section="analysis" ${existingSettingsSection === 'analysis' ? 'open' : ''}>
               <summary class="settings-collapsible-summary">
                 <span class="settings-collapsible-copy">
                   <strong>消費分析分類</strong>
@@ -1159,7 +1162,7 @@ async function renderLedger(
             </details>
           </section>
           <section class="settings-section settings-collapsible-section">
-            <details class="settings-collapsible">
+            <details class="settings-collapsible" data-settings-section="annual" ${existingSettingsSection === 'annual' ? 'open' : ''}>
               <summary class="settings-collapsible-summary">
                 <span class="settings-collapsible-copy">
                   <strong>年度預估</strong>
@@ -1188,7 +1191,7 @@ async function renderLedger(
             </details>
           </section>
           <section class="settings-section merchant-settings-section">
-            <details class="merchant-settings-collapsible">
+            <details class="merchant-settings-collapsible" data-settings-section="merchant" ${existingSettingsSection === 'merchant' ? 'open' : ''}>
               <summary>
                 <span class="merchant-settings-summary-copy">
                   <strong>速食店、超商與別名</strong>
@@ -3747,6 +3750,7 @@ async function renderLedger(
       renderedHtml: app.innerHTML,
     });
   }
+  if (shouldReopenSettingsDialog) openDialog('ledger-settings-dialog');
 }
 
 function ledgerViewHasUnsavedExpenseDraft() {

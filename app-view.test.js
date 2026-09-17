@@ -98,7 +98,7 @@ test('右上角選單可開啟帳本設定並管理自訂分類與週期起始�
   assert.match(appSource, /updateCategory/);
   assert.match(appSource, /name="cycleStartDay"[^>]*min="1"[^>]*max="28"/);
   assert.match(appSource, /id="cycle-settings-form"/);
-  assert.match(appSource, /<details class="settings-collapsible">[\s\S]*<strong>帳務週期<\/strong>[\s\S]*settings-collapsible-toggle/);
+  assert.match(appSource, /<details class="settings-collapsible"[\s\S]*<strong>帳務週期<\/strong>[\s\S]*settings-collapsible-toggle/);
   assert.match(stylesSource, /\.settings-dialog/);
   assert.match(stylesSource, /\.category-settings-list/);
 });
@@ -365,7 +365,7 @@ test('帳本建立者可設定分類分析性質與店家別名', () => {
 
 test('速食店與超商設定預設折疊，需要時可展開編輯', () => {
   assert.match(appSource, /class="merchant-settings-collapsible"/);
-  assert.match(appSource, /<details class="merchant-settings-collapsible">/);
+  assert.match(appSource, /<details class="merchant-settings-collapsible"/);
   assert.match(appSource, /merchant-settings-summary-toggle/);
   assert.match(appSource, /class="merchant-settings-content"/);
   assert.match(appSource, /class="settings-collapsible-toggle merchant-settings-summary-toggle"/);
@@ -373,9 +373,9 @@ test('速食店與超商設定預設折疊，需要時可展開編輯', () => {
 });
 
 test('帳本設定的年度預估、消費分析分類與自訂分類預設收合', () => {
-  assert.match(appSource, /<details class="settings-collapsible">[\s\S]*<strong>自訂分類<\/strong>/);
-  assert.match(appSource, /<details class="settings-collapsible">[\s\S]*<strong>消費分析分類<\/strong>/);
-  assert.match(appSource, /<details class="settings-collapsible">[\s\S]*<strong>年度預估<\/strong>/);
+  assert.match(appSource, /<details class="settings-collapsible"[\s\S]*<strong>自訂分類<\/strong>/);
+  assert.match(appSource, /<details class="settings-collapsible"[\s\S]*<strong>消費分析分類<\/strong>/);
+  assert.match(appSource, /<details class="settings-collapsible"[\s\S]*<strong>年度預估<\/strong>/);
   assert.match(appSource, /class="settings-collapsible-content"/);
   assert.match(stylesSource, /\.settings-collapsible\[open\] \.settings-collapsible-toggle::before/);
   assert.match(stylesSource, /\.settings-collapsible-toggle::before,[\s\S]*content: '▶'/);
@@ -694,4 +694,11 @@ test('從共同消費切換到代墊明細時等待母彈窗完整關閉，避�
     advanceDialogHandler,
     /parentDialog\.close\(\);\s*openDialog\(button\.dataset\.dialogId\)/,
   );
+});
+
+test('設定儲存重繪後仍留在設定內頁與原本展開的區塊', () => {
+  assert.match(appSource, /const existingSettingsDialog = app\.querySelector\('#ledger-settings-dialog'\)/);
+  assert.match(appSource, /const shouldReopenSettingsDialog = existingSettingsDialog\?\.open === true/);
+  assert.match(appSource, /data-settings-section="merchant"/);
+  assert.match(appSource, /if \(shouldReopenSettingsDialog\)[\s\S]*openDialog\('ledger-settings-dialog'\)/);
 });
