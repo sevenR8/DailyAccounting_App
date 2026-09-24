@@ -20,8 +20,15 @@
     <title>每日帳本</title>
   </head>
   <body>
-    <div id="app"></div>
-    <script src="./config.js"></script>
+    <div id="app">
+      <main class="ledger-resume" aria-busy="true" aria-label="正在載入帳本">
+        <div class="ledger-resume-top"><span class="ledger-resume-avatar" aria-hidden="true"></span></div>
+        <section class="ledger-resume-card ledger-resume-summary" aria-hidden="true"></section>
+        <section class="ledger-resume-card ledger-resume-primary" aria-hidden="true"></section>
+        <section class="ledger-resume-card ledger-resume-secondary" aria-hidden="true"></section>
+      </main>
+    </div>
+    <script src="./config.js?v=1"></script>
     <script>
       if (window.location.protocol === 'file:') {
         document.querySelector('#app').innerHTML = `
@@ -35,14 +42,15 @@
   <script type="module" src="./app.js?v=146"></script>
     <script>
       if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
-        let isReloadingForNewServiceWorker = false;
-        navigator.serviceWorker.addEventListener('controllerchange', () => {
-          if (isReloadingForNewServiceWorker) return;
-          isReloadingForNewServiceWorker = true;
-          window.location.reload();
-        });
-        navigator.serviceWorker.register('./service-worker.js?v=152', { updateViaCache: 'none' })
-          .then((registration) => registration.update());
+        // Keep the already visible page intact. The completed update is used
+        // on the next launch instead of reloading during a quick entry.
+        window.addEventListener('load', () => {
+          window.setTimeout(() => {
+            navigator.serviceWorker.register('./service-worker.js?v=153', { updateViaCache: 'none' })
+              .then((registration) => registration.update())
+              .catch(() => {});
+          }, 500);
+        }, { once: true });
       }
     </script>
   </body>

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'daily-ledger-shell-v152';
+const CACHE_NAME = 'daily-ledger-shell-v153';
 const APP_SHELL = [
   './',
   './index.html',
@@ -13,7 +13,7 @@ const APP_SHELL = [
   './daily-history.js?v=46',
   './accounting-period.js?v=46',
   './supabase-adapter.js?v=83',
-  './config.js',
+  './config.js?v=1',
   './manifest.webmanifest',
   './icon.svg',
 ];
@@ -40,24 +40,22 @@ self.addEventListener('activate', (event) => {
   })());
 });
 
-async function networkFirst(request) {
-  try {
-    const response = await fetch(request);
-    const cache = await caches.open(CACHE_NAME);
-    await cache.put(request, response.clone());
-    return response;
-  } catch (error) {
-    const cachedResponse = await caches.match(request);
-    if (cachedResponse) return cachedResponse;
-    throw error;
-  }
+async function shellCacheFirst(request) {
+  const cache = await caches.open(CACHE_NAME);
+  const cachedResponse = await cache.match(request);
+  if (cachedResponse) return cachedResponse;
+
+  // A missing shell asset still loads normally; only a complete install is
+  // allowed to replace the current versioned cache on the next launch.
+  return fetch(request);
 }
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
-  const pathname = new URL(event.request.url).pathname;
-  if (pathname === '/' || [
+  const url = new URL(event.request.url);
+  const pathname = url.pathname;
+  if (url.origin === self.location.origin && (event.request.mode === 'navigate' || pathname === '/' || [
     '/index.html',
     '/styles.css',
     '/app.js',
@@ -70,8 +68,8 @@ self.addEventListener('fetch', (event) => {
     '/accounting-period.js',
     '/supabase-adapter.js',
     '/config.js',
-  ].some((path) => pathname.endsWith(path))) {
-    event.respondWith(networkFirst(event.request));
+  ].some((path) => pathname.endsWith(path)))) {
+    event.respondWith(shellCacheFirst(event.request));
     return;
   }
 
