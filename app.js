@@ -38,7 +38,7 @@ import {
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=83';
+} from './supabase-adapter.js?v=84';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -1844,7 +1844,7 @@ async function renderLedger(
           <div>
             <p class="eyebrow">歷史記帳</p>
             <h1>搜尋開銷</h1>
-            <p>輸入項目名稱，找出所有以往記帳。</p>
+            <p>輸入項目名稱或細項文字，找出以往記帳。</p>
           </div>
         </header>
         <section class="expense-search-results-section" aria-labelledby="expense-search-results-title">
@@ -1856,7 +1856,7 @@ async function renderLedger(
         <form class="expense-search-form" id="expense-search-form" role="search">
           <label class="sr-only" for="expense-search-input">搜尋歷史開銷</label>
           <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.5" /><path d="m16 16 4.2 4.2" /></svg>
-          <input id="expense-search-input" type="search" name="keyword" autocomplete="off" enterkeyhint="search" placeholder="搜尋項目名稱" />
+          <input id="expense-search-input" type="search" name="keyword" autocomplete="off" enterkeyhint="search" placeholder="搜尋項目名稱或細項" />
           <button class="expense-search-clear" type="button" data-action="clear-expense-search" aria-label="清除搜尋關鍵字" hidden>×</button>
         </form>
       </section>
@@ -2559,9 +2559,8 @@ async function renderLedger(
 
   const searchEntriesFromLoadedHistory = (keyword) => {
     const normalizedKeyword = keyword.toLocaleLowerCase('zh-TW');
-    return entries.filter((entry) => String(entry.item_name ?? '')
-      .toLocaleLowerCase('zh-TW')
-      .includes(normalizedKeyword));
+    return entries.filter((entry) => [entry.item_name, entry.item_detail]
+      .some((value) => String(value ?? '').toLocaleLowerCase('zh-TW').includes(normalizedKeyword)));
   };
   const newestFirstSearchEntries = (searchEntries) => [...searchEntries].sort(
     (left, right) => new Date(right.occurred_at) - new Date(left.occurred_at),

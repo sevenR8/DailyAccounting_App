@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import { runInNewContext } from 'node:vm';
 
 const appSource = await readFile(new URL('./app.js', import.meta.url), 'utf8');
 const stylesSource = await readFile(new URL('./styles.css', import.meta.url), 'utf8');
@@ -72,6 +73,23 @@ test('開銷紀錄旁可開啟歷史名稱搜尋，從新到舊查看相符開�
   assert.match(stylesSource, /\.expense-search-page/);
   assert.match(stylesSource, /\.expense-search-form/);
   assert.match(stylesSource, /:not\(\.search-expense-edit-dialog\)/);
+});
+
+test('搜尋提示與離線歷史搜尋皆包含細項', () => {
+  assert.match(appSource, /搜尋項目名稱或細項/);
+  const searchFunction = appSource.match(/const searchEntriesFromLoadedHistory = \(keyword\) => \{[\s\S]*?\n  \};/)?.[0];
+  assert.ok(searchFunction);
+  const matchedIds = runInNewContext(
+    `${searchFunction}\nsearchEntriesFromLoadedHistory('退款').map((entry) => entry.id)`,
+    {
+      entries: [
+        { id: 'name-match', item_name: '退款', item_detail: '' },
+        { id: 'detail-match', item_name: '午餐', item_detail: '朋友退款 350' },
+        { id: 'unmatched', item_name: '晚餐', item_detail: null },
+      ],
+    },
+  );
+  assert.deepEqual(Array.from(matchedIds), ['name-match', 'detail-match']);
 });
 
 test('登入後頂部只保留使用者縮寫與可展開的帳號選單', () => {

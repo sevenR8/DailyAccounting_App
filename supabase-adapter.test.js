@@ -25,13 +25,16 @@ test('帳本連線以 Window 作為瀏覽器 fetch 的呼叫端', async () => {
   assert.deepEqual(await connection.getUser(), { id: 'user-1' });
 });
 
-test('可依項目名稱搜尋歷史開銷並依日期由新到舊取得結果', async () => {
+test('可依項目名稱或細項搜尋歷史開銷並依日期由新到舊取得結果', async () => {
   const calls = [];
   const connection = new SupabaseConnection({
     supabaseUrl: 'https://example.supabase.co', supabaseAnonKey: 'public-key', accessToken: 'token',
     fetchImpl: async (url) => {
       calls.push(url);
-      return response([{ id: 'expense-2', item_name: '晚餐', occurred_at: '2026-09-06T12:00:00+08:00' }]);
+      return response([
+        { id: 'expense-2', item_name: '晚餐', occurred_at: '2026-09-06T12:00:00+08:00' },
+        { id: 'expense-1', item_name: '聚餐', item_detail: '晚餐分攤', occurred_at: '2026-09-05T12:00:00+08:00' },
+      ]);
     },
   });
 
@@ -41,10 +44,52 @@ test('可依項目名稱搜尋歷史開銷並依日期由新到舊取得結果',
   const request = new URL(calls[0]);
 
   assert.equal(request.searchParams.get('ledger_id'), 'eq.ledger-1');
-  assert.equal(request.searchParams.get('item_name'), 'ilike.*晚餐*');
+  assert.equal(request.searchParams.get('or'), '(item_name.ilike."*晚餐*",item_detail.ilike."*晚餐*")');
   assert.equal(request.searchParams.get('order'), 'occurred_at.desc');
   assert.equal(request.searchParams.get('limit'), '100');
-  assert.deepEqual(entries, [{ id: 'expense-2', item_name: '晚餐', occurred_at: '2026-09-06T12:00:00+08:00' }]);
+  assert.deepEqual(entries.map((entry) => entry.id), ['expense-2', 'expense-1']);
+});
+
+test('細項搜尋可安全處理逗號與括號', async () => {
+  let request;
+  const connection = new SupabaseConnection({
+    supabaseUrl: 'https://example.supabase.co', supabaseAnonKey: 'public-key', accessToken: 'token',
+    fetchImpl: async (url) => {
+      request = new URL(url);
+      return response([]);
+    },
+  });
+
+  await new SupabaseLedgerAdapter(connection).searchExpenseEntries({
+    ledgerId: 'ledger-1', keyword: '交通,補票(一)',
+  });
+
+  assert.equal(
+    request.searchParams.get('or'),
+    '(item_name.ilike."*交通,補票(一)*",item_detail.ilike."*交通,補票(一)*")',
+  );
+});
+
+test('舊版資料表缺少細項欄位時仍可搜尋項目名稱', async () => {
+  const calls = [];
+  const connection = new SupabaseConnection({
+    supabaseUrl: 'https://example.supabase.co', supabaseAnonKey: 'public-key', accessToken: 'token',
+    fetchImpl: async (url) => {
+      calls.push(new URL(url));
+      return calls.length < 3
+        ? response({ message: 'column does not exist' }, false)
+        : response([{ id: 'expense-1', item_name: '晚餐' }]);
+    },
+  });
+
+  const entries = await new SupabaseLedgerAdapter(connection).searchExpenseEntries({
+    ledgerId: 'ledger-1', keyword: '晚餐',
+  });
+
+  assert.equal(calls.length, 3);
+  assert.equal(calls[2].searchParams.get('item_name'), 'ilike.*晚餐*');
+  assert.equal(calls[2].searchParams.has('or'), false);
+  assert.deepEqual(entries.map((entry) => entry.id), ['expense-1']);
 });
 
 test('其他收入可依帳本與收入 id 刪除', async () => {

@@ -258,14 +258,22 @@ export class SupabaseLedgerAdapter {
     if (!searchTerm) return [];
 
     const escapedSearchTerm = searchTerm.replace(/([\\%_*])/g, '\\$1');
+    const quotedPattern = `"*${escapedSearchTerm.replace(/([\\"])/g, '\\$1')}*"`;
     const normalizedLimit = Math.min(Math.max(Number(limit) || 100, 1), 1000);
-    const buildParameters = (select) => new URLSearchParams({
-      select,
-      ledger_id: `eq.${ledgerId}`,
-      item_name: `ilike.*${escapedSearchTerm}*`,
-      order: 'occurred_at.desc',
-      limit: String(normalizedLimit),
-    });
+    const buildParameters = (select, includeDetails = true) => {
+      const parameters = new URLSearchParams({
+        select,
+        ledger_id: `eq.${ledgerId}`,
+        order: 'occurred_at.desc',
+        limit: String(normalizedLimit),
+      });
+      if (includeDetails) {
+        parameters.set('or', `(item_name.ilike.${quotedPattern},item_detail.ilike.${quotedPattern})`);
+      } else {
+        parameters.set('item_name', `ilike.*${escapedSearchTerm}*`);
+      }
+      return parameters;
+    };
     let response = await this.connection.request(
       `/rest/v1/expense_entries?${buildParameters('id,category_id,item_name,item_detail,include_in_daily_average,is_reimbursement,amount,payment_method,occurred_at,is_fixed,created_at')}`,
     );
@@ -281,7 +289,7 @@ export class SupabaseLedgerAdapter {
         this.expenseDetailsSupported = false;
         this.expenseDailyAverageSupported = false;
         response = await this.connection.request(
-          `/rest/v1/expense_entries?${buildParameters('id,category_id,item_name,amount,payment_method,occurred_at,is_fixed,created_at')}`,
+          `/rest/v1/expense_entries?${buildParameters('id,category_id,item_name,amount,payment_method,occurred_at,is_fixed,created_at', false)}`,
         );
       }
     } else {

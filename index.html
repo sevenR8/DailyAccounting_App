@@ -39,14 +39,14 @@
           </main>`;
       }
     </script>
-  <script type="module" src="./app.js?v=147"></script>
+  <script type="module" src="./app.js?v=148"></script>
     <script>
       if ('serviceWorker' in navigator && window.location.protocol !== 'file:') {
         // Keep the already visible page intact. The completed update is used
         // on the next launch instead of reloading during a quick entry.
         window.addEventListener('load', () => {
           window.setTimeout(() => {
-            navigator.serviceWorker.register('./service-worker.js?v=154', { updateViaCache: 'none' })
+            navigator.serviceWorker.register('./service-worker.js?v=155', { updateViaCache: 'none' })
               .then((registration) => registration.update())
               .catch(() => {});
           }, 500);

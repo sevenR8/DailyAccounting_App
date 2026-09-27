@@ -8,7 +8,7 @@ const indexHtml = await readFile(new URL('./index.html', import.meta.url), 'utf8
 
 test('首頁與設定檔使用同一份完整版本快取', () => {
   assert.match(serviceWorker, /daily-ledger-shell-v\d+/);
-  assert.match(serviceWorker, /daily-ledger-shell-v154/);
+  assert.match(serviceWorker, /daily-ledger-shell-v155/);
   assert.match(serviceWorker, /\.\/amount-expression\.js/);
   assert.match(serviceWorker, /\.\/expense-analysis\.js/);
   assert.match(serviceWorker, /\.\/expense-advance\.js/);
@@ -35,7 +35,7 @@ test('冷啟動的首頁和程式檔優先回傳快取，不等待網路', async
     },
   });
 
-  for (const path of ['/', '/app.js?v=147', '/config.js?v=1']) {
+  for (const path of ['/', '/app.js?v=148', '/config.js?v=1']) {
     let result;
     listeners.get('fetch')({
       request: { method: 'GET', mode: path === '/' ? 'navigate' : 'same-origin', url: `https://example.test${path}` },
@@ -57,6 +57,6 @@ test('新版 PWA 會先完成快取再接管，且不強制重新導向既有頁
 test('新版在背景更新，下次開啟生效，不中斷當前記帳', () => {
   assert.doesNotMatch(indexHtml, /window\.location\.reload\(\)/);
   assert.match(indexHtml, /updateViaCache:\s*'none'/);
-  assert.match(indexHtml, /service-worker\.js\?v=154/);
+  assert.match(indexHtml, /service-worker\.js\?v=155/);
   assert.match(indexHtml, /<main class="ledger-resume"/);
 });
