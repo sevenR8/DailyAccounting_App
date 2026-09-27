@@ -2623,11 +2623,7 @@ async function renderLedger(
   const openSearchExpenseDetail = (entry) => {
     if (!entry) return;
     if (!entry.is_fixed) {
-      const existingEditDialog = document.getElementById(`expense-edit-${entry.id}`);
-      if (existingEditDialog) {
-        openDialog(existingEditDialog.id);
-        return;
-      }
+      // The regular history dialog is hidden in mobile search view.
       const editFields = searchExpenseEditForm?.elements;
       if (editFields) {
         searchExpenseEditForm.dataset.entryId = entry.id;

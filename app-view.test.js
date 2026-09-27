@@ -59,7 +59,7 @@ test('開銷紀錄旁可開啟歷史名稱搜尋，從新到舊查看相符開�
   assert.match(appSource, /id="search-expense-edit-dialog"/);
   assert.match(appSource, /class="finance-dialog expense-edit-dialog search-expense-edit-dialog"/);
   assert.match(appSource, /id="search-expense-edit-form"/);
-  assert.match(appSource, /existingEditDialog/);
+  assert.doesNotMatch(appSource, /openDialog\(existingEditDialog\.id\)/);
   assert.match(appSource, /updateExpenseEntry/);
   assert.doesNotMatch(appSource, /class="expense-search-close"/);
   assert.match(appSource, /openSearchExpenseDetail/);
