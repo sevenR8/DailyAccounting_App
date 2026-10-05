@@ -305,12 +305,12 @@ button { font: inherit; cursor: pointer; }
 .summary-panel div { display: grid; align-content: start; gap: 6px; }
 .summary-panel span { color: #657066; font-size: 0.8rem; }
 .summary-panel strong { font-size: 1rem; }
-.summary-credit-card-trigger { cursor: pointer; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: pan-y; }
-.summary-credit-card-trigger:focus-visible { outline: 2px solid #739d79; outline-offset: 3px; border-radius: 8px; }
-.summary-panel .summary-credit-card-popover { display: block; top: 50%; right: 16px; left: auto; transform: translateY(-50%); }
-.summary-panel .summary-credit-card-popover[hidden] { display: none; }
-.summary-panel .summary-credit-card-popover-heading { display: flex; }
-.summary-panel .summary-credit-card-popover-heading strong span { color: inherit; }
+.summary-expense-trigger { cursor: pointer; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: pan-y; }
+.summary-expense-trigger:focus-visible { outline: 2px solid #739d79; outline-offset: 3px; border-radius: 8px; }
+.summary-panel .summary-expense-popover { display: block; top: 50%; right: 16px; left: auto; transform: translateY(-50%); }
+.summary-panel .summary-expense-popover[hidden] { display: none; }
+.summary-panel .summary-expense-popover-heading { display: flex; }
+.summary-panel .summary-expense-popover-heading strong span { color: inherit; }
 .savings-summary { padding: 10px; border-radius: 14px; background: #e9f4df; }
 .savings-summary-label { display: flex; align-items: center; justify-content: flex-start; gap: 10px; min-width: 0; white-space: nowrap; }
 .savings-rate { position: relative; top: 11px; flex: 0 0 auto; color: #78c98e; font-size: 0.72rem; font-weight: 800; letter-spacing: 0.01em; line-height: 1.1; white-space: nowrap; }
@@ -1241,7 +1241,7 @@ input[type="datetime-local"] {
     outline: 2px solid #4d8f64;
     outline-offset: 2px;
   }
-  .summary-credit-card-trigger { position: relative; z-index: 3; }
+  .summary-expense-trigger { position: relative; z-index: 3; }
   .finance-panel { display: none; order: 3; }
   .finance-dialog,
   .ledger-home[data-mobile-view="finance"] > .finance-panel {

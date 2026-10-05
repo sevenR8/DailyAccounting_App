@@ -884,15 +884,36 @@ async function renderLedger(
   }) : null;
   const cashTotal = calculatedSummary?.cashTotal ?? periodEntries
     .filter((entry) => !entry.is_fixed && entry.payment_method === 'cash')
-    .reduce((total, entry) => total + entry.amount, 0);
+    .reduce((total, entry) => total + (entry.is_reimbursement ? -1 : 1) * Number(entry.amount || 0), 0);
   const creditCardTotal = calculatedSummary?.creditCardTotal ?? periodEntries
     .filter((entry) => !entry.is_fixed && entry.payment_method === 'credit_card')
-    .reduce((total, entry) => total + entry.amount, 0);
+    .reduce((total, entry) => total + (entry.is_reimbursement ? -1 : 1) * Number(entry.amount || 0), 0);
+  const cashEntriesForSummary = periodEntries
+    .filter((entry) => !entry.is_fixed && entry.payment_method === 'cash');
   const creditCardEntriesForSummary = periodEntries
     .filter((entry) => !entry.is_fixed && entry.payment_method === 'credit_card')
     .sort((left, right) => new Date(right.occurred_at) - new Date(left.occurred_at));
+  const advancesByRepaymentId = new Map(expenseAdvances.flatMap((advance) =>
+    (advance.repayments ?? []).map((repayment) => [repayment.id, advance])));
+  const cashSummaryItems = [
+    ...cashEntriesForSummary.map((entry) => ({
+      name: entry.is_reimbursement ? `${entry.item_name}（收回款）` : entry.item_name,
+      amount: (entry.is_reimbursement ? -1 : 1) * Number(entry.amount || 0),
+      occurredAt: entry.occurred_at,
+    })),
+    ...periodAdvanceRepayments.map((repayment) => ({
+      name: `代墊收回・${advancesByRepaymentId.get(repayment.id)?.debtorName || '未指定對象'}`,
+      amount: -Number(repayment.amount || 0),
+      occurredAt: repayment.receivedAt,
+    })),
+  ].sort((left, right) => new Date(right.occurredAt) - new Date(left.occurredAt));
+  const creditCardSummaryItems = creditCardEntriesForSummary.map((entry) => ({
+    name: entry.item_name,
+    amount: (entry.is_reimbursement ? -1 : 1) * Number(entry.amount || 0),
+  }));
   const advanceRepaymentTotal = calculatedSummary?.advanceRepaymentTotal ?? 0;
   const netCashOutflowTotal = calculatedSummary?.netCashOutflowTotal ?? cashTotal;
+  const cashSummaryDisplayAmount = `${netCashOutflowTotal < 0 ? '+' : ''}$${formatAmount(Math.abs(netCashOutflowTotal))}`;
   const personalNonFixedExpenseTotal = personalPeriodEntries
     .filter((entry) => !entry.is_fixed)
     .reduce((total, entry) => total + entry.amount, 0);
@@ -1834,11 +1855,12 @@ async function renderLedger(
       <section class="summary-panel" data-mobile-section="overview" aria-label="本期帳務摘要">
         <button class="summary-mobile-open" type="button" data-action="open-mobile-finance" aria-label="開啟帳務管理，查看與編輯收入、信用卡繳納及固定開銷"></button>
         <div><span>本期收入</span><strong>${totalIncome === null ? '—' : `$${formatAmount(totalIncome)}`}</strong></div>
-        <div><span>現金開銷</span><strong>${netCashOutflowTotal < 0 ? '+' : ''}$${formatAmount(Math.abs(netCashOutflowTotal))}</strong></div>
-        <div class="summary-credit-card-trigger" role="button" tabindex="0" aria-label="信用卡開銷 $${formatAmount(creditCardTotal)}，長按半秒查看清單" aria-expanded="false" aria-controls="summary-credit-card-popover"><span>信用卡開銷</span><strong>$${formatAmount(creditCardTotal)}</strong></div>
+        <div class="summary-expense-trigger summary-cash-trigger" role="button" tabindex="0" aria-label="現金開銷 ${cashSummaryDisplayAmount}，長按半秒查看清單" aria-expanded="false" aria-controls="summary-cash-popover"><span>現金開銷</span><strong>${cashSummaryDisplayAmount}</strong></div>
+        <div class="summary-expense-trigger summary-credit-card-trigger" role="button" tabindex="0" aria-label="信用卡開銷 $${formatAmount(creditCardTotal)}，長按半秒查看清單" aria-expanded="false" aria-controls="summary-credit-card-popover"><span>信用卡開銷</span><strong>$${formatAmount(creditCardTotal)}</strong></div>
         <div><span>總開銷</span><strong>$${formatAmount(personalNonFixedExpenseTotal)}</strong></div>
         <div><span>本期固定開銷</span><strong>${fixedExpenseTotal === null ? '—' : `$${formatAmount(fixedExpenseTotal)}`}</strong></div>
-        <div class="chart-category-popover summary-credit-card-popover" id="summary-credit-card-popover" role="dialog" aria-label="本期信用卡開銷清單" hidden></div>
+        <div class="chart-category-popover summary-expense-popover" id="summary-cash-popover" role="dialog" aria-label="本期現金開銷清單" hidden></div>
+        <div class="chart-category-popover summary-expense-popover" id="summary-credit-card-popover" role="dialog" aria-label="本期信用卡開銷清單" hidden></div>
       </section>
       ${savingsSummaryMarkup}
       ${analysisPage}
@@ -2192,91 +2214,114 @@ async function renderLedger(
   const closeMobileFinance = () => {
     showMobileMainSection('overview', 'period-overview-section');
   };
-  const creditCardSummaryTrigger = document.querySelector('.summary-credit-card-trigger');
-  const creditCardSummaryPopover = document.querySelector('#summary-credit-card-popover');
-  let creditCardLongPressTimer = null;
-  let creditCardLongPressTriggered = false;
-  let creditCardPointerStart = null;
-  const cancelCreditCardLongPress = () => {
-    if (creditCardLongPressTimer !== null) {
-      window.clearTimeout(creditCardLongPressTimer);
-      creditCardLongPressTimer = null;
-    }
-    creditCardPointerStart = null;
+  const summaryExpensePopovers = [
+    {
+      trigger: document.querySelector('.summary-cash-trigger'),
+      popover: document.querySelector('#summary-cash-popover'),
+      label: '現金開銷',
+      totalText: cashSummaryDisplayAmount,
+      items: cashSummaryItems,
+    },
+    {
+      trigger: document.querySelector('.summary-credit-card-trigger'),
+      popover: document.querySelector('#summary-credit-card-popover'),
+      label: '信用卡開銷',
+      totalText: `$${formatAmount(creditCardTotal)}`,
+      items: creditCardSummaryItems,
+    },
+  ];
+  const closeSummaryExpensePopover = ({ trigger, popover }) => {
+    if (!popover) return;
+    popover.hidden = true;
+    popover.innerHTML = '';
+    trigger?.setAttribute('aria-expanded', 'false');
   };
-  const closeCreditCardSummaryPopover = () => {
-    if (!creditCardSummaryPopover) return;
-    creditCardSummaryPopover.hidden = true;
-    creditCardSummaryPopover.innerHTML = '';
-    creditCardSummaryTrigger?.setAttribute('aria-expanded', 'false');
-  };
-  const openCreditCardSummaryPopover = () => {
-    if (!creditCardSummaryPopover) return;
-    creditCardSummaryPopover.innerHTML = `
-      <div class="chart-category-popover-heading summary-credit-card-popover-heading">
-        <strong>信用卡開銷 <span>${creditCardEntriesForSummary.length} 筆</span></strong>
-        <b>$${formatAmount(creditCardTotal)}</b>
-      </div>
-      <ul>${creditCardEntriesForSummary.map((entry) => `
-        <li><span>${escapeHtml(entry.item_name)}</span><b>${entry.is_reimbursement ? '−' : ''}$${formatAmount(entry.amount)}</b></li>`).join('') || '<li class="chart-category-popover-empty">尚無信用卡開銷</li>'}</ul>`;
-    creditCardSummaryPopover.hidden = false;
-    creditCardSummaryTrigger?.setAttribute('aria-expanded', 'true');
-  };
-  creditCardSummaryTrigger?.addEventListener('pointerdown', (event) => {
-    if (event.pointerType === 'mouse' && event.button !== 0) return;
-    cancelCreditCardLongPress();
-    creditCardLongPressTriggered = false;
-    creditCardPointerStart = { x: event.clientX, y: event.clientY };
-    creditCardLongPressTimer = window.setTimeout(() => {
-      creditCardLongPressTimer = null;
-      creditCardLongPressTriggered = true;
-      openCreditCardSummaryPopover();
-    }, 500);
-  });
-  creditCardSummaryTrigger?.addEventListener('pointermove', (event) => {
-    if (!creditCardPointerStart) return;
-    if (Math.abs(event.clientX - creditCardPointerStart.x) > 10
-      || Math.abs(event.clientY - creditCardPointerStart.y) > 10) {
-      cancelCreditCardLongPress();
-    }
-  });
-  creditCardSummaryTrigger?.addEventListener('pointerup', cancelCreditCardLongPress);
-  creditCardSummaryTrigger?.addEventListener('pointercancel', cancelCreditCardLongPress);
-  creditCardSummaryTrigger?.addEventListener('pointerleave', cancelCreditCardLongPress);
-  creditCardSummaryTrigger?.addEventListener('contextmenu', (event) => event.preventDefault());
-  creditCardSummaryTrigger?.addEventListener('click', (event) => {
-    event.stopPropagation();
-    if (creditCardLongPressTriggered) {
-      creditCardLongPressTriggered = false;
+  const summaryExpensePopoverCleanups = summaryExpensePopovers.map((config) => {
+    const { trigger, popover, label, totalText, items } = config;
+    if (!trigger || !popover) return () => {};
+    let longPressTimer = null;
+    let longPressTriggered = false;
+    let pointerStart = null;
+    const cancelLongPress = () => {
+      if (longPressTimer !== null) {
+        window.clearTimeout(longPressTimer);
+        longPressTimer = null;
+      }
+      pointerStart = null;
+    };
+    const open = () => {
+      summaryExpensePopovers.forEach(closeSummaryExpensePopover);
+      popover.innerHTML = `
+        <div class="chart-category-popover-heading summary-expense-popover-heading">
+          <strong>${label} <span>${items.length} 筆</span></strong>
+          <b>${totalText}</b>
+        </div>
+        <ul>${items.map((item) => `
+          <li><span>${escapeHtml(item.name)}</span><b>${item.amount < 0 ? '−' : ''}$${formatAmount(Math.abs(item.amount))}</b></li>`).join('') || `<li class="chart-category-popover-empty">尚無${label}</li>`}</ul>`;
+      popover.hidden = false;
+      trigger.setAttribute('aria-expanded', 'true');
+    };
+    trigger.addEventListener('pointerdown', (event) => {
+      if (event.pointerType === 'mouse' && event.button !== 0) return;
+      cancelLongPress();
+      longPressTriggered = false;
+      pointerStart = { x: event.clientX, y: event.clientY };
+      longPressTimer = window.setTimeout(() => {
+        longPressTimer = null;
+        longPressTriggered = true;
+        open();
+      }, 500);
+    });
+    trigger.addEventListener('pointermove', (event) => {
+      if (!pointerStart) return;
+      if (Math.abs(event.clientX - pointerStart.x) > 10
+        || Math.abs(event.clientY - pointerStart.y) > 10) {
+        cancelLongPress();
+      }
+    });
+    trigger.addEventListener('pointerup', cancelLongPress);
+    trigger.addEventListener('pointercancel', cancelLongPress);
+    trigger.addEventListener('pointerleave', cancelLongPress);
+    trigger.addEventListener('contextmenu', (event) => event.preventDefault());
+    trigger.addEventListener('click', (event) => {
+      event.stopPropagation();
+      if (longPressTriggered) {
+        longPressTriggered = false;
+        event.preventDefault();
+        return;
+      }
+      if (!popover.hidden) {
+        closeSummaryExpensePopover(config);
+      } else if (window.innerWidth < 900) {
+        showMobileFinance();
+      } else {
+        open();
+      }
+    });
+    trigger.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter' && event.key !== ' ') return;
       event.preventDefault();
-      return;
-    }
-    if (!creditCardSummaryPopover?.hidden) {
-      closeCreditCardSummaryPopover();
-    } else if (window.innerWidth < 900) {
-      showMobileFinance();
-    } else {
-      openCreditCardSummaryPopover();
-    }
+      event.stopPropagation();
+      if (popover.hidden) open();
+      else closeSummaryExpensePopover(config);
+    });
+    popover.addEventListener('click', (event) => event.stopPropagation());
+    const dismiss = (event) => {
+      if (popover.hidden || popover.contains(event.target) || trigger.contains(event.target)) return;
+      closeSummaryExpensePopover(config);
+    };
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') closeSummaryExpensePopover(config);
+    };
+    document.addEventListener('click', dismiss);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      cancelLongPress();
+      closeSummaryExpensePopover(config);
+      document.removeEventListener('click', dismiss);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
   });
-  creditCardSummaryTrigger?.addEventListener('keydown', (event) => {
-    if (event.key !== 'Enter' && event.key !== ' ') return;
-    event.preventDefault();
-    event.stopPropagation();
-    if (creditCardSummaryPopover?.hidden) openCreditCardSummaryPopover();
-    else closeCreditCardSummaryPopover();
-  });
-  creditCardSummaryPopover?.addEventListener('click', (event) => event.stopPropagation());
-  const dismissCreditCardSummaryPopover = (event) => {
-    if (creditCardSummaryPopover?.hidden || creditCardSummaryPopover?.contains(event.target)
-      || creditCardSummaryTrigger?.contains(event.target)) return;
-    closeCreditCardSummaryPopover();
-  };
-  const closeCreditCardSummaryPopoverOnEscape = (event) => {
-    if (event.key === 'Escape') closeCreditCardSummaryPopover();
-  };
-  document.addEventListener('click', dismissCreditCardSummaryPopover);
-  document.addEventListener('keydown', closeCreditCardSummaryPopoverOnEscape);
   const showExpenseAnalysis = () => {
     ledgerHome.dataset.mobileView = 'analysis';
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2534,10 +2579,7 @@ async function renderLedger(
     cancelChartCategoryLongPress();
     closeChartCategoryPopover();
     document.removeEventListener('click', dismissChartCategoryPopover);
-    cancelCreditCardLongPress();
-    closeCreditCardSummaryPopover();
-    document.removeEventListener('click', dismissCreditCardSummaryPopover);
-    document.removeEventListener('keydown', closeCreditCardSummaryPopoverOnEscape);
+    summaryExpensePopoverCleanups.forEach((cleanup) => cleanup());
     if (mobileNavigationFrame !== null) window.cancelAnimationFrame(mobileNavigationFrame);
     mobileNavigationFrame = null;
   };

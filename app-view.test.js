@@ -225,7 +225,7 @@ test('本期摘要以乾淨文字顯示收入、現金、信用卡、總開銷�
   assert.doesNotMatch(summarySource, /待輸入帳單/);
 });
 
-test('長按半秒可查看本期非固定信用卡開銷清單，輕點仍可開啟手機帳務', () => {
+test('現金與信用卡摘要長按半秒可查看同口徑清單，輕點仍可開啟手機帳務', () => {
   const selectionSource = appSource.match(/const creditCardEntriesForSummary = periodEntries[\s\S]*?;/)?.[0];
   assert.ok(selectionSource);
   const selected = runInNewContext(
@@ -240,27 +240,36 @@ test('長按半秒可查看本期非固定信用卡開銷清單，輕點仍可�
     },
   );
   assert.deepEqual(Array.from(selected), ['card-new', 'card-old']);
-  const popoverSource = appSource.match(/const openCreditCardSummaryPopover = \(\) => \{[\s\S]*?\n  \};/)?.[0];
-  assert.ok(popoverSource);
-  const popover = { hidden: true, innerHTML: '' };
-  runInNewContext(`${popoverSource}\nopenCreditCardSummaryPopover()`, {
-    creditCardSummaryPopover: popover,
-    creditCardSummaryTrigger: { setAttribute: () => {} },
-    creditCardEntriesForSummary: [{ item_name: '<退款>', amount: 350, is_reimbursement: true }],
-    creditCardTotal: -350,
-    formatAmount: (amount) => Number(amount).toLocaleString('zh-TW'),
-    escapeHtml: (value) => String(value).replaceAll('<', '&lt;').replaceAll('>', '&gt;'),
-  });
-  assert.equal(popover.hidden, false);
-  assert.match(popover.innerHTML, /&lt;退款&gt;/);
-  assert.match(popover.innerHTML, /−\$350/);
-  assert.match(appSource, /class="summary-credit-card-trigger"[^>]*aria-expanded="false"/);
+  const cashSelectionSource = appSource.match(/const cashEntriesForSummary = periodEntries[\s\S]*?;/)?.[0];
+  const cashItemsSource = appSource.match(/const advancesByRepaymentId = new Map[\s\S]*?\.sort\(\(left, right\) => new Date\(right\.occurredAt\) - new Date\(left\.occurredAt\)\);/)?.[0];
+  assert.ok(cashSelectionSource);
+  assert.ok(cashItemsSource);
+  const cashItems = runInNewContext(
+    `${cashSelectionSource}\n${cashItemsSource}\ncashSummaryItems`,
+    {
+      periodEntries: [
+        { id: 'cash', item_name: '晚餐', amount: 500, payment_method: 'cash', occurred_at: '2026-08-06' },
+        { id: 'refund', item_name: '退款', amount: 70, payment_method: 'cash', is_reimbursement: true, occurred_at: '2026-08-08' },
+        { id: 'fixed', item_name: '房租', amount: 9000, payment_method: 'cash', is_fixed: true, occurred_at: '2026-08-08' },
+        { id: 'card', item_name: '午餐', amount: 100, payment_method: 'credit_card', occurred_at: '2026-08-08' },
+      ],
+      expenseAdvances: [{ debtorName: '朋友', repayments: [{ id: 'repayment', amount: 300, receivedAt: '2026-08-09' }] }],
+      periodAdvanceRepayments: [{ id: 'repayment', amount: 300, receivedAt: '2026-08-09' }],
+    },
+  );
+  assert.deepEqual(Array.from(cashItems, (item) => item.name), ['代墊收回・朋友', '退款（收回款）', '晚餐']);
+  assert.equal(cashItems.reduce((total, item) => total + item.amount, 0), 130);
+  assert.match(appSource, /class="summary-expense-trigger summary-cash-trigger"[^>]*aria-expanded="false"/);
+  assert.match(appSource, /id="summary-cash-popover"/);
+  assert.match(appSource, /class="summary-expense-trigger summary-credit-card-trigger"[^>]*aria-expanded="false"/);
   assert.match(appSource, /id="summary-credit-card-popover"/);
-  assert.match(appSource, /creditCardLongPressTimer = window\.setTimeout\([\s\S]*?}, 500\)/);
-  assert.match(appSource, /if \(creditCardLongPressTriggered\)[\s\S]*?event\.preventDefault\(\);[\s\S]*?return;/);
+  assert.match(appSource, /longPressTimer = window\.setTimeout\([\s\S]*?}, 500\)/);
+  assert.match(appSource, /if \(longPressTriggered\)[\s\S]*?event\.preventDefault\(\);[\s\S]*?return;/);
+  assert.match(appSource, /escapeHtml\(item\.name\)/);
+  assert.match(appSource, /item\.amount < 0 \? '−' : ''/);
   assert.match(appSource, /else if \(window\.innerWidth < 900\) \{\s*showMobileFinance\(\)/);
-  assert.match(stylesSource, /\.summary-credit-card-trigger \{ position: relative; z-index: 3; \}/);
-  assert.match(stylesSource, /\.summary-panel \.summary-credit-card-popover\[hidden\] \{ display: none; \}/);
+  assert.match(stylesSource, /\.summary-expense-trigger \{ position: relative; z-index: 3; \}/);
+  assert.match(stylesSource, /\.summary-panel \.summary-expense-popover\[hidden\] \{ display: none; \}/);
 });
 
 test('快速記帳以同款窄卡片提供預設關閉的收回款勾選框', () => {
@@ -313,7 +322,8 @@ test('本期摘要保留代墊淨額計算但不加入註解小字或特殊金�
     appSource.indexOf('<section class="summary-panel"'),
     appSource.indexOf('${analysisPage}'),
   );
-  assert.match(summarySource, /netCashOutflowTotal/);
+  assert.match(summarySource, /cashSummaryDisplayAmount/);
+  assert.match(appSource, /const cashSummaryDisplayAmount = `\$\{netCashOutflowTotal < 0/);
   assert.match(summarySource, /personalNonFixedExpenseTotal/);
   assert.doesNotMatch(summarySource, /<small>/);
   assert.doesNotMatch(stylesSource, /\.net-cash-summary/);
