@@ -225,6 +225,44 @@ test('本期摘要以乾淨文字顯示收入、現金、信用卡、總開銷�
   assert.doesNotMatch(summarySource, /待輸入帳單/);
 });
 
+test('長按半秒可查看本期非固定信用卡開銷清單，輕點仍可開啟手機帳務', () => {
+  const selectionSource = appSource.match(/const creditCardEntriesForSummary = periodEntries[\s\S]*?;/)?.[0];
+  assert.ok(selectionSource);
+  const selected = runInNewContext(
+    `${selectionSource}\ncreditCardEntriesForSummary.map((entry) => entry.id)`,
+    {
+      periodEntries: [
+        { id: 'cash', is_fixed: false, payment_method: 'cash', occurred_at: '2026-08-08' },
+        { id: 'fixed-card', is_fixed: true, payment_method: 'credit_card', occurred_at: '2026-08-08' },
+        { id: 'card-old', is_fixed: false, payment_method: 'credit_card', occurred_at: '2026-08-06' },
+        { id: 'card-new', is_fixed: false, payment_method: 'credit_card', occurred_at: '2026-08-09' },
+      ],
+    },
+  );
+  assert.deepEqual(Array.from(selected), ['card-new', 'card-old']);
+  const popoverSource = appSource.match(/const openCreditCardSummaryPopover = \(\) => \{[\s\S]*?\n  \};/)?.[0];
+  assert.ok(popoverSource);
+  const popover = { hidden: true, innerHTML: '' };
+  runInNewContext(`${popoverSource}\nopenCreditCardSummaryPopover()`, {
+    creditCardSummaryPopover: popover,
+    creditCardSummaryTrigger: { setAttribute: () => {} },
+    creditCardEntriesForSummary: [{ item_name: '<退款>', amount: 350, is_reimbursement: true }],
+    creditCardTotal: -350,
+    formatAmount: (amount) => Number(amount).toLocaleString('zh-TW'),
+    escapeHtml: (value) => String(value).replaceAll('<', '&lt;').replaceAll('>', '&gt;'),
+  });
+  assert.equal(popover.hidden, false);
+  assert.match(popover.innerHTML, /&lt;退款&gt;/);
+  assert.match(popover.innerHTML, /−\$350/);
+  assert.match(appSource, /class="summary-credit-card-trigger"[^>]*aria-expanded="false"/);
+  assert.match(appSource, /id="summary-credit-card-popover"/);
+  assert.match(appSource, /creditCardLongPressTimer = window\.setTimeout\([\s\S]*?}, 500\)/);
+  assert.match(appSource, /if \(creditCardLongPressTriggered\)[\s\S]*?event\.preventDefault\(\);[\s\S]*?return;/);
+  assert.match(appSource, /else if \(window\.innerWidth < 900\) \{\s*showMobileFinance\(\)/);
+  assert.match(stylesSource, /\.summary-credit-card-trigger \{ position: relative; z-index: 3; \}/);
+  assert.match(stylesSource, /\.summary-panel \.summary-credit-card-popover\[hidden\] \{ display: none; \}/);
+});
+
 test('快速記帳以同款窄卡片提供預設關閉的收回款勾選框', () => {
   assert.match(appSource, /class="payment-method-controls"/);
   assert.match(appSource, /class="reimbursement-toggle"/);
