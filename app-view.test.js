@@ -293,6 +293,8 @@ test('投資摘要位於右下角，長按可查看獨立清單', () => {
   assert.match(appSource, /trigger: document\.querySelector\('\.summary-investment-trigger'\)[\s\S]*items: investmentSummaryItems/);
   assert.match(appSource, /const isInvestment = \(entry\) => investmentCategoryIds\.has\(entry\.category_id\)/);
   assert.match(appSource, /spentAmount: personalNonFixedExpenseTotal/);
+  assert.match(appSource, /investmentCashEffect[\s\S]*現金減少/);
+  assert.match(appSource, /現金淨變動[\s\S]*cashFlowAmount/);
 });
 
 test('快速記帳以同款窄卡片提供預設關閉的收回款勾選框', () => {

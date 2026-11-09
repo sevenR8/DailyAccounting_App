@@ -97,7 +97,7 @@ test('收回款不算生活開銷，並依付款方式抵銷本期現金流', ()
   assert.equal(summary.savingsAmount, 2350);
 });
 
-test('投資獨立於現金與信用卡開銷，現金投資仍影響本期結餘', () => {
+test('投資獨立於現金與信用卡開銷，現金投入另列於實際現金變動', () => {
   const summary = calculateFinancialSummary({
     periodEntries: [
       { category_id: 'food', amount: 2000, payment_method: 'cash', is_fixed: false },
@@ -117,7 +117,8 @@ test('投資獨立於現金與信用卡開銷，現金投資仍影響本期結�
   assert.equal(summary.investmentTotal, 5400);
   assert.equal(summary.cashInvestmentTotal, 5000);
   assert.equal(summary.nonFixedExpenseTotal, 2300);
-  assert.equal(summary.savingsAmount, 2000);
+  assert.equal(summary.savingsAmount, 7000);
+  assert.equal(summary.cashFlowAmount, 2000);
 });
 
 test('每日生活上限只扣生活消費，不扣投資或固定開銷', () => {
@@ -153,7 +154,29 @@ test('投資代墊收回歸回投資，不誤算為生活現金開銷', () => {
   assert.equal(summary.netCashOutflowTotal, 0);
   assert.equal(summary.investmentTotal, 4000);
   assert.equal(summary.cashInvestmentTotal, 4000);
-  assert.equal(summary.savingsAmount, 6000);
+  assert.equal(summary.savingsAmount, 10000);
+  assert.equal(summary.cashFlowAmount, 6000);
+});
+
+test('固定投資不扣本月收支結餘，但仍記錄現金減少', () => {
+  const summary = calculateFinancialSummary({
+    periodEntries: [],
+    investmentCategoryIds: new Set(['investment']),
+    fixedExpenseRules: [
+      { category_id: 'investment', amount: 3000, payment_method: 'cash' },
+      { category_id: 'rent', amount: 5000, payment_method: 'cash' },
+    ],
+    salaryAmount: 10000,
+    otherIncomeEntries: [],
+    previousCardBillAmount: 0,
+  });
+
+  assert.equal(summary.fixedExpenseTotal, 8000);
+  assert.equal(summary.cashFixedExpenseTotal, 5000);
+  assert.equal(summary.investmentTotal, 3000);
+  assert.equal(summary.cashInvestmentTotal, 3000);
+  assert.equal(summary.savingsAmount, 5000);
+  assert.equal(summary.cashFlowAmount, 2000);
 });
 
 test('每日可花額以不含固定開銷的本期生活上限扣除已發生生活開銷後除以剩餘天數', () => {

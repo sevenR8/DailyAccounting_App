@@ -22,20 +22,25 @@ export function calculateFinancialSummary({
   const nonFixedEntries = periodEntries.filter((entry) => !entry.is_fixed);
   const investmentEntries = nonFixedEntries.filter((entry) =>
     investmentCategoryIds.has(categoryIdOf(entry)));
+  const fixedInvestmentRules = fixedExpenseRules.filter((rule) =>
+    investmentCategoryIds.has(categoryIdOf(rule)));
   const livingEntries = nonFixedEntries.filter((entry) =>
     !investmentCategoryIds.has(categoryIdOf(entry)));
   const cashTotal = sumAmounts(livingEntries.filter((entry) => entry.payment_method === 'cash'));
   const creditCardTotal = sumAmounts(livingEntries.filter((entry) => entry.payment_method === 'credit_card'));
   const investmentRepaymentTotal = sumAmounts(investmentAdvanceRepaymentEntries);
-  const investmentTotal = sumAmounts(investmentEntries) - investmentRepaymentTotal;
+  const investmentTotal = sumAmounts(investmentEntries) + sumAmounts(fixedInvestmentRules)
+    - investmentRepaymentTotal;
   const cashInvestmentTotal = sumAmounts(
     investmentEntries.filter((entry) => entry.payment_method === 'cash'),
-  ) - investmentRepaymentTotal;
+  ) + sumAmounts(fixedInvestmentRules.filter((rule) => rule.payment_method === 'cash'))
+    - investmentRepaymentTotal;
   const nonFixedExpenseTotal = cashTotal + creditCardTotal;
   const generatedExpenseTotal = sumAmounts(periodEntries);
   const fixedExpenseTotal = sumAmounts(fixedExpenseRules);
   const cashFixedExpenseTotal = sumAmounts(
-    fixedExpenseRules.filter((rule) => rule.payment_method === 'cash'),
+    fixedExpenseRules.filter((rule) => rule.payment_method === 'cash'
+      && !investmentCategoryIds.has(categoryIdOf(rule))),
   );
   const otherIncomeTotal = sumAmounts(otherIncomeEntries);
   const advanceRepaymentTotal = sumAmounts(advanceRepaymentEntries);
@@ -46,7 +51,8 @@ export function calculateFinancialSummary({
   // behind a separate “confirmed zero” checkbox.
   const previousCardBillReady = true;
   const savingsAmount = totalIncome - (previousCardBillAmount ?? 0)
-    - netCashOutflowTotal - cashInvestmentTotal - cashFixedExpenseTotal;
+    - netCashOutflowTotal - cashFixedExpenseTotal;
+  const cashFlowAmount = savingsAmount - cashInvestmentTotal;
 
   return {
     cashTotal,
@@ -64,6 +70,7 @@ export function calculateFinancialSummary({
     totalIncome,
     previousCardBillReady,
     savingsAmount,
+    cashFlowAmount,
   };
 }
 
