@@ -38,7 +38,7 @@ import {
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=84';
+} from './supabase-adapter.js?v=85';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -1069,7 +1069,7 @@ async function renderLedger(
   const customCategoryRows = ledger.categories
     .filter((category) => category.isDefault === false)
     .map((category) => `
-      <li class="category-settings-row ${category.retiredAt ? 'is-retired' : ''}">
+      <li class="category-settings-row">
         <form class="category-settings-form" data-category-id="${escapeHtml(category.id)}">
           <label>
             <span class="sr-only">分類名稱</span>
@@ -1077,12 +1077,23 @@ async function renderLedger(
           </label>
           <button class="secondary-button" type="submit">儲存</button>
           <button
-            class="category-toggle"
+            class="category-delete"
             type="button"
-            data-action="toggle-category"
+            data-action="delete-category"
             data-category-id="${escapeHtml(category.id)}"
-          >${category.retiredAt ? '啟用' : '停用'}</button>
+          >刪除</button>
           <p class="form-status" aria-live="polite"></p>
+          <div class="category-delete-replacement" hidden>
+            <p>這個分類已有紀錄。選擇替代分類後，舊記帳與固定開銷會一起改歸，金額不變。</p>
+            <select aria-label="刪除${escapeHtml(category.name)}後改歸的分類">
+              <option value="">選擇替代分類</option>
+              ${ledger.categories
+    .filter((item) => item.id !== category.id && !item.retiredAt)
+    .map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.name)}</option>`)
+    .join('')}
+            </select>
+            <button class="category-delete" type="button" data-action="delete-category-with-replacement">移轉並刪除</button>
+          </div>
         </form>
       </li>`)
     .join('');
@@ -1160,7 +1171,7 @@ async function renderLedger(
                   <button class="small-primary-button" type="submit">新增分類</button>
                   <p class="form-status" aria-live="polite"></p>
                 </form>
-                <p class="dialog-note">停用只會從新的記帳選單隱藏，既有歷史紀錄仍會保留原分類。</p>
+                <p class="dialog-note">刪除分類不會刪除記帳紀錄；已使用的分類可選擇替代分類後刪除。</p>
               </div>
             </details>
           </section>
@@ -3112,28 +3123,53 @@ async function renderLedger(
     });
   });
 
-  document.querySelectorAll('[data-action="toggle-category"]').forEach((button) => {
+  document.querySelectorAll('[data-action="delete-category"]').forEach((button) => {
     button.addEventListener('click', async () => {
       const category = ledger.categories.find((item) => item.id === button.dataset.categoryId);
+      if (!category || category.isDefault) return;
       const form = button.closest('.category-settings-form');
       const status = form.querySelector('.form-status');
-      if (!category.retiredAt) {
-        const activeCategories = ledger.categories.filter((item) => !item.retiredAt);
-        if (activeCategories.length <= 1) {
-          status.textContent = '至少需要保留一個啟用中的分類。';
-          return;
-        }
-      }
+      if (!window.confirm(`確定刪除「${category.name}」？記帳紀錄不會一併刪除。`)) return;
       button.disabled = true;
-      status.textContent = category.retiredAt ? '正在啟用…' : '正在停用…';
+      status.textContent = '正在刪除…';
       try {
-        const updatedCategory = await expenseAdapter.updateCategory({
+        await expenseAdapter.deleteCategory({
           ledgerId: ledger.id,
           categoryId: category.id,
-          name: category.name,
-          retiredAt: category.retiredAt ? null : new Date().toISOString(),
         });
-        Object.assign(category, updatedCategory);
+        ledger.categories = ledger.categories.filter((item) => item.id !== category.id);
+        await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
+      } catch (error) {
+        status.textContent = error.message;
+        if (error.code === 'CATEGORY_IN_USE') {
+          form.querySelector('.category-delete-replacement').hidden = false;
+        }
+        button.disabled = false;
+      }
+    });
+  });
+
+  document.querySelectorAll('[data-action="delete-category-with-replacement"]').forEach((button) => {
+    button.addEventListener('click', async () => {
+      const form = button.closest('.category-settings-form');
+      const category = ledger.categories.find((item) => item.id === form.dataset.categoryId);
+      const status = form.querySelector('.form-status');
+      const replacementCategoryId = form.querySelector('.category-delete-replacement select').value;
+      const replacement = ledger.categories.find((item) => item.id === replacementCategoryId && !item.retiredAt);
+      if (!category || category.isDefault || !replacement || replacement.id === category.id) {
+        status.textContent = '請先選擇其他仍在使用的分類。';
+        return;
+      }
+      if (!window.confirm(`將「${category.name}」的記帳與固定開銷改歸「${replacement.name}」，並永久刪除「${category.name}」？`)) return;
+      button.disabled = true;
+      status.textContent = '正在移轉並刪除…';
+      try {
+        await expenseAdapter.deleteCategory({
+          ledgerId: ledger.id,
+          categoryId: category.id,
+          replacementCategoryId,
+        });
+        ledger.categories = ledger.categories.filter((item) => item.id !== category.id);
         await renderLedger(ledger, user, expenseAdapter, activeStartsOn);
       } catch (error) {
         status.textContent = error.message;

@@ -344,6 +344,99 @@ test('帳本擁有者可新增、重新命名、停用及重新啟用自訂分�
   });
 });
 
+test('刪除自訂分類需限定帳本與非預設分類，且確認資料庫確實刪除', async () => {
+  let request;
+  const connection = new SupabaseConnection({
+    supabaseUrl: 'https://example.supabase.co',
+    supabaseAnonKey: 'public-key',
+    accessToken: 'access-token',
+    fetchImpl: async (url, options) => {
+      request = { url: new URL(url), options };
+      return response([{ id: 'category-7' }]);
+    },
+  });
+
+  await new SupabaseLedgerAdapter(connection).deleteCategory({
+    ledgerId: 'ledger-1',
+    categoryId: 'category-7',
+  });
+
+  assert.equal(request.options.method, 'DELETE');
+  assert.equal(request.options.headers.Prefer, 'return=representation');
+  assert.equal(request.url.searchParams.get('id'), 'eq.category-7');
+  assert.equal(request.url.searchParams.get('ledger_id'), 'eq.ledger-1');
+  assert.equal(request.url.searchParams.get('is_default'), 'eq.false');
+});
+
+test('已使用分類或沒有刪除權限時不假裝刪除成功', async () => {
+  const usedConnection = new SupabaseConnection({
+    supabaseUrl: 'https://example.supabase.co',
+    supabaseAnonKey: 'public-key',
+    accessToken: 'access-token',
+    fetchImpl: async () => response({ message: 'category_has_expense_history' }, false),
+  });
+  const noAccessConnection = new SupabaseConnection({
+    supabaseUrl: 'https://example.supabase.co',
+    supabaseAnonKey: 'public-key',
+    accessToken: 'access-token',
+    fetchImpl: async () => response([]),
+  });
+
+  await assert.rejects(
+    new SupabaseLedgerAdapter(usedConnection).deleteCategory({ ledgerId: 'ledger-1', categoryId: 'category-7' }),
+    (error) => error.code === 'CATEGORY_IN_USE' && /請選擇要轉入的分類/.test(error.message),
+  );
+  await assert.rejects(
+    new SupabaseLedgerAdapter(noAccessConnection).deleteCategory({ ledgerId: 'ledger-1', categoryId: 'category-7' }),
+    /找不到可刪除的自訂分類/,
+  );
+});
+
+test('已使用的自訂分類只透過原子程序移轉紀錄並刪除', async () => {
+  let request;
+  const connection = new SupabaseConnection({
+    supabaseUrl: 'https://example.supabase.co',
+    supabaseAnonKey: 'public-key',
+    accessToken: 'access-token',
+    fetchImpl: async (url, options) => {
+      request = { url, options };
+      return response({ deletedCategoryId: 'category-7', movedExpenseCount: 3, movedFixedRuleCount: 1 });
+    },
+  });
+
+  const result = await new SupabaseLedgerAdapter(connection).deleteCategory({
+    ledgerId: 'ledger-1',
+    categoryId: 'category-7',
+    replacementCategoryId: 'category-8',
+  });
+
+  assert.match(request.url, /rpc\/delete_custom_category$/);
+  assert.equal(request.options.method, 'POST');
+  assert.deepEqual(JSON.parse(request.options.body), {
+    p_ledger_id: 'ledger-1',
+    p_category_id: 'category-7',
+    p_replacement_category_id: 'category-8',
+  });
+  assert.equal(result.movedExpenseCount, 3);
+});
+
+test('移轉刪除程序尚未升級時顯示明確提示', async () => {
+  const connection = new SupabaseConnection({
+    supabaseUrl: 'https://example.supabase.co',
+    supabaseAnonKey: 'public-key',
+    accessToken: 'access-token',
+    fetchImpl: async () => ({ ok: false, status: 404, json: async () => ({ code: 'PGRST202' }) }),
+  });
+  await assert.rejects(
+    new SupabaseLedgerAdapter(connection).deleteCategory({
+      ledgerId: 'ledger-1',
+      categoryId: 'category-7',
+      replacementCategoryId: 'category-8',
+    }),
+    /supabase-0015-delete-custom-category\.sql/,
+  );
+});
+
 test('分析開銷依指定兩期日期範圍讀取且不套用全帳本筆數上限', async () => {
   let requestUrl;
   const connection = new SupabaseConnection({

@@ -213,6 +213,53 @@ export class SupabaseLedgerAdapter {
     };
   }
 
+  async deleteCategory({ ledgerId, categoryId, replacementCategoryId = null }) {
+    if (replacementCategoryId) {
+      const response = await this.connection.request('/rest/v1/rpc/delete_custom_category', {
+        method: 'POST',
+        body: JSON.stringify({
+          p_ledger_id: ledgerId,
+          p_category_id: categoryId,
+          p_replacement_category_id: replacementCategoryId,
+        }),
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        if (error.code === 'PGRST202' || response.status === 404) {
+          throw new Error('請先在 Supabase SQL Editor 執行 supabase-0015-delete-custom-category.sql，再刪除已使用的分類。');
+        }
+        if (error.message?.includes('invalid_replacement_category')) {
+          throw new Error('替代分類無效，請重新選擇仍在使用的分類。');
+        }
+        throw new Error('無法移轉並刪除分類，請稍後再試一次。');
+      }
+      return response.json();
+    }
+    const parameters = new URLSearchParams({
+      id: `eq.${categoryId}`,
+      ledger_id: `eq.${ledgerId}`,
+      is_default: 'eq.false',
+      select: 'id',
+    });
+    const response = await this.connection.request(`/rest/v1/categories?${parameters}`, {
+      method: 'DELETE',
+      headers: { Prefer: 'return=representation' },
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({}));
+      if (error.message?.includes('category_has_expense_history') || error.code === '23503') {
+        const inUseError = new Error('此分類已有記帳或固定開銷，請選擇要轉入的分類。');
+        inUseError.code = 'CATEGORY_IN_USE';
+        throw inUseError;
+      }
+      throw new Error('無法刪除分類，請稍後再試一次。');
+    }
+    const deleted = await response.json();
+    if (!Array.isArray(deleted) || deleted.length !== 1) {
+      throw new Error('找不到可刪除的自訂分類，請重新整理後再試。');
+    }
+  }
+
   async listExpenseEntries(ledgerId) {
     const parameters = new URLSearchParams({
       select: 'id,category_id,item_name,item_detail,include_in_daily_average,is_reimbursement,amount,payment_method,occurred_at,is_fixed,created_at',

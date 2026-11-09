@@ -34,6 +34,10 @@ const livingExpenseLimitMigration = await readFile(
   new URL('./supabase-0013-living-expense-limit.sql', import.meta.url),
   'utf8',
 );
+const deleteCustomCategoryMigration = await readFile(
+  new URL('./supabase-0015-delete-custom-category.sql', import.meta.url),
+  'utf8',
+);
 
 test('資料模型保留開銷的記錄者、可選付款者與同帳本外鍵', () => {
   assert.match(migration, /create table public\.expense_entries/i);
@@ -126,4 +130,16 @@ test('每期生活開銷上限可為空值或非負整數', () => {
   assert.match(livingExpenseLimitMigration, /alter table public\.accounting_periods/i);
   assert.match(livingExpenseLimitMigration, /living_expense_limit_amount integer/i);
   assert.match(livingExpenseLimitMigration, /is null or living_expense_limit_amount >= 0/i);
+});
+
+test('自訂分類移轉與刪除在同一交易內進行，限帳本擁有者且保留開銷紀錄', () => {
+  assert.match(deleteCustomCategoryMigration, /create or replace function public\.delete_custom_category/i);
+  assert.match(deleteCustomCategoryMigration, /public\.is_ledger_owner\(p_ledger_id\)/i);
+  assert.match(deleteCustomCategoryMigration, /target_category\.is_default/i);
+  assert.match(deleteCustomCategoryMigration, /invalid_replacement_category/i);
+  assert.match(deleteCustomCategoryMigration, /update public\.expense_entries[\s\S]*set category_id = p_replacement_category_id/i);
+  assert.match(deleteCustomCategoryMigration, /update public\.fixed_expense_rules[\s\S]*set category_id = p_replacement_category_id/i);
+  assert.match(deleteCustomCategoryMigration, /delete from public\.categories/i);
+  assert.doesNotMatch(deleteCustomCategoryMigration, /delete from public\.expense_entries/i);
+  assert.match(deleteCustomCategoryMigration, /grant execute on function public\.delete_custom_category/i);
 });

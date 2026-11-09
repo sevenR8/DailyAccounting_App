@@ -114,6 +114,12 @@ test('右上角選單可開啟帳本設定並管理自訂分類與週期起始�
   assert.match(appSource, /class="category-settings-form"/);
   assert.match(appSource, /createCategory/);
   assert.match(appSource, /updateCategory/);
+  assert.match(appSource, /data-action="delete-category"/);
+  assert.match(appSource, /data-action="delete-category-with-replacement"/);
+  assert.match(appSource, /expenseAdapter\.deleteCategory/);
+  assert.doesNotMatch(appSource, /data-action="toggle-category"/);
+  assert.match(appSource, /error\.code === 'CATEGORY_IN_USE'[\s\S]*category-delete-replacement/);
+  assert.match(appSource, /replacementCategoryId,[\s\S]*ledger\.categories = ledger\.categories\.filter/);
   assert.match(appSource, /name="cycleStartDay"[^>]*min="1"[^>]*max="28"/);
   assert.match(appSource, /id="cycle-settings-form"/);
   assert.match(appSource, /<details class="settings-collapsible"[\s\S]*<strong>帳務週期<\/strong>[\s\S]*settings-collapsible-toggle/);
