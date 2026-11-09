@@ -491,7 +491,7 @@ export class SupabaseLedgerAdapter {
 
   async listExpenseAdvances(ledgerId) {
     const parameters = new URLSearchParams({
-      select: 'id,expense_entry_id,debtor_name,amount,expected_on,created_at,expense_entries(id,item_name,amount,payment_method,occurred_at),advance_repayments(id,amount,receipt_method,received_at,created_at)',
+      select: 'id,expense_entry_id,debtor_name,amount,expected_on,created_at,expense_entries(id,category_id,item_name,amount,payment_method,occurred_at),advance_repayments(id,amount,receipt_method,received_at,created_at)',
       ledger_id: `eq.${ledgerId}`,
       order: 'created_at.desc',
     });

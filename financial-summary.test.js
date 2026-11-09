@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { calculateDailyLivingBudget, calculateFinancialSummary } from './financial-summary.js';
+import { calculateDailyLivingBudget, calculateFinancialSummary, livingExpenseSpentTotal } from './financial-summary.js';
 
 test('可存額扣除上期帳單、非固定現金與現金固定開銷，不先扣本期刷卡', () => {
   const summary = calculateFinancialSummary({
@@ -95,6 +95,65 @@ test('收回款不算生活開銷，並依付款方式抵銷本期現金流', ()
   assert.equal(summary.creditCardTotal, 600);
   assert.equal(summary.nonFixedExpenseTotal, 1250);
   assert.equal(summary.savingsAmount, 2350);
+});
+
+test('投資獨立於現金與信用卡開銷，現金投資仍影響本期結餘', () => {
+  const summary = calculateFinancialSummary({
+    periodEntries: [
+      { category_id: 'food', amount: 2000, payment_method: 'cash', is_fixed: false },
+      { category_id: 'investment', amount: 5000, payment_method: 'cash', is_fixed: false },
+      { category_id: 'investment', amount: 400, payment_method: 'credit_card', is_fixed: false },
+      { category_id: 'food', amount: 300, payment_method: 'credit_card', is_fixed: false },
+    ],
+    investmentCategoryIds: new Set(['investment']),
+    fixedExpenseRules: [],
+    salaryAmount: 10000,
+    otherIncomeEntries: [],
+    previousCardBillAmount: 1000,
+  });
+
+  assert.equal(summary.cashTotal, 2000);
+  assert.equal(summary.creditCardTotal, 300);
+  assert.equal(summary.investmentTotal, 5400);
+  assert.equal(summary.cashInvestmentTotal, 5000);
+  assert.equal(summary.nonFixedExpenseTotal, 2300);
+  assert.equal(summary.savingsAmount, 2000);
+});
+
+test('每日生活上限只扣生活消費，不扣投資或固定開銷', () => {
+  const spentAmount = livingExpenseSpentTotal([
+    { category_id: 'food', amount: 2000, is_fixed: false },
+    { category_id: 'investment', amount: 5000, is_fixed: false },
+    { category_id: 'rent', amount: 3000, is_fixed: true },
+  ], new Set(['investment']));
+  const budget = calculateDailyLivingBudget({
+    livingExpenseLimitAmount: 8000,
+    spentAmount,
+    periodStart: '2026-09-05',
+    periodEnd: '2026-10-04',
+    now: '2026-09-08T10:00:00+08:00',
+  });
+
+  assert.equal(budget.spent, 2000);
+  assert.equal(budget.remainingAmount, 6000);
+});
+
+test('投資代墊收回歸回投資，不誤算為生活現金開銷', () => {
+  const summary = calculateFinancialSummary({
+    periodEntries: [{ category_id: 'investment', amount: 5000, payment_method: 'cash', is_fixed: false }],
+    investmentCategoryIds: new Set(['investment']),
+    fixedExpenseRules: [],
+    salaryAmount: 10000,
+    otherIncomeEntries: [],
+    advanceRepaymentEntries: [{ amount: 1000 }],
+    investmentAdvanceRepaymentEntries: [{ amount: 1000 }],
+    previousCardBillAmount: 0,
+  });
+
+  assert.equal(summary.netCashOutflowTotal, 0);
+  assert.equal(summary.investmentTotal, 4000);
+  assert.equal(summary.cashInvestmentTotal, 4000);
+  assert.equal(summary.savingsAmount, 6000);
 });
 
 test('每日可花額以不含固定開銷的本期生活上限扣除已發生生活開銷後除以剩餘天數', () => {

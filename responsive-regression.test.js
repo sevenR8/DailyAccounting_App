@@ -99,7 +99,7 @@ test('手機帳務摘要依左欄再右欄的順序排列六項金額', () => {
   );
   assert.match(
     appSource,
-    /<section class="summary-panel"[\s\S]*本期收入[\s\S]*現金[\s\S]*信用卡[\s\S]*總開銷[\s\S]*本期固定開銷[\s\S]*本期可存額[\s\S]*<\/section>/,
+    /<section class="summary-panel"[\s\S]*本期收入[\s\S]*現金開銷[\s\S]*信用卡開銷[\s\S]*總開銷[\s\S]*本期固定開銷[\s\S]*summary-investment-trigger[\s\S]*<\/section>/,
   );
 });
 

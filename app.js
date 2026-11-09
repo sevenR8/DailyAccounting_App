@@ -1,5 +1,5 @@
 import { LedgerModule } from './ledger-module.js?v=44';
-import { calculateDailyLivingBudget, calculateFinancialSummary } from './financial-summary.js?v=48';
+import { calculateDailyLivingBudget, calculateFinancialSummary, livingExpenseSpentTotal } from './financial-summary.js?v=49';
 import { parseAmountExpression, parseSignedAmountExpression } from './amount-expression.js?v=45';
 import {
   buildExpenseTemplates,
@@ -38,7 +38,7 @@ import {
   startGoogleSignIn,
   SupabaseConnection,
   SupabaseLedgerAdapter,
-} from './supabase-adapter.js?v=85';
+} from './supabase-adapter.js?v=86';
 
 const app = document.querySelector('#app');
 const config = window.DAILY_LEDGER_CONFIG ?? {};
@@ -552,6 +552,7 @@ function renderExpenseAnalysis({
     ? `<div class="analysis-savings-breakdown" aria-label="本期可存額計算">
         <div><span>本月總收入</span><strong>NT$ ${formatAmount(savingsBreakdown.totalIncome)}</strong></div>
         <div><span>− 現金開銷</span><strong>NT$ ${formatAmount(savingsBreakdown.cashExpense)}</strong></div>
+        <div><span>− 投資（現金）</span><strong>NT$ ${formatAmount(savingsBreakdown.cashInvestment)}</strong></div>
         <div><span>− 固定開銷（現金）</span><strong>NT$ ${formatAmount(savingsBreakdown.cashFixedExpense)}</strong></div>
         <div><span>− 本月信用卡應繳</span><strong>NT$ ${formatAmount(savingsBreakdown.previousCardBill)}</strong></div>
       </div>`
@@ -842,6 +843,10 @@ async function renderLedger(
     const occurredAt = new Date(entry.occurred_at);
     return occurredAt >= periodStart && occurredAt < periodEnd;
   });
+  const investmentCategoryIds = new Set(
+    ledger.categories.filter((category) => category.name.trim() === '投資').map((category) => category.id),
+  );
+  const isInvestment = (entry) => investmentCategoryIds.has(entry.category_id);
   const expenseAdvances = decorateExpenseAdvances(financialOverview?.expenseAdvances ?? []);
   const personalAnalysisEntries = applyPersonalExpenseAmounts(analysisEntries, expenseAdvances);
   const analysisPersonalEntries = applyAnalysisExpenseAmounts(analysisEntries, expenseAdvances);
@@ -861,6 +866,15 @@ async function renderLedger(
       financialOverview.period.ends_on,
     )
     : [];
+  const advancesByRepaymentId = new Map(expenseAdvances.flatMap((advance) =>
+    (advance.repayments ?? []).map((repayment) => [repayment.id, advance])));
+  const expenseCategoryById = new Map(entries.map((entry) => [entry.id, entry.category_id]));
+  const investmentAdvanceRepayments = periodAdvanceRepayments.filter((repayment) => {
+    const advance = advancesByRepaymentId.get(repayment.id);
+    const categoryId = advance?.expense?.category_id ?? expenseCategoryById.get(advance?.expenseEntryId);
+    return investmentCategoryIds.has(categoryId);
+  });
+  const investmentRepaymentIds = new Set(investmentAdvanceRepayments.map((repayment) => repayment.id));
   const isCurrentPeriod = financialOverview?.isCurrentPeriod ?? true;
   const isFuturePeriod = financialOverview?.isFuturePeriod ?? false;
   const isHistoricalPeriod = Boolean(financialOverview && !isCurrentPeriod && !isFuturePeriod);
@@ -875,33 +889,39 @@ async function renderLedger(
     : periodEntries.filter((entry) => entry.is_fixed);
   const calculatedSummary = financialOverview ? calculateFinancialSummary({
     periodEntries,
+    investmentCategoryIds,
     fixedExpenseRules: fixedExpensesForSummary,
     salaryAmount: financialOverview.period.salary_amount,
     otherIncomeEntries: financialOverview.otherIncomeEntries,
     advanceRepaymentEntries: periodAdvanceRepayments,
+    investmentAdvanceRepaymentEntries: investmentAdvanceRepayments,
     previousCardBillAmount: financialOverview.period.previous_card_bill_amount,
     previousCardBillZeroConfirmed: financialOverview.period.previous_card_bill_zero_confirmed,
   }) : null;
   const cashTotal = calculatedSummary?.cashTotal ?? periodEntries
-    .filter((entry) => !entry.is_fixed && entry.payment_method === 'cash')
+    .filter((entry) => !entry.is_fixed && !isInvestment(entry) && entry.payment_method === 'cash')
     .reduce((total, entry) => total + (entry.is_reimbursement ? -1 : 1) * Number(entry.amount || 0), 0);
   const creditCardTotal = calculatedSummary?.creditCardTotal ?? periodEntries
-    .filter((entry) => !entry.is_fixed && entry.payment_method === 'credit_card')
+    .filter((entry) => !entry.is_fixed && !isInvestment(entry) && entry.payment_method === 'credit_card')
     .reduce((total, entry) => total + (entry.is_reimbursement ? -1 : 1) * Number(entry.amount || 0), 0);
-  const cashEntriesForSummary = periodEntries
-    .filter((entry) => !entry.is_fixed && entry.payment_method === 'cash');
-  const creditCardEntriesForSummary = periodEntries
-    .filter((entry) => !entry.is_fixed && entry.payment_method === 'credit_card')
+  const investmentEntriesForSummary = periodEntries
+    .filter((entry) => !entry.is_fixed && isInvestment(entry))
     .sort((left, right) => new Date(right.occurred_at) - new Date(left.occurred_at));
-  const advancesByRepaymentId = new Map(expenseAdvances.flatMap((advance) =>
-    (advance.repayments ?? []).map((repayment) => [repayment.id, advance])));
+  const investmentTotal = calculatedSummary?.investmentTotal ?? investmentEntriesForSummary
+    .reduce((total, entry) => total + (entry.is_reimbursement ? -1 : 1) * Number(entry.amount || 0), 0)
+    - investmentAdvanceRepayments.reduce((total, repayment) => total + Number(repayment.amount || 0), 0);
+  const cashEntriesForSummary = periodEntries
+    .filter((entry) => !entry.is_fixed && !isInvestment(entry) && entry.payment_method === 'cash');
+  const creditCardEntriesForSummary = periodEntries
+    .filter((entry) => !entry.is_fixed && !isInvestment(entry) && entry.payment_method === 'credit_card')
+    .sort((left, right) => new Date(right.occurred_at) - new Date(left.occurred_at));
   const cashSummaryItems = [
     ...cashEntriesForSummary.map((entry) => ({
       name: entry.is_reimbursement ? `${entry.item_name}（收回款）` : entry.item_name,
       amount: (entry.is_reimbursement ? -1 : 1) * Number(entry.amount || 0),
       occurredAt: entry.occurred_at,
     })),
-    ...periodAdvanceRepayments.map((repayment) => ({
+    ...periodAdvanceRepayments.filter((repayment) => !investmentRepaymentIds.has(repayment.id)).map((repayment) => ({
       name: `代墊收回・${advancesByRepaymentId.get(repayment.id)?.debtorName || '未指定對象'}`,
       amount: -Number(repayment.amount || 0),
       occurredAt: repayment.receivedAt,
@@ -911,12 +931,25 @@ async function renderLedger(
     name: entry.item_name,
     amount: (entry.is_reimbursement ? -1 : 1) * Number(entry.amount || 0),
   }));
+  const investmentSummaryItems = [
+    ...investmentEntriesForSummary.map((entry) => ({
+      name: `${entry.item_name}・${formatEntryPaymentMethod(entry)}`,
+      amount: (entry.is_reimbursement ? -1 : 1) * Number(entry.amount || 0),
+      occurredAt: entry.occurred_at,
+    })),
+    ...investmentAdvanceRepayments.map((repayment) => ({
+      name: `代墊收回・${advancesByRepaymentId.get(repayment.id)?.debtorName || '未指定對象'}`,
+      amount: -Number(repayment.amount || 0),
+      occurredAt: repayment.receivedAt,
+    })),
+  ].sort((left, right) => new Date(right.occurredAt) - new Date(left.occurredAt));
   const advanceRepaymentTotal = calculatedSummary?.advanceRepaymentTotal ?? 0;
   const netCashOutflowTotal = calculatedSummary?.netCashOutflowTotal ?? cashTotal;
   const cashSummaryDisplayAmount = `${netCashOutflowTotal < 0 ? '+' : ''}$${formatAmount(Math.abs(netCashOutflowTotal))}`;
-  const personalNonFixedExpenseTotal = personalPeriodEntries
-    .filter((entry) => !entry.is_fixed)
-    .reduce((total, entry) => total + entry.amount, 0);
+  const personalNonFixedExpenseTotal = livingExpenseSpentTotal(
+    personalPeriodEntries,
+    investmentCategoryIds,
+  );
   const generatedExpenseTotal = calculatedSummary?.generatedExpenseTotal
     ?? periodEntries.reduce((total, entry) => total + entry.amount, 0);
   const personalGeneratedExpenseTotal = personalPeriodEntries
@@ -1466,6 +1499,7 @@ async function renderLedger(
     savingsBreakdown: calculatedSummary ? {
       totalIncome: calculatedSummary.totalIncome,
       cashExpense: calculatedSummary.netCashOutflowTotal,
+      cashInvestment: calculatedSummary.cashInvestmentTotal,
       cashFixedExpense: calculatedSummary.cashFixedExpenseTotal,
       previousCardBill: financialOverview.period.previous_card_bill_amount ?? 0,
     } : null,
@@ -1481,6 +1515,7 @@ async function renderLedger(
     : '上期實際帳單・已納入本期可存額';
   const savingsExpenseTotal = calculatedSummary
     ? calculatedSummary.netCashOutflowTotal
+      + calculatedSummary.cashInvestmentTotal
       + calculatedSummary.cashFixedExpenseTotal
       + (previousCardBillAmount ?? 0)
     : null;
@@ -1493,7 +1528,7 @@ async function renderLedger(
           </header>
           <div class="savings-summary-breakdown" aria-label="本期可存額計算">
             <div class="savings-summary-equation"><span>收入 <strong>${totalIncome === null ? '—' : formatAmount(totalIncome)}</strong></span><b>−</b><span>總開銷 <strong>${savingsExpenseTotal === null ? '—' : formatAmount(savingsExpenseTotal)}</strong></span></div>
-            <div class="savings-summary-details"><span>固定現金開銷 ${formatAmount(calculatedSummary?.cashFixedExpenseTotal ?? 0)}</span><span>＋ 現金開銷 ${formatAmount(calculatedSummary?.netCashOutflowTotal ?? 0)}</span><span>＋ 信用卡應繳 ${formatAmount(previousCardBillAmount ?? 0)}</span></div>
+            <div class="savings-summary-details"><span>固定現金開銷 ${formatAmount(calculatedSummary?.cashFixedExpenseTotal ?? 0)}</span><span>＋ 現金開銷 ${formatAmount(calculatedSummary?.netCashOutflowTotal ?? 0)}</span><span>＋ 投資（現金） ${formatAmount(calculatedSummary?.cashInvestmentTotal ?? 0)}</span><span>＋ 信用卡應繳 ${formatAmount(previousCardBillAmount ?? 0)}</span></div>
           </div>
         </div>
       </section>` : '';
@@ -1870,8 +1905,10 @@ async function renderLedger(
         <div class="summary-expense-trigger summary-credit-card-trigger" role="button" tabindex="0" aria-label="信用卡開銷 $${formatAmount(creditCardTotal)}，長按半秒查看清單" aria-expanded="false" aria-controls="summary-credit-card-popover"><span>信用卡開銷</span><strong>$${formatAmount(creditCardTotal)}</strong></div>
         <div><span>總開銷</span><strong>$${formatAmount(personalNonFixedExpenseTotal)}</strong></div>
         <div><span>本期固定開銷</span><strong>${fixedExpenseTotal === null ? '—' : `$${formatAmount(fixedExpenseTotal)}`}</strong></div>
+        <div class="summary-expense-trigger summary-investment-trigger" role="button" tabindex="0" aria-label="投資 $${formatAmount(investmentTotal)}，長按半秒查看清單" aria-expanded="false" aria-controls="summary-investment-popover"><span>投資</span><strong>$${formatAmount(investmentTotal)}</strong></div>
         <div class="chart-category-popover summary-expense-popover" id="summary-cash-popover" role="dialog" aria-label="本期現金開銷清單" hidden></div>
         <div class="chart-category-popover summary-expense-popover" id="summary-credit-card-popover" role="dialog" aria-label="本期信用卡開銷清單" hidden></div>
+        <div class="chart-category-popover summary-expense-popover" id="summary-investment-popover" role="dialog" aria-label="本期投資清單" hidden></div>
       </section>
       ${savingsSummaryMarkup}
       ${analysisPage}
@@ -2239,6 +2276,13 @@ async function renderLedger(
       label: '信用卡開銷',
       totalText: `$${formatAmount(creditCardTotal)}`,
       items: creditCardSummaryItems,
+    },
+    {
+      trigger: document.querySelector('.summary-investment-trigger'),
+      popover: document.querySelector('#summary-investment-popover'),
+      label: '投資',
+      totalText: `$${formatAmount(investmentTotal)}`,
+      items: investmentSummaryItems,
     },
   ];
   const closeSummaryExpensePopover = ({ trigger, popover }) => {

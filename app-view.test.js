@@ -243,11 +243,12 @@ test('現金與信用卡摘要長按半秒可查看同口徑清單，輕點仍�
         { id: 'card-old', is_fixed: false, payment_method: 'credit_card', occurred_at: '2026-08-06' },
         { id: 'card-new', is_fixed: false, payment_method: 'credit_card', occurred_at: '2026-08-09' },
       ],
+      isInvestment: () => false,
     },
   );
   assert.deepEqual(Array.from(selected), ['card-new', 'card-old']);
   const cashSelectionSource = appSource.match(/const cashEntriesForSummary = periodEntries[\s\S]*?;/)?.[0];
-  const cashItemsSource = appSource.match(/const advancesByRepaymentId = new Map[\s\S]*?\.sort\(\(left, right\) => new Date\(right\.occurredAt\) - new Date\(left\.occurredAt\)\);/)?.[0];
+  const cashItemsSource = appSource.match(/const cashSummaryItems = \[[\s\S]*?\.sort\(\(left, right\) => new Date\(right\.occurredAt\) - new Date\(left\.occurredAt\)\);/)?.[0];
   assert.ok(cashSelectionSource);
   assert.ok(cashItemsSource);
   const cashItems = runInNewContext(
@@ -261,6 +262,9 @@ test('現金與信用卡摘要長按半秒可查看同口徑清單，輕點仍�
       ],
       expenseAdvances: [{ debtorName: '朋友', repayments: [{ id: 'repayment', amount: 300, receivedAt: '2026-08-09' }] }],
       periodAdvanceRepayments: [{ id: 'repayment', amount: 300, receivedAt: '2026-08-09' }],
+      advancesByRepaymentId: new Map([['repayment', { debtorName: '朋友' }]]),
+      investmentRepaymentIds: new Set(),
+      isInvestment: () => false,
     },
   );
   assert.deepEqual(Array.from(cashItems, (item) => item.name), ['代墊收回・朋友', '退款（收回款）', '晚餐']);
@@ -276,6 +280,19 @@ test('現金與信用卡摘要長按半秒可查看同口徑清單，輕點仍�
   assert.match(appSource, /else if \(window\.innerWidth < 900\) \{\s*showMobileFinance\(\)/);
   assert.match(stylesSource, /\.summary-expense-trigger \{ position: relative; z-index: 3; \}/);
   assert.match(stylesSource, /\.summary-panel \.summary-expense-popover\[hidden\] \{ display: none; \}/);
+});
+
+test('投資摘要位於右下角，長按可查看獨立清單', () => {
+  const summarySource = appSource.slice(
+    appSource.indexOf('<section class="summary-panel"'),
+    appSource.indexOf('${savingsSummaryMarkup}'),
+  );
+  assert.match(summarySource, /本期固定開銷[\s\S]*summary-investment-trigger/);
+  assert.match(summarySource, /summary-investment-trigger[^>]*aria-expanded="false"/);
+  assert.match(summarySource, /id="summary-investment-popover"/);
+  assert.match(appSource, /trigger: document\.querySelector\('\.summary-investment-trigger'\)[\s\S]*items: investmentSummaryItems/);
+  assert.match(appSource, /const isInvestment = \(entry\) => investmentCategoryIds\.has\(entry\.category_id\)/);
+  assert.match(appSource, /spentAmount: personalNonFixedExpenseTotal/);
 });
 
 test('快速記帳以同款窄卡片提供預設關閉的收回款勾選框', () => {
